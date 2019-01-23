@@ -1,5 +1,10 @@
 # -*- coding: utf-8 -*-
 # @Time    : 2019/1/19 17:58
+import sys
+import os
+curPath = os.path.abspath(os.path.dirname(__file__))
+rootPath = os.path.split(curPath)[0]
+sys.path.append(rootPath)
 
 import json
 import random
@@ -9,7 +14,6 @@ from urllib import urlencode
 
 import requests
 
-from LuceneSearch import LuceneSearch
 from Model.seq2seq import Seq2Seq
 from Preprocess.load_qadata import load_qadata
 from Preprocess.load_wikidata import load_wikidata
@@ -19,7 +23,7 @@ from SymbolicExecutor.symbolics import Symbolics
 from params import get_params
 
 
-class TestSymbolics(TestCase):
+class TestSymbolics():
 
     def test_sparql(self,e='Q148',r = 'P17',t = 'Q4022'):
         answer_dict = {}
@@ -86,3 +90,6 @@ class TestSymbolics(TestCase):
 
         print(0)
 # #wikidata, reverse_dict, prop_data, child_par_dict, wikidata_fanout_dict = load_wikidata(param["wikidata_dir"])
+
+if __name__ == "__main__":
+    test = TestSymbolics().test_select()

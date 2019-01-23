@@ -14,11 +14,11 @@ class Seq2Seq():
         symbolic_seq = []
 
         if(states == 1):
-            print("ChangedQuestion:", "Which rivers flow through India and China?")
+            print("ChangedQuestion:", "Which rivers flow through India or China?")
             symbolic_seq.append({"A1": ['Q148', 'P17', 'Q4022']}) # select（China, flow, River），Union(India, flow, River), EOQ
             symbolic_seq.append({"A9": ['Q668', 'P17', 'Q4022']})
         elif(states == 2):
-            print("ChangedQuestion:", "Which rivers flow through India or China?")
+            print("ChangedQuestion:", "Which rivers flow through India and China?")
             symbolic_seq.append({"A1": ['Q148', 'P17', 'Q4022']})  # select（China, flow, River），Inter(India, flow, River)，EOQ
             symbolic_seq.append({"A10": ['Q668', 'P17', 'Q4022']})
         elif (states == 3):
@@ -45,7 +45,7 @@ class Seq2Seq():
         elif (states == 8):
             print("ChangedQuestion:", "Which river flows through maximum number of countries ?")
             symbolic_seq.append({"A2": ['Q15617994', 'P17', 'Q4022']}) # select(India, Flow, River)，Union(India，Flow，Lake), Count，EOQ
-
+            symbolic_seq.append({"A12": ['', '', '']})
         else:
             print(states,"not ready")
 

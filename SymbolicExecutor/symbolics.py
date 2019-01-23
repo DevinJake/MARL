@@ -23,7 +23,7 @@ class Symbolics():
             r = symbolic[key][1]
             t = symbolic[key][2]
             if ("A1" in symbolic):
-                self.answer = self.select_sparql(e, r, t)
+                self.answer = self.select(e, r, t)
             elif ("A2" in symbolic):
                 self.answer = self.select_all(e, r, t)
             elif ("A3" in symbolic):
