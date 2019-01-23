@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 # @Time    : 2019/1/20 14:11
-# @Author  : Yaoleo
-# @Blog    : yaoleo.github.io
 
 import codecs
 import re

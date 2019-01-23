@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 # @Time    : 2019/1/14 15:55
-# @Author  : Yaoleo
-# @Blog    : yaoleo.github.io
+
 
 import tensorflow as tf
 

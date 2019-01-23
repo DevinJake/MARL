@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 # @Time    : 2019/1/16 15:52
-# @Author  : Yaoleo
-# @Blog    : yaoleo.github.io
+
 
 import json, codecs, random, pickle, traceback, logging, os, math
 

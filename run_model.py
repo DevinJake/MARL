@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 # @Time    : 2019/1/14 16:00
-# @Author  : Yaoleo
-# @Blog    : yaoleo.github.io
+
 from Preprocess.prepare_data import PrepareData
 from params import get_params
 from Preprocess.load_wikidata import load_wikidata

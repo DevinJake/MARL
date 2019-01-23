@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 # @Time    : 2019/1/19 18:09
-# @Author  : Yaoleo
-# @Blog    : yaoleo.github.io
 
 import json
 import sys, os, lucene

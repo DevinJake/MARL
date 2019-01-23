@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 # @Time    : 2019/1/14 16:02
-# @Author  : Yaoleo
-# @Blog    : yaoleo.github.io
 
 def get_params(dir,qadir):
     param = {}

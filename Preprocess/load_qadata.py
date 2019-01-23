@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 # @Time    : 2019/1/20 14:50
-# @Author  : Yaoleo
-# @Blog    : yaoleo.github.io
+
 import re
 
 import fnmatch
