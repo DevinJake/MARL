@@ -81,7 +81,7 @@ class TestSymbolics():
                 types = question_parser.getTypes(q)
 
                 # 得到操作序列
-                states = random.randint(8,8) # 随机生成操作序列
+                states = random.randint(13,13) # 随机生成操作序列
                 seq2seq = Seq2Seq()
                 symbolic_seq = seq2seq.simple(qstring,entities,relations,types, states)
 
@@ -91,9 +91,6 @@ class TestSymbolics():
                 answer = symbolic_exe.executor()
 
                 print("answer is :", answer)
-                if (type(answer) == dict):
-                    for key in answer:
-                        print [item_data[v] for v in answer[key]]
 
                 time_end = time.time()
                 print('time cost:', time_end - time_start)

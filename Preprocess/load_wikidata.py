@@ -75,10 +75,11 @@ def load_wikidata(wikidata_dir):
         item_data = json.load(data_file)
     print 'Successfully loaded items json'
 
-    # with codecs.open(wikidata_dir + '/comp_wikidata_rev.json', 'r', 'utf-8') as data_file:
-    #     reverse_dict = json.load(data_file)
-    # print 'Successfully loaded reverse_dict json'
-
+    with codecs.open(wikidata_dir + '/comp_wikidata_rev.json', 'r', 'utf-8') as data_file:
+        reverse_dict = json.load(data_file)
+    print 'Successfully loaded reverse_dict json'
+    wikidata.update(reverse_dict)
+    del reverse_dict
     # with codecs.open(wikidata_dir + '/wikidata_fanout_dict.json', 'r', 'utf-8') as data_file:
     #     wikidata_fanout_dict = json.load(data_file)
     # print 'Successfully loaded wikidata_fanout_dict json'

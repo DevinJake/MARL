@@ -55,7 +55,6 @@ if __name__ == "__main__":
     for pid in pids:
         if(pid in wikidata.keys()):
             for prop in wikidata[pid]:
-
                 if prop in prop_data:
                     print(pid+":"+item_data[pid],
                           prop+":"+prop_data[prop],
