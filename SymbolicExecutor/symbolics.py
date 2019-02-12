@@ -10,8 +10,8 @@ class Symbolics():
 
     def __init__(self, wiki_data, item_data, property_data, child_par_dict, seq):
         self.wikidata = wiki_data
-        self.item_data = item_data
-        self.pid2prop = property_data
+        #self.item_data = item_data
+        #self.pid2prop = property_data
         self.type_data = child_par_dict
         self.seq = seq
         self.answer = {}
