@@ -6,21 +6,21 @@ import unicodedata
 
 
 class QuestionParser():
+
     def __init__(self, params, all_possible_ngrams):
         # item_wikidata = json.load(open(params["wikidata_dir"] + '/items_wikidata_n.json'))
         # self.item_wikidata = {k: self.clean_string(v) for k, v in item_wikidata.items()}
-
         self.use_gold_entities = params['use_gold_types']
         self.use_gold_relations = params['use_gold_types']
         self.use_gold_types = params['use_gold_types']
         self.all_possible_ngrams = all_possible_ngrams
 
     def getNER(self, q):
-        if(self.use_gold_entities):
+        if (self.use_gold_entities):
             print("use_gold_entity")
             self.entities = []
             context_enties = q["context_entities"].replace("\n", "")
-            if(context_enties != ""):
+            if (context_enties != ""):
                 self.entities.extend(context_enties.split("|"))
             else:
                 self.entities = []
@@ -28,7 +28,6 @@ class QuestionParser():
         else:
             print("not_use_gold_entity")
         return self.entities
-
 
     def getTypes(self, q):
         if (self.use_gold_types):
@@ -44,7 +43,7 @@ class QuestionParser():
             print("not_use_gold_type")
         return self.types
 
-    def getRelations(self,q):
+    def getRelations(self, q):
         if (self.use_gold_relations):
             print("use_gold_relations")
             self.relations = []

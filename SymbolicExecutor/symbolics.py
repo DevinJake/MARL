@@ -24,18 +24,46 @@ class Symbolics():
             t = symbolic[key][2]
             if ("A1" in symbolic):
                 self.answer = self.select(e, r, t)
+                self.print_answer()
             elif ("A2" in symbolic):
                 self.answer = self.select_all(e, r, t)
+                self.print_answer()
             elif ("A3" in symbolic):
                 self.answer = self.is_bool(e)
+                self.print_answer()
+            elif ("A4" in symbolic):
+                self.answer = self.arg_min()
+                self.print_answer()
+            elif ("A5" in symbolic):
+                self.answer = self.arg_max()
+                self.print_answer()
+            elif ("A6" in symbolic):
+                self.answer = self.greater_than(e)
+                self.print_answer()
+            elif ("A7" in symbolic):
+                self.answer = self.less_than(e)
+                self.print_answer()
             elif ("A9" in symbolic):
                 self.answer = self.union(e, r, t)
-            elif ("A10" in symbolic):
+                self.print_answer()
+            elif ("A8" in symbolic):
                 self.answer = self.inter(e, r, t)
-            elif ("A11" in symbolic):
+                self.print_answer()
+            elif ("A10" in symbolic):
                 self.answer = self.diff(e, r, t)
-            elif ("A12" in symbolic):
+                self.print_answer()
+            elif ("A11" in symbolic):
                 self.answer = self.count()
+                self.print_answer()
+            elif ("A12" in symbolic):
+                self.answer = self.at_least(e)
+                self.print_answer()
+            elif ("A13" in symbolic):
+                self.answer = self.at_most(e)
+                self.print_answer()
+            elif ("A14" in symbolic):
+                self.answer = self.equal(e)
+                self.print_answer()
             else:
                 print("wrong symbolic")
 
@@ -62,28 +90,46 @@ class Symbolics():
 
         for key in self.wikidata.keys():
             if ("P31" in self.wikidata[key] and r in self.wikidata[key]):
-                if (t in self.wikidata[key]["P31"]):
+                if (et in self.wikidata[key]["P31"]):
                     for e in self.wikidata[key][r]:
-                        if(self.type_data[e] == et): # todo 这里的类型是CSQA数据里的 并不标准 因为一个实体有多个类型 这里只有一个
+                        if(e in self.wikidata and t in self.wikidata[e]["P31"]): # todo 这里的类型是CSQA数据里的 并不标准 因为一个实体有多个类型 这里只有一个
                             # print e, self.item_data[e],self.type_data[e],self.item_data[self.type_data[e]]
-                            if(e in answer_dict):
-                                answer_dict[e].append(key)
+                            if(key in answer_dict):
+                                answer_dict[key].append(e)
                             else:
-                                answer_dict[e] = [key]
+                                answer_dict[key] = [e]
         return answer_dict
 
     def is_bool(self, e):
-        print("is_bool")
+        print("A3: is_bool")
         for key in self.answer:
             if (e in self.answer[key]):
                 return True
         return False
 
     def arg_min(self):
-        pass
+        print("A4: arg_min")
+        if not self.answer:
+            return None
+        min = 99999
+        min_k = self.answer.keys[0]
+        for k, v in self.answer.iteritems():
+            if len(v) < min:
+                min = len(v)
+                min_k = k
+        return min_k
 
     def arg_max(self):
-        pass
+        print("A5: arg_max")
+        if not self.answer:
+            return None
+        max = 0
+        max_k, max_v = self.answer.popitem()
+        for k,v in self.answer.iteritems():
+            if len(v) > max:
+                max = len(v)
+                max_k = k
+        return max_k
 
     def less_than(self, e):
         pass
@@ -117,7 +163,7 @@ class Symbolics():
         pass
 
     def inter(self, e, r, t):
-        print("A10:", e, r, t)
+        print("A8:", e, r, t)
         answer_dict = self.answer
         answer_values = []
 
@@ -145,7 +191,7 @@ class Symbolics():
         return answer_dict
 
     def diff(self, e, r, t):
-        print("A11:", e, r, t)
+        print("A10:", e, r, t)
         answer_dict = self.answer
         answer_values = []
 
@@ -173,7 +219,8 @@ class Symbolics():
         return answer_dict
 
     def count(self):
-        if (len(self.answer) == 1):
+        print("A11:Count")
+        if (len(self.answer) == 1 or type(self.answer) == type([])):
             return len(self.answer.values()[0])
         else:
             print("more than one items in answer")
@@ -181,19 +228,53 @@ class Symbolics():
         pass
 
     def at_least(self, N):
-        pass
+        print("A12: at_least")
+        answer_keys = []
+        for k, v in self.answer.iteritems():
+            if len(v) >= N:
+                answer_keys.append(k)
+        return answer_keys
 
     def at_most(self, N):
-        pass
+        print("A12: at_most")
+        answer_keys = []
+        for k, v in self.answer.iteritems():
+            if len(v) <= N:
+                answer_keys.append(k)
+        return answer_keys
 
-    def get_keys(self):
-        pass
+    def equal(self, N):
+        print("A13: equal")
+        answer_keys = []
+        for k, v in self.answer.iteritems():
+            if len(v) == N:
+                answer_keys.append(k)
+        return answer_keys
 
     def EOQ(self):
         pass
 
 
     ########################
+    def print_answer(self):
+        print("----------------")
+        if(type(self.answer) == dict):
+            for k,v in self.answer.iteritems():
+                print self.item_data[k],": ",
+                for value in v:
+                    print self.item_data[value], ",",
+                print
+        elif(type(self.answer) == type([])):
+            for a in self.answer:
+                print self.item_data[a],
+            print
+        else:
+            if(self.answer in self.item_data):
+                print self.answer,self.item_data[self.answer]
+            else:
+                print self.answer
+    print("----------------")
+
     def select_sparql(self, e, r, t):  # use sparql
         answer_dict = {}
         anser_values = []
