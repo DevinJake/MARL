@@ -62,7 +62,7 @@ class TestSymbolics():
         #     print("loading...")
         #     child_par_dict = pickle.load(open('/home/zhangjingyao/data/type_kb.pkl','rb'))
         # except:
-        wikidata, item_data, prop_data, child_par_dict = load_wikidata(params["wikidata_dir"])# data for entity ,property, type
+        # wikidata, item_data, prop_data, child_par_dict = load_wikidata(params["wikidata_dir"])# data for entity ,property, type
 
         # 读取qa文件集
         qa_set = load_qadata("/home/zhangjingyao/preprocessed_data_10k/demo")
@@ -81,16 +81,19 @@ class TestSymbolics():
                 types = question_parser.getTypes(q)
 
                 # 得到操作序列
-                states = random.randint(13,13) # 随机生成操作序列
+                states = random.randint(1,18) # 随机生成操作序列
                 seq2seq = Seq2Seq()
                 symbolic_seq = seq2seq.simple(qstring,entities,relations,types, states)
 
                 # 符号执行
                 time_start = time.time()
-                symbolic_exe = Symbolics(wikidata, item_data, prop_data, child_par_dict, symbolic_seq)
+                symbolic_exe = Symbolics(symbolic_seq)
                 answer = symbolic_exe.executor()
 
                 print("answer is :", answer)
+                if (type(answer) == dict):
+                    for key in answer:
+                        print [v for v in answer[key]]
 
                 time_end = time.time()
                 print('time cost:', time_end - time_start)
@@ -103,11 +106,11 @@ class TestSymbolics():
     def test_demo20(self):
         params = get_params("/data/zjy/csqa_data", "/home/zhangjingyao/preprocessed_data_10k")
 
-        wikidata, item_data, prop_data, child_par_dict = load_wikidata(
-            params["wikidata_dir"])  # data for entity ,property, type
+        #wikidata, item_data, prop_data, child_par_dict = load_wikidata(
+        #    params["wikidata_dir"])  # data for entity ,property, type
 
         # 读取qa文件集
-        qa_file = open("/home/zhangjingyao/demoqa/csqa问题demo20.txt")
+        qa_file = open("/home/zhangjingyao/demoqa/csqa问题demo20X.txt")
         question_parser = QuestionParser(params, True)
         sym_seq = []
         flag = 0
@@ -115,26 +118,40 @@ class TestSymbolics():
 
             if line.startswith("symbolic_seq.append"):
                 flag = 1
-                key = line[line.find("{")+1:line.find('}')].split(':')[0].replace('\"','')
-                val = line[line.find("{")+1:line.find('}')].split(':')[1]
-                val = val[2:-1].replace("\'","").split(',')
+                key = line[line.find("{")+1:line.find('}')].split(':')[0].replace('\"','').strip()
+                val = line[line.find("{")+1:line.find('}')].split(':')[1].strip()
+                val = val.replace('[','').replace(']','').replace("\'","").split(',')
 
                 sym_seq.append({key:val})
+            if line.startswith("response_entities"):
+                count = 0
+                answer_entities = line.replace("response_entities:",'').strip().split("|")
+
             if(line.startswith("-----------") and flag == 1):
-                print("RUN",sym_seq)
                 time_start = time.time()
-                symbolic_exe = Symbolics(wikidata, item_data, prop_data, child_par_dict, sym_seq)
+                symbolic_exe = Symbolics( sym_seq)
                 answer = symbolic_exe.executor()
 
-                print("answer is :", answer)
                 if (type(answer) == dict):
                     for key in answer:
-                        print [item_data[v] for v in answer[key]]
-
+                        print "answer is :",[v for v in answer[key]]
+                else:
+                    print("answer is :", answer)
                 time_end = time.time()
                 print('time cost:', time_end - time_start)
+
+                # for e in answer_entities:
+                #     if (e in answer):
+                #         count += 1
+                #print("accurate:",float(count)/float(len(answer)))
+                print('===============================')
                 flag = 0
                 sym_seq = []
-            print line,
+
+
+
+
+            if ("response") in line or line.startswith("context_utterance") or line.replace("\r\n","").isdigit() or "state" in line:
+                print line,
 if __name__ == "__main__":
     test = TestSymbolics().test_demo20()
