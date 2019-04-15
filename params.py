@@ -7,6 +7,8 @@ def get_params(dir,qadir):
     qadata_dir = str(qadir)
     # filepath
     param['wikidata_dir'] = data_dir + "/wikidata_dir"
+    param['transe_dir'] = data_dir + "/transe_dir"
+    param['glove_dir'] = data_dir + "/glove_dir"
     param['train_dir'] =  qadata_dir + "/train"
     # settings
     param['use_gold_entities'] = True

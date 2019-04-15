@@ -22,6 +22,7 @@ class Symbolics():
 
         self.seq = seq
         self.answer = {}
+        self.temp_set = set([])
 
     def executor(self):
         for symbolic in self.seq:
@@ -32,7 +33,7 @@ class Symbolics():
             if ("A1" in symbolic):
                 self.answer = self.select(e, r.encode("utf-8"), t.encode("utf-8"))
                 self.print_answer()
-            elif ("A2" in symbolic):
+            elif ("A2" in symbolic or "A16" in symbolic):
                 self.answer = self.select_all(e, r, t)
                 self.print_answer()
             elif ("A3" in symbolic):
@@ -45,10 +46,10 @@ class Symbolics():
                 self.answer = self.arg_max()
                 self.print_answer()
             elif ("A6" in symbolic):
-                self.answer = self.greater_than(e)
+                self.answer = self.greater_than(e,r,t)
                 self.print_answer()
             elif ("A7" in symbolic):
-                self.answer = self.less_than(e)
+                self.answer = self.less_than(e,r,t)
                 self.print_answer()
             elif ("A9" in symbolic):
                 self.answer = self.union(e, r, t)
@@ -72,7 +73,12 @@ class Symbolics():
                 self.answer = self.equal(e)
                 self.print_answer()
             elif ("A15" in symbolic):
-                self.answer = self.around(e)
+                if r == "" and t == "":
+                    self.answer = self.around(e)
+                else:
+                    self.answer = self.around(e,r,t)
+                self.print_answer()
+            elif ("A17" in symbolic):
                 self.print_answer()
             else:
                 print("wrong symbolic")
@@ -94,13 +100,15 @@ class Symbolics():
             return content
 
     def select(self, e, r, t):
+        if e == "":
+            return {}
         if self.graph is not None:
             if 'sub' in self.graph[get_id(e)] and r in self.graph[get_id(e)]['sub']:
                 return {e:[ee for ee in self.graph[get_id(e)]['sub'][r] if self.is_A(ee) == t]}
             elif 'obj' in self.graph[get_id(e)] and r in self.graph[get_id(e)]['obj']:
                 return {e:[ee for ee in self.graph[get_id(e)]['obj'][r] if self.is_A(ee) == t]}
             else:
-                return None
+                return {}
         else:
             json_pack = dict()
             json_pack['op'] = "select"
@@ -110,11 +118,13 @@ class Symbolics():
             content = requests.post("http://127.0.0.1:5000/post", json=json_pack).json()['content']
             if content is not None:
                 content = set(content)
+            else:
+                content = set([])
             return {e:content}
 
     def select_all(self, et, r, t):
         #print("A2:", et, r, t)
-        content = self.answer
+        content = {}
         if self.graph is not None and self.par_dict is not None:
             keys = self.par_dict[get_id(et)]
             for key in keys:
@@ -133,45 +143,63 @@ class Symbolics():
             json_pack['obj'] = t
 
         content = requests.post("http://127.0.0.1:5000/post", json=json_pack).json()['content']
+        # for k, v in content.items():
+        #   if len(v) == 0: content.pop(k)
+
         if self.answer:
-            for k in content:
-                if k in self.answer:content[k].extend(self.answer[k])
+            for k, v in self.answer.items():
+                content.setdefault(k, []).extend(v)
         return content
 
     def is_bool(self, e):
-        print("A3: is_bool")
+        # print("A3: is_bool")
+        if type(self.answer) == bool: return True
         for key in self.answer:
-            if (e in self.answer[key]):
+            if (self.answer[key] != None and e in self.answer[key]):
                 return True
         return False
 
     def arg_min(self):
-        print("A4: arg_min")
+        # print("A4: arg_min")
         if not self.answer:
             return None
         minK = min(self.answer, key=lambda x: len(self.answer[x]))
         minN = len(self.answer[minK])
-        return [k for k in self.answer if len(self.answer[k]) == minN]
+        min_set = [k for k in self.answer if len(self.answer[k]) == minN]
+        self.temp_set = set(min_set)
+        return min_set
 
     def arg_max(self):
-        print("A5: arg_max")
+        # print("A5: arg_max")
         if not self.answer:
             return None
         maxK = max(self.answer, key=lambda x: len(self.answer[x]))
         maxN = len(self.answer[maxK])
         return [k for k in self.answer if len(self.answer[k]) == maxN]
 
-    def less_than(self, e):
-        pass
+    def greater_than(self, e, r, t):
+        content = self.answer
+        if e in content and not content[e] == None:
+            N = len(content[e])
+        else:
+            N = 0
+        return [k for k in self.answer if len(self.answer[k]) > N]
 
-    def greater_than(self, e):
-        pass
+    def less_than(self, e, r, t):
+        content = self.answer
+        if e in content and not content[e] == None:
+            N = len(content[e])
+        else:
+            N = 0
+        return [k for k in self.answer if len(self.answer[k]) < N]
 
     def union(self, e, r, t):
         #print("A9:", e, r, t)
+        if e == "": return {}
         answer_dict = self.answer
-        if e in answer_dict:
-            answer_dict[e] = answer_dict[e] | self.select(e, r, t)[e]
+        if type(answer_dict) == bool: return False
+        if e in answer_dict and answer_dict[e]!=None:
+            answer_dict[e] = set(answer_dict[e]) | set(self.select(e, r, t)[e])
         else:
             answer_dict.update(self.select(e, r, t))
 
@@ -179,74 +207,80 @@ class Symbolics():
         union_key = ""
         union_value = set([])
         for k, v in answer_dict.iteritems():
-            union_key += k + "|"
+            if v == None: v = []
             union_value = union_value | set(v)
-        union_key = union_key[:-1]
+        union_key = "|"
         answer_dict.clear()
-        answer_dict[union_key] = set(union_value)
+        answer_dict[union_key] = list(set(union_value))
 
         return answer_dict
 
     def inter(self, e, r, t):
         #print("A8:", e, r, t)
+        if e == "": return {}
+        if not e.startswith("Q"): return {}
         answer_dict = self.answer
-        if e in answer_dict:
-            answer_dict = answer_dict[e] & self.select(e, r, t)[e]
+        if e in answer_dict and answer_dict[e]!=None:
+            answer_dict[e] = set(answer_dict[e]) & set(self.select(e, r, t)[e])
         else:
-            answer_dict.update(self.select(e, r, t))
+            s = self.select(e, r, t)
+            answer_dict.update(s)
 
         # 进行 inter 类似 union
         inter_key = ""
         inter_value = set([])
         for k, v in answer_dict.iteritems():
-            inter_key += k + "&"
+            if v == None: v = []
             if len(inter_value) > 0:
                 inter_value = inter_value & set(v)
             else:
                 inter_value = set(v)
 
         answer_dict.clear()
-        inter_key = inter_key[:-1]
-        answer_dict[inter_key] = set(inter_value)
+        inter_key = "&"
+        answer_dict[inter_key] = list(set(inter_value))
 
         return answer_dict
 
     def diff(self, e, r, t):
-        print("A10:", e, r, t)
+        #print("A10:", e, r, t)
+        if e == "": return {}
         answer_dict = self.answer
-        if e in answer_dict:
-            answer_dict = answer_dict[e] - self.select(e, r, t)[e]
+        if e in answer_dict and answer_dict[e]!=None:
+            answer_dict[e] = set(answer_dict[e]) - set(self.select(e, r, t)[e])
         else:
             answer_dict.update(self.select(e, r, t))
         # 进行 diff 操作 类似 union
         diff_key = ""
         diff_value = set([])
         for k, v in answer_dict.iteritems():
-            diff_key += k + "-"
-            if len(diff_value) > 0:
-                diff_value = diff_value - set(v)
-            else:
-                diff_value = set(v)
+            if v == None: v = []
+            if k != e:
+                diff_value.update(set(v))
+        if(answer_dict[e]):
+            diff_value = diff_value - set(answer_dict[e])
 
         answer_dict.clear()
-        diff_key = diff_key[:-1]
-        answer_dict[diff_key] = set(diff_value)
+        diff_key = "-"
+        answer_dict[diff_key] = list(set(diff_value))
 
         return answer_dict
 
     def count(self,e= None):
-        print("A11:Count")
+        #print("A11:Count")
         if type(self.answer) == type([]):
             return len(self.answer)
-        elif e!='' and e:
+        elif e!='' and e and e in self.answer:
             if e not in self.answer and len(self.answer.keys()) == 1:
                 return len(self.answer.popitem())
             return len(self.answer[e])
         else:
-            return len(self.answer.keys())
+            return len(self.answer.keys()) if type(self.answer) == type({}) else 0
+
+        return 0
 
     def at_least(self, N):
-        print("A12: at_least")
+        # print("A12: at_least")
         # for k in list(self.answer):
         #     if len(self.answer[k]) <= int(N):
         #         self.answer.pop(k)
@@ -258,12 +292,14 @@ class Symbolics():
         return answer_keys
 
     def at_most(self, N):
-        print("A12: at_most")
+        # print("A13: at_most")
         answer_keys = []
+        # for k, v in self.answer.items():
+        #   if len(v) == 0: self.answer.pop(k)
         for k in list(self.answer):
-            if len(self.answer[k]) >= int(N):
-                self.answer.pop(k)
-        return self.answer
+            if len(self.answer[k]) <= int(N):
+                answer_keys.append(k)
+        return answer_keys
 
     def equal(self, N):
         answer_keys = []
@@ -273,12 +309,17 @@ class Symbolics():
                 answer_keys.append(k)
         return answer_keys
 
-    def around(self,N):
+    def around(self,N,r=None,t=None):
+        if(r!=None) and  (t!=None):
+            e = N
+            dict_temp = self.select_all(e,r,t)
+            N = len(dict_temp)
         answer_keys = []
         for k, v in self.answer.iteritems():
-            #print k, len(v)
-            if abs(len(v)-int(N))<(int(N)/2):
+            # print k, len(v),abs(len(v)-int(N)),(int(N)/2)
+            if abs(len(v)-int(N))<(int(N)*0.6):
                 answer_keys.append(k)
+        self.temp_set = set(answer_keys)
         return answer_keys
 
     def EOQ(self):
@@ -313,9 +354,9 @@ class Symbolics():
                                        }",
                   "format": "json",
                   }
-        print sparql
+        # print sparql
         sparql = urlencode(sparql)
-        print sparql
+        # print sparql
         url = 'https://query.wikidata.org/sparql?' + sparql
         r = requests.get(url)
         # print r.json()["results"]
