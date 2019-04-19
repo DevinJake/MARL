@@ -15,16 +15,16 @@ import torch.nn.functional as F
 
 import ptan
 
-SAVES_DIR = "saves"
+SAVES_DIR = "../data/saves"
 
 BATCH_SIZE = 16
 LEARNING_RATE = 1e-4
 MAX_EPOCHES = 40
 MAX_TOKENS = 40
 
-TRAIN_QUESTION_PATH = 'data/auto_QA_data/mask/RL_train.question'
-TRAIN_ACTION_PATH = 'data/auto_QA_data/mask/RL_train.action'
-DIC_PATH = 'data/auto_QA_data/mask/share.question'
+TRAIN_QUESTION_PATH = '../data/auto_QA_data/mask/RL_train.question'
+TRAIN_ACTION_PATH = '../data/auto_QA_data/mask/RL_train.action'
+DIC_PATH = '../data/auto_QA_data/mask/share.question'
 
 log = logging.getLogger("train")
 
@@ -50,7 +50,7 @@ if __name__ == "__main__":
     logging.basicConfig(format="%(asctime)-15s %(levelname)s %(message)s", level=logging.INFO)
 
     # command line parameters
-    sys.argv = ['train_crossent.py', '--cuda', '-l=saves\crossent\pre_bleu_0.929_01.dat', '-n=rl']
+    sys.argv = ['train_crossent.py', '--cuda', '-l=..\data\saves\crossent\pre_bleu_0.964_01.dat', '-n=rl']
 
     parser = argparse.ArgumentParser()
     # parser.add_argument("--data", required=True, help="Category to use for training. Empty string to train on full processDataset")
