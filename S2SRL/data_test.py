@@ -9,7 +9,7 @@ import torch
 
 log = logging.getLogger("data_test")
 
-DIC_PATH = 'data/auto_QA_data/mask/share.question'
+DIC_PATH = '../data/auto_QA_data/mask_test/share.question'
 
 if __name__ == "__main__":
     logging.basicConfig(format="%(asctime)-15s %(levelname)s %(message)s", level=logging.INFO)
@@ -21,7 +21,7 @@ if __name__ == "__main__":
     # sys.argv = ['data_test.py', '-m=epoch_000_0.944_0.946.dat', '-p=rl', '--n=rl']
 
     # command line parameters for final test
-    sys.argv = ['data_test.py', '-m=epoch_010_0.973_0.958.dat', '-p=final', '--n=rl']
+    sys.argv = ['data_test.py', '-m=epoch_000_0.961_0.965.dat', '-p=final', '--n=rl']
 
     parser = argparse.ArgumentParser()
     # parser.add_argument("--data", required=True,
@@ -32,16 +32,16 @@ if __name__ == "__main__":
     parser.add_argument("-n", "--name", required=True, help="Name of the run")
     args = parser.parse_args()
 
-    PREDICT_PATH = 'saves/' + str(args.name) + '/' + str(args.pred) + '_predict.actions'
+    PREDICT_PATH = '../data/saves/' + str(args.name) + '/' + str(args.pred) + '_predict.actions'
     fwPredict = open(PREDICT_PATH, 'w', encoding="UTF-8")
-    REFER_PATH = 'saves/' + str(args.name) + '/' + str(args.pred) + '_refer.actions'
+    REFER_PATH = '../data/saves/' + str(args.name) + '/' + str(args.pred) + '_refer.actions'
     fwRefer = open(REFER_PATH, 'w', encoding="UTF-8")
 
     phrase_pairs, emb_dict = [], list()
-    TEST_QUESTION_PATH = 'data/auto_QA_data/mask/' + str(args.pred).upper() + '_test.question'
-    log.info("Open: %s", 'data/auto_QA_data/mask/' + str(args.pred).upper() + '_test.question')
-    TEST_ACTION_PATH = 'data/auto_QA_data/mask/' + str(args.pred).upper() + '_test.action'
-    log.info("Open: %s", 'data/auto_QA_data/mask/' + str(args.pred).upper() + '_test.action')
+    TEST_QUESTION_PATH = '../data/auto_QA_data/mask_test/' + str(args.pred).upper() + '_test.question'
+    log.info("Open: %s", '../data/auto_QA_data/mask_test/' + str(args.pred).upper() + '_test.question')
+    TEST_ACTION_PATH = '../data/auto_QA_data/mask_test/' + str(args.pred).upper() + '_test.action'
+    log.info("Open: %s", '../data/auto_QA_data/mask_test/' + str(args.pred).upper() + '_test.action')
     if args.pred == 'pt' or args.pred == 'final':
         phrase_pairs, emb_dict = data.load_data_from_existing_data(TEST_QUESTION_PATH, TEST_ACTION_PATH, DIC_PATH)
     elif args.pred == 'rl':
@@ -56,7 +56,7 @@ if __name__ == "__main__":
 
     net = model.PhraseModel(emb_size=model.EMBEDDING_DIM, dict_size=len(emb_dict), hid_size=model.HIDDEN_STATE_SIZE)
     net = net.cuda()
-    model_path = 'saves/' + str(args.name) + '/' + str(args.model)
+    model_path = '../data/saves/' + str(args.name) + '/' + str(args.model)
     net.load_state_dict((torch.load(model_path)))
     end_token = emb_dict[data.END_TOKEN]
 
