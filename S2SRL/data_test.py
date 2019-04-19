@@ -25,9 +25,9 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     # parser.add_argument("--data", required=True,
-    #                     help="Category to use for training. Empty string to train on full dataset")
+    #                     help="Category to use for training. Empty string to train on full processDataset")
     parser.add_argument("-m", "--model", required=True, help="Model name to load")
-    parser.add_argument("-p", "--pred", required=True, help="the test dataset format, " \
+    parser.add_argument("-p", "--pred", required=True, help="the test processDataset format, " \
                                                             "py is one-to-one (one sentence with one reference), rl is one-to-many")
     parser.add_argument("-n", "--name", required=True, help="Name of the run")
     args = parser.parse_args()
