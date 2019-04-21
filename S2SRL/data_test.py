@@ -1,4 +1,5 @@
-#!/usr/bin/env python3
+# !/usr/bin/env python3
+# The file is used to predict the action sequences for full-data test dataset.
 import argparse
 import logging
 import sys
