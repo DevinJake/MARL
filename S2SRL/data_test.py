@@ -21,7 +21,7 @@ if __name__ == "__main__":
     # sys.argv = ['data_test.py', '-m=epoch_000_0.944_0.946.dat', '-p=rl', '--n=rl']
 
     # command line parameters for final test
-    sys.argv = ['data_test.py', '-m=epoch_000_0.961_0.965.dat', '-p=final', '--n=rl']
+    sys.argv = ['data_test.py', '-m=epoch_000_0.957_0.957.dat', '-p=final', '--n=rl']
 
     parser = argparse.ArgumentParser()
     # parser.add_argument("--data", required=True,
