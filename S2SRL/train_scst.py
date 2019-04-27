@@ -23,9 +23,9 @@ MAX_EPOCHES = 40
 MAX_TOKENS = 40
 TRAIN_RATIO = 0.985
 
-TRAIN_QUESTION_PATH = '../data/auto_QA_data/mask/RL_train.question'
-TRAIN_ACTION_PATH = '../data/auto_QA_data/mask/RL_train.action'
-DIC_PATH = '../data/auto_QA_data/mask/share.question'
+TRAIN_QUESTION_PATH = '../data/auto_QA_data/mask_even/RL_train.question'
+TRAIN_ACTION_PATH = '../data/auto_QA_data/mask_even/RL_train.action'
+DIC_PATH = '../data/auto_QA_data/mask_even/share.question'
 
 log = logging.getLogger("train")
 
@@ -59,7 +59,7 @@ if __name__ == "__main__":
     logging.basicConfig(format="%(asctime)-15s %(levelname)s %(message)s", level=logging.INFO)
 
     # command line parameters
-    sys.argv = ['train_crossent.py', '--cuda', '-l=../data/saves/crossent/epoch_000_0.831_0.929.dat', '-n=rl']
+    sys.argv = ['train_crossent.py', '--cuda', '-l=../data/saves/crossent/pre_bleu_0.942_18.dat', '-n=rl']
 
     parser = argparse.ArgumentParser()
     # parser.add_argument("--data", required=True, help="Category to use for training. Empty string to train on full processDataset")

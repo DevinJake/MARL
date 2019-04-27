@@ -24,9 +24,9 @@ log = logging.getLogger("train")
 
 TEACHER_PROB = 1.0
 
-TRAIN_QUESTION_PATH = '../data/auto_QA_data/mask/PT_train.question'
-TRAIN_ACTION_PATH = '../data/auto_QA_data/mask/PT_train.action'
-DIC_PATH = '../data/auto_QA_data/mask/share.question'
+TRAIN_QUESTION_PATH = '../data/auto_QA_data/mask_even/PT_train.question'
+TRAIN_ACTION_PATH = '../data/auto_QA_data/mask_even/PT_train.action'
+DIC_PATH = '../data/auto_QA_data/mask_even/share.question'
 
 def run_test(test_data, net, end_token, device="cpu"):
     bleu_sum = 0.0

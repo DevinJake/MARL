@@ -22,7 +22,7 @@ if __name__ == "__main__":
     # sys.argv = ['data_test.py', '-m=epoch_000_0.944_0.946.dat', '-p=rl', '--n=rl']
 
     # command line parameters for final test
-    sys.argv = ['data_test.py', '-m=epoch_000_0.957_0.957.dat', '-p=final', '--n=rl']
+    sys.argv = ['data_test.py', '-m=bleu_0.979_05.dat', '-p=sample_final', '--n=rl']
 
     parser = argparse.ArgumentParser()
     # parser.add_argument("--data", required=True,
@@ -43,7 +43,7 @@ if __name__ == "__main__":
     log.info("Open: %s", '../data/auto_QA_data/mask_test/' + str(args.pred).upper() + '_test.question')
     TEST_ACTION_PATH = '../data/auto_QA_data/mask_test/' + str(args.pred).upper() + '_test.action'
     log.info("Open: %s", '../data/auto_QA_data/mask_test/' + str(args.pred).upper() + '_test.action')
-    if args.pred == 'pt' or args.pred == 'final':
+    if args.pred == 'pt' or 'final' in args.pred:
         phrase_pairs, emb_dict = data.load_data_from_existing_data(TEST_QUESTION_PATH, TEST_ACTION_PATH, DIC_PATH)
     elif args.pred == 'rl':
         phrase_pairs, emb_dict = data.load_RL_data(TEST_QUESTION_PATH, TEST_ACTION_PATH, DIC_PATH)
