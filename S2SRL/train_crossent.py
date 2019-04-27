@@ -34,6 +34,7 @@ def run_test(test_data, net, end_token, device="cpu"):
     for p1, p2 in test_data:
         input_seq = model.pack_input(p1, net.emb, device)
         enc = net.encode(input_seq)
+        # Return logits (N*outputvocab), res_tokens (1*N)
         _, tokens = net.decode_chain_argmax(enc, input_seq.data[0:1],
                                             seq_len=data.MAX_TOKENS,
                                             stop_at_token=end_token)
@@ -68,7 +69,7 @@ if __name__ == "__main__":
              len(phrase_pairs), len(emb_dict))
     data.save_emb_dict(saves_path, emb_dict)
     end_token = emb_dict[data.END_TOKEN]
-    # 将token转换为emb_dict中的index;
+    # 将tokens转换为emb_dict中的indices;
     train_data = data.encode_phrase_pairs(phrase_pairs, emb_dict)
     rand = np.random.RandomState(data.SHUFFLE_SEED)
     rand.shuffle(train_data)

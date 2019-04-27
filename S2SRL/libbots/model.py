@@ -51,8 +51,19 @@ class PhraseModel(nn.Module):
         return out
 
     def decode_one(self, hid, input_x):
+        # Example for unsqueeze:
+        #             >>> x = torch.tensor([1, 2, 3, 4])
+        #             >>> torch.unsqueeze(x, 0)
+        #             tensor([[ 1,  2,  3,  4]])
+        #             >>> torch.unsqueeze(x, 1)
+        #             tensor([[ 1],
+        #                     [ 2],
+        #                     [ 3],
+        #                     [ 4]])
         out, new_hid = self.decoder(input_x.unsqueeze(0), hid)
+        # Self.output(out) using nn.Linear(hid_size, dict_size) to transform logits to distribution over output vocab.
         out = self.output(out)
+        # squeeze: Returns a tensor with all the dimensions of :attr:`input` of size `1` removed.
         return out.squeeze(dim=0), new_hid
 
     def decode_chain_argmax(self, hid, begin_emb, seq_len, stop_at_token=None):
@@ -61,19 +72,58 @@ class PhraseModel(nn.Module):
         """
         res_logits = []
         res_tokens = []
+        # First cur_emb is the embedding of '#BEG'.
         cur_emb = begin_emb
 
+        # At first using the '#BEG' as first input token and hidden states from encoder as initial hidden state to predict the first output token and first decoder hidden state.
+        # Then predict the output token by using last step's output token as current step's input and last step's decoder hidden state.
         for _ in range(seq_len):
+            # The out_logits is the distribution over whole output vocabulary.
+            # The hid is new hidden state generated from current time step.
             out_logits, hid = self.decode_one(hid, cur_emb)
+            # After torch.max operation, the result is a list.
+            # First element is the largest logit value in dimension-1 (each row), the second value is the index of the largest logit value.
+            # >>> a = torch.randn(4, 4)
+            # >>> a
+            # tensor([[-1.2360, -0.2942, -0.1222,  0.8475],
+            #         [ 1.1949, -1.1127, -2.2379, -0.6702],
+            #         [ 1.5717, -0.9207,  0.1297, -1.8768],
+            #         [-0.6172,  1.0036, -0.6060, -0.2432]])
+            # >>> torch.max(a, 1)
+            # (tensor([ 0.8475,  1.1949,  1.5717,  1.0036]), tensor([ 3,  0,  0,  1]))
             out_token_v = torch.max(out_logits, dim=1)[1]
+            # Transform tensorflow to array and return array[0];
             out_token = out_token_v.data.cpu().numpy()[0]
-
+            # Using current output token's embedding.
             cur_emb = self.emb(out_token_v)
 
+            # The list of out_logits list.
             res_logits.append(out_logits)
+            # The list of output tokens.
             res_tokens.append(out_token)
+            # When the EOS is predicted the prediction is ended.
             if stop_at_token is not None and out_token == stop_at_token:
                 break
+        # torch.cat(tensors, dim=0, out=None) → Tensor
+        # Concatenates the given sequence of seq tensors in the given dimension.
+        # All tensors must either have the same shape (except in the concatenating dimension) or be empty.
+        # >>> x = torch.randn(2, 3)
+        # >>> x
+        # tensor([[ 0.6580, -1.0969, -0.4614],
+        #         [-0.1034, -0.5790,  0.1497]])
+        # >>> torch.cat((x, x, x), 0)
+        # tensor([[ 0.6580, -1.0969, -0.4614],
+        #         [-0.1034, -0.5790,  0.1497],
+        #         [ 0.6580, -1.0969, -0.4614],
+        #         [-0.1034, -0.5790,  0.1497],
+        #         [ 0.6580, -1.0969, -0.4614],
+        #         [-0.1034, -0.5790,  0.1497]])
+        # >>> torch.cat((x, x, x), 1)
+        # tensor([[ 0.6580, -1.0969, -0.4614,  0.6580, -1.0969, -0.4614,  0.6580,
+        #          -1.0969, -0.4614],
+        #         [-0.1034, -0.5790,  0.1497, -0.1034, -0.5790,  0.1497, -0.1034,
+        #          -0.5790,  0.1497]])
+        # Concatenate follow rows.
         return torch.cat(res_logits), res_tokens
 
     def decode_chain_sampling(self, hid, begin_emb, seq_len, stop_at_token=None):
@@ -87,11 +137,16 @@ class PhraseModel(nn.Module):
 
         for _ in range(seq_len):
             out_logits, hid = self.decode_one(hid, cur_emb)
+            # Using softmax to transform logits to probabilities.
             out_probs_v = F.softmax(out_logits, dim=1)
             out_probs = out_probs_v.data.cpu().numpy()[0]
+            # np.random.choice(out_probs.shape[0], p=out_probs):
+            # choose one index from out_probs.shape[0] by the probabilities associated with each entry as out_probs.
             action = int(np.random.choice(out_probs.shape[0], p=out_probs))
+            # Transform action to tensor and cast it to the device where begin_emb is in.
             action_v = torch.LongTensor([action]).to(begin_emb.device)
             action_v = action_v.cuda()
+            # Get the embedding of the sampled output token.
             cur_emb = self.emb(action_v)
 
             res_logits.append(out_logits)
@@ -102,13 +157,25 @@ class PhraseModel(nn.Module):
 
 
 def pack_batch_no_out(batch, embeddings, device="cpu"):
+    # Assert statements are a convenient way to insert debugging assertions into a program.
+    # To guarantee that the batch is a list.
     assert isinstance(batch, list)
+    # The format of batch is a list of tuple: ((tuple),[[list of token ID list]])
+    # A lambda function is a small anonymous function, the example is as following.
+    # x = lambda a, b: a * b
+    # print(x(5, 6))
     # Sort descending (CuDNN requirements) batch中第一个元素为最长的句子；
     batch.sort(key=lambda s: len(s[0]), reverse=True)
-    # input_idx：一个batch的输入句子的tokens对应的ID矩阵；
-    # output_idx：一个batch的输出句子的tokens对应的ID矩阵；
+    # input_idx：一个batch的输入句子的tokens对应的ID矩阵；Each row is corresponding to one input sentence.
+    # output_idx：一个batch的输出句子的tokens对应的ID矩阵；Each row is corresponding to a list of several output sentences.
     input_idx, output_idx = zip(*batch)
     # create padded matrix of inputs
+    # map() function returns a list of the results after applying the given function to each item of a given iterable (list, tuple etc.)
+    # For example:
+    # numbers = (1, 2, 3, 4)
+    # result = map(lambda x: x + x, numbers)
+    # print(list(result))
+    # Output: {2, 4, 6, 8}
     # 建立长度词典，为batch中每一个元素的长度；
     lens = list(map(len, input_idx))
     # 以最长的句子来建立batch*最长句子长度的全0矩阵；

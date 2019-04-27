@@ -59,7 +59,7 @@ def encode_phrase_pairs(phrase_pairs, emb_dict, filter_unknows=True):
     result = []
     for p1, p2 in phrase_pairs:
         p = encode_words(p1, emb_dict), encode_words(p2, emb_dict)
-        # TODO: 有UNK为什么不加入训练测试集了？这个不对。
+        '''It is not correct to exclude the sample with 'UNK' from the dataset.'''
         # if unk_token in p[0] or unk_token in p[1]:
         #     continue
         result.append(p)
@@ -73,7 +73,7 @@ def group_train_data(training_data):
 
     这里的defaultdict(function_factory)构建的是一个类似dictionary的对象，
     其中keys的值，自行确定赋值，但是values的类型，是function_factory的类实例，而且具有默认值。
-    比如default(int)则创建一个类似dictionary对象，里面任何的values都是int的实例，
+    比如defaultdict(int)则创建一个类似dictionary对象，里面任何的values都是int的实例，
     而且就算是一个不存在的key, d[key] 也有一个默认值，这个默认值是int()的默认值0.
     一般用法为：
     d = collections.defaultdict(list)
@@ -83,6 +83,7 @@ def group_train_data(training_data):
     groups = collections.defaultdict(list)
     for p1, p2 in training_data:
         # 取出key为tuple(p1)的value；
+        # If no value is assigned to the key, the default value (in this case empty list) is assigned to the key.
         l = groups[tuple(p1)]
         # 将p2挂在value后面，完成grouping操作；
         l.append(p2)
@@ -304,6 +305,6 @@ def trim_tokens_seq(tokens, end_token):
     return res
 
 
-def split_train_test(data, train_ratio=0.985):
+def split_train_test(data, train_ratio=0.90):
     count = int(len(data) * train_ratio)
     return data[:count], data[count:]
