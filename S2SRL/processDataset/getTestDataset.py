@@ -146,56 +146,9 @@ def getSampleTestDataset():
     fwTestA.close()
     print ("Getting test processDataset is done!")
 
-def getShareVocabulary():
-    questionVocab = set()
-    actionVocab = set()
-    actionVocab_list = list()
-    with open('../../data/auto_QA_data/mask/dic.question', 'r', encoding="UTF-8") as infile:
-        count = 0
-        while True:
-            lines_gen = list(islice(infile, LINE_SIZE))
-            if not lines_gen:
-                break
-            for line in lines_gen:
-                token = line.strip()
-                questionVocab.add(token)
-            count = count + 1
-            print(count)
-    with open('../../data/auto_QA_data/mask/dic.action', 'r', encoding="UTF-8") as infile:
-        count = 0
-        while True:
-            lines_gen = list(islice(infile, LINE_SIZE))
-            if not lines_gen:
-                break
-            for line in lines_gen:
-                token = line.strip()
-                actionVocab.add(token)
-            count = count + 1
-            print(count)
-    action_size = 0
-    for word in actionVocab:
-        if word not in questionVocab and word not in special_characters:
-            actionVocab_list.append(word)
-            action_size += 1
-        elif word in special_characters:
-            actionVocab_list.append(word)
-            action_size += 1
-            if word in questionVocab:
-                questionVocab.remove(word)
-    questionVocab_list = list(questionVocab)
-    share_vocab_list = actionVocab_list + questionVocab_list
-    for i in range(len(share_vocab_list)):
-        share_vocab_list[i] = share_vocab_list[i] + '\n'
-    fw = open('../../data/auto_QA_data/mask_test/share.question', 'w', encoding="UTF-8")
-    fw.writelines(share_vocab_list)
-    fw.close()
-    print("Writing SHARE VOCAB is done!")
-    return action_size
-
 # Run getTestDataset to get the final test processDataset.
 if __name__ == "__main__":
     # getTestDataset()
-    # getShareVocabulary()
     getSampleTestDataset()
 
 

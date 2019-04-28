@@ -26,7 +26,7 @@ TEACHER_PROB = 1.0
 
 TRAIN_QUESTION_PATH = '../data/auto_QA_data/mask_even/PT_train.question'
 TRAIN_ACTION_PATH = '../data/auto_QA_data/mask_even/PT_train.action'
-DIC_PATH = '../data/auto_QA_data/mask_even/share.question'
+DIC_PATH = '../data/auto_QA_data/share.question'
 
 def run_test(test_data, net, end_token, device="cpu"):
     bleu_sum = 0.0
@@ -47,7 +47,7 @@ if __name__ == "__main__":
     logging.basicConfig(format="%(asctime)-15s %(levelname)s %(message)s", level=logging.INFO)
 
     # command line parameters
-    sys.argv = ['train_crossent.py', '--cuda', '--n=crossent']
+    sys.argv = ['train_crossent.py', '--cuda', '--n=crossent_even']
 
     parser = argparse.ArgumentParser()
     # parser.add_argument("--data", required=True, help="Category to use for training. "
@@ -65,6 +65,8 @@ if __name__ == "__main__":
     # 得到配对的input-output pair和对应的词汇表（词汇表放在一起），这里可以换成自己的pair和词典！
     # phrase_pairs, emb_dict = data.load_data(genre_filter=args.data)
     phrase_pairs, emb_dict = data.load_data_from_existing_data(TRAIN_QUESTION_PATH, TRAIN_ACTION_PATH, DIC_PATH, MAX_TOKENS)
+    # Index -> word.
+    rev_emb_dict = {idx: word for word, idx in emb_dict.items()}
     log.info("Obtained %d phrase pairs with %d uniq words",
              len(phrase_pairs), len(emb_dict))
     data.save_emb_dict(saves_path, emb_dict)
@@ -91,6 +93,8 @@ if __name__ == "__main__":
         losses = []
         bleu_sum = 0.0
         bleu_count = 0
+        dial_shown = False
+        random.shuffle(train_data)
         for batch in data.iterate_batches(train_data, BATCH_SIZE):
             optimiser.zero_grad()
             # input_idx：一个batch的输入句子的tokens对应的ID矩阵；
@@ -115,15 +119,27 @@ if __name__ == "__main__":
                 # teacher forcing做训练；
                 if random.random() < TEACHER_PROB:
                     r = net.decode_teacher(enc_item, out_seq)
-                    bleu_sum += model.seq_bleu(r, ref_indices)
+                    blue_temp = model.seq_bleu(r, ref_indices)
+                    bleu_sum += blue_temp
+                    # Get predicted tokens.
+                    seq = torch.max(r.data, dim=1)[1]
+                    seq = seq.cpu().numpy()
                 # argmax做训练；
                 else:
                     r, seq = net.decode_chain_argmax(enc_item, out_seq.data[0:1],
                                                      len(ref_indices))
-                    bleu_sum += utils.calc_bleu(seq, ref_indices)
+                    blue_temp = utils.calc_bleu(seq, ref_indices)
+                    bleu_sum += blue_temp
                 net_results.append(r)
                 net_targets.extend(ref_indices)
                 bleu_count += 1
+
+                if not dial_shown:
+                    # data.decode_words transform IDs to tokens.
+                    ref_words = [utils.untokenize(data.decode_words(ref_indices, rev_emb_dict))]
+                    log.info("Reference: %s", " ~~|~~ ".join(ref_words))
+                    log.info("Predicted: %s, bleu=%.4f", utils.untokenize(data.decode_words(seq, rev_emb_dict)), blue_temp)
+                    dial_shown = True
             results_v = torch.cat(net_results)
             results_v = results_v.cuda()
             targets_v = torch.LongTensor(net_targets).to(device)
@@ -153,5 +169,5 @@ if __name__ == "__main__":
             out_name = os.path.join(saves_path, "epoch_%03d_%.3f_%.3f.dat" %
                                     (epoch, bleu, bleu_test))
             torch.save(net.state_dict(), out_name)
-
+        print ("------------------Epoch " + str(epoch) + ": training is over.------------------")
     writer.close()
