@@ -11,5 +11,9 @@ def test():
     a = log_prob_v[actions_t]
     print(a)
 
+    answer = 111
+    orig_response = 222
+    print (str(answer) + "::" + str(orig_response))
+
 if __name__ == "__main__":
     test()

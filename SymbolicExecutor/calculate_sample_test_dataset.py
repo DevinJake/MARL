@@ -13,7 +13,7 @@ from symbolics import Symbolics
 
 
 def transMask2Action(state):
-    with open("../data/auto_QA_data/CSQA_ANNOTATIONS_test.json", 'r') as load_f, open("../data/saves/rl/sample_final_predict.actions", 'r') as predict_actions \
+    with open("../data/auto_QA_data/CSQA_ANNOTATIONS_test.json", 'r') as load_f, open("../data/saves/rl_even/sample_final_predict.actions", 'r') as predict_actions \
             , open("../data/auto_QA_data/mask_test/SAMPLE_FINAL_test.question", 'r') as RL_test:
         count = 1
         load_dict = json.load(load_f)
@@ -59,19 +59,19 @@ def transMask2Action(state):
                 answer = symbolic_exe.executor()
 
                 if state.startswith("QuantitativeReasoning(Count)(All)") or state.startswith("ComparativeReasoning(Count)(All)"):
-                    print symbolic_seq
-                    print "answer::orig_response", answer, orig_response
+                    print (symbolic_seq)
+                    print (str(answer)+"::"+str(orig_response))
 
                     if orig_response.isdigit() and answer == int(orig_response):
                         count_right_count += 1
-                        print "count_right_count+1"
+                        print ("count_right_count+1")
                     else:
                         import re
                         orig_response = re.findall(r"\d+\.?\d*", orig_response)
                         orig_response = sum([int(i) for i in orig_response])
                         if answer == orig_response:
                             count_right_count += 1
-                            print "count_right_count+1"
+                            print ("count_right_count+1")
                 if state.startswith("Verification(Boolean)(All)"):
                     if answer == True:
                         answer = "YES"
@@ -109,9 +109,9 @@ def transMask2Action(state):
                 print("Recall:", recall)
                 print('===============================')
             # print answer
-        print "bool_right_count", bool_right_count
-        print "count_right_count", count_right_count
-        print "total_num::total_right::total_answer::total_response", num, total_right_count, total_answer_count, total_response_count
+        print ("bool_right_count: "+str(bool_right_count))
+        print ("count_right_count: "+str(count_right_count))
+        print ("total_num::total_right::total_answer::total_response: "+str(num)+'::'+str(total_right_count)+'::'+str(total_answer_count)+'::'+str(total_response_count))
         mean_pre = total_precision / num
         mean_recall = total_recall / num
         mean_pre2 = float(total_right_count) / total_answer_count
