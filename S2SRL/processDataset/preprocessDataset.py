@@ -429,7 +429,7 @@ def getShareVocabulary():
     share_vocab_list = actionVocab_list + questionVocab_list
     for i in range(len(share_vocab_list)):
         share_vocab_list[i] = share_vocab_list[i] + '\n'
-    fw = open('../../data/auto_QA_data/mask/share.question', 'w', encoding="UTF-8")
+    fw = open('../../data/auto_QA_data/share.question', 'w', encoding="UTF-8")
     fw.writelines(share_vocab_list)
     fw.close()
     print("Writing SHARE VOCAB is done!")

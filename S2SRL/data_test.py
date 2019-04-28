@@ -10,7 +10,7 @@ import torch
 
 log = logging.getLogger("data_test")
 
-DIC_PATH = '../data/auto_QA_data/mask_test/share.question'
+DIC_PATH = '../data/auto_QA_data/share.question'
 
 if __name__ == "__main__":
     logging.basicConfig(format="%(asctime)-15s %(levelname)s %(message)s", level=logging.INFO)
@@ -22,7 +22,7 @@ if __name__ == "__main__":
     # sys.argv = ['data_test.py', '-m=epoch_000_0.944_0.946.dat', '-p=rl', '--n=rl']
 
     # command line parameters for final test
-    sys.argv = ['data_test.py', '-m=bleu_0.979_05.dat', '-p=sample_final', '--n=rl']
+    sys.argv = ['data_test.py', '-m=bleu_0.984_09.dat', '-p=sample_final', '--n=rl_even']
 
     parser = argparse.ArgumentParser()
     # parser.add_argument("--data", required=True,

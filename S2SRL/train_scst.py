@@ -19,13 +19,13 @@ SAVES_DIR = "../data/saves"
 
 BATCH_SIZE = 16
 LEARNING_RATE = 1e-4
-MAX_EPOCHES = 40
+MAX_EPOCHES = 30
 MAX_TOKENS = 40
 TRAIN_RATIO = 0.985
 
 TRAIN_QUESTION_PATH = '../data/auto_QA_data/mask_even/RL_train.question'
 TRAIN_ACTION_PATH = '../data/auto_QA_data/mask_even/RL_train.action'
-DIC_PATH = '../data/auto_QA_data/mask_even/share.question'
+DIC_PATH = '../data/auto_QA_data/share.question'
 
 log = logging.getLogger("train")
 
@@ -59,8 +59,9 @@ if __name__ == "__main__":
     logging.basicConfig(format="%(asctime)-15s %(levelname)s %(message)s", level=logging.INFO)
 
     # command line parameters
-    sys.argv = ['train_crossent.py', '--cuda', '-l=../data/saves/crossent/pre_bleu_0.942_18.dat', '-n=rl']
+    # sys.argv = ['train_crossent.py', '--cuda', '-l=../data/saves/crossent/pre_bleu_0.942_18.dat', '-n=rl']
 
+    sys.argv = ['train_crossent.py', '--cuda', '-l=../data/saves/crossent_even/pre_bleu_0.942_26.dat', '-n=rl_even']
     parser = argparse.ArgumentParser()
     # parser.add_argument("--data", required=True, help="Category to use for training. Empty string to train on full processDataset")
     parser.add_argument("--cuda", action='store_true', default=False, help="Enable cuda")
