@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 # @Time    : 2019/1/18 14:52
 
-from urllib import urlencode
+try:
+    from urllib import urlencode
+except ImportError:
+    from urllib.parse import urlencode
 
 import pickle
 import requests
@@ -96,7 +99,8 @@ class Symbolics():
             json_pack = dict()
             json_pack['op']="is_A"
             json_pack['entity']=e
-            content=requests.post("http://127.0.0.1:5000/post",json=json_pack).json()['content']
+            content = requests.post("http://10.201.19.151:5000/post", json=json_pack).json()['content']
+            # content=requests.post("http://127.0.0.1:5000/post",json=json_pack).json()['content']
             return content
 
     def select(self, e, r, t):
@@ -115,7 +119,8 @@ class Symbolics():
             json_pack['sub'] = e
             json_pack['pre'] = r
             json_pack['obj'] = t
-            content = requests.post("http://127.0.0.1:5000/post", json=json_pack).json()['content']
+            # content = requests.post("http://127.0.0.1:5000/post", json=json_pack).json()['content']
+            content = requests.post("http://10.201.19.151:5000/post", json=json_pack).json()['content']
             if content is not None:
                 content = set(content)
             else:
@@ -142,7 +147,8 @@ class Symbolics():
             json_pack['pre'] = r
             json_pack['obj'] = t
 
-        content = requests.post("http://127.0.0.1:5000/post", json=json_pack).json()['content']
+        content = requests.post("http://10.201.19.151:5000/post", json=json_pack).json()['content']
+        # content = requests.post("http://127.0.0.1:5000/post", json=json_pack).json()['content']
         # for k, v in content.items():
         #   if len(v) == 0: content.pop(k)
 
