@@ -146,13 +146,13 @@ def transMask2Action(state):
         mean_recall = total_recall / num
         mean_pre2 = float(total_right_count) / total_answer_count
         mean_recall2 = float(total_right_count) / total_response_count
-        string_mean_pre = str(state) + "::mean_pre::mean_recall", mean_pre, mean_recall
-        string_mean_pre2 = str(state) + "::mean_pre2::mean_recall2", mean_pre2, mean_recall2
+        string_mean_pre = "state::mean_pre::mean_recall -> %s::%f::%f" %(state, mean_pre, mean_recall)
+        string_mean_pre2 = "state::mean_pre2::mean_recall2 -> %s::%f::%f" %(state, mean_pre2, mean_recall2)
         print(string_mean_pre)
         print(string_mean_pre2)
         print("++++++++++++++")
-        logging.info("state::mean_pre::mean_recall->%s::%f::%f", state, mean_pre, mean_recall)
-        logging.info("state::mean_pre2::mean_recall2->%s::%f::%f", state, mean_pre2, mean_recall2)
+        logging.info("state::mean_pre::mean_recall -> %s::%f::%f", state, mean_pre, mean_recall)
+        logging.info("state::mean_pre2::mean_recall2 -> %s::%f::%f", state, mean_pre2, mean_recall2)
         logging.info("++++++++++++++")
         linelist.append(string_mean_pre + '\r\n')
         linelist.append(string_mean_pre2 + '\r\n')
