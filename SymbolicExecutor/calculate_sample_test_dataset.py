@@ -8,14 +8,21 @@
 '''
 
 import json
-
-from symbolics import Symbolics
-
+from SymbolicExecutor.symbolics import Symbolics
+import logging
+log1 = logging.basicConfig(level=logging.INFO,#控制台打印的日志级别
+                    filename='../data/auto_QA_data/test_result/sample_testdataset_result_without_magic.log',
+                    filemode='w',##模式，有w和a，w就是写模式，每次都会重新写日志，覆盖之前的日志
+                    #a是追加模式，默认如果不写的话，就是追加模式
+                    format=
+                    '%(message)s'
+                    #日志格式
+                    )
 
 def transMask2Action(state):
     with open("../data/auto_QA_data/CSQA_ANNOTATIONS_test.json", 'r') as load_f, open("../data/saves/rl_even/sample_final_predict.actions", 'r') as predict_actions \
             , open("../data/auto_QA_data/mask_test/SAMPLE_FINAL_test.question", 'r') as RL_test:
-        count = 1
+        linelist = list()
         load_dict = json.load(load_f)
         num = 0
         total_precision = 0
@@ -47,31 +54,38 @@ def transMask2Action(state):
                             act = k
                             break
                     new_action.append(act)
-                print("{0}:{1}".format(id, action))
+                print("{0}".format(num))
+                '''print("{0}: {1}->{2}".format(num, id, action))'''
+                logging.info("%d: %s -> %s", num, id, action)
                 #print(" ".join(new_action))
                 symbolic_seq = list2dict(new_action)
                 # symbolic_seq.append({"A11":["","",""]})### A11
-                if state.startswith("Verification(Boolean)(All)"):
-                    symbolic_seq[-1] = {"A3":["","",""]} if not symbolic_seq[-1].has_key("A3") else symbolic_seq[-1]### A3
-                if state.startswith("QuantitativeReasoning(Count)(All)") or state.startswith("ComparativeReasoning(Count)(All)"):
-                    symbolic_seq[-1] = {"A11": ["", "", ""]} if not symbolic_seq[-1].has_key("A11") else symbolic_seq[-1]
+                # Modify with magic.
+                # if state.startswith("Verification(Boolean)(All)"):
+                #     symbolic_seq[-1] = {"A3":["","",""]} if not symbolic_seq[-1].has_key("A3") else symbolic_seq[-1]### A3
+                # if state.startswith("QuantitativeReasoning(Count)(All)") or state.startswith("ComparativeReasoning(Count)(All)"):
+                #     symbolic_seq[-1] = {"A11": ["", "", ""]} if not symbolic_seq[-1].has_key("A11") else symbolic_seq[-1]
                 symbolic_exe = Symbolics(symbolic_seq)
                 answer = symbolic_exe.executor()
 
                 if state.startswith("QuantitativeReasoning(Count)(All)") or state.startswith("ComparativeReasoning(Count)(All)"):
-                    print (symbolic_seq)
-                    print (str(answer)+"::"+str(orig_response))
+                    '''print (symbolic_seq)
+                    print ("%s::%s" %(answer, orig_response))'''
+                    logging.info(symbolic_seq)
+                    logging.info("answer:%s, orig_response:%s", answer, orig_response)
 
                     if orig_response.isdigit() and answer == int(orig_response):
                         count_right_count += 1
-                        print ("count_right_count+1")
+                        '''print ("count_right_count+1")'''
+                        logging.info("count_right_count+1")
                     else:
                         import re
                         orig_response = re.findall(r"\d+\.?\d*", orig_response)
                         orig_response = sum([int(i) for i in orig_response])
                         if answer == orig_response:
                             count_right_count += 1
-                            print ("count_right_count+1")
+                            '''print ("count_right_count+1")'''
+                            logging.info("count_right_count+1")
                 if state.startswith("Verification(Boolean)(All)"):
                     if answer == True:
                         answer = "YES"
@@ -79,6 +93,8 @@ def transMask2Action(state):
                         answer = "NO"
                     if answer == orig_response:
                         bool_right_count+=1
+                        '''print("bool_right_count+1")'''
+                        logging.info("bool_right_count+1")
                 if (type(answer) == dict):
                     temp = []
                     for key, value in answer.items():
@@ -104,22 +120,44 @@ def transMask2Action(state):
                 total_precision += precision
                 recall = (right_count / float(len(response_entities))) if len(response_entities) != 0 else 0
                 total_recall += recall
-                print("orig:", len(response_entities), "answer:", len(answer), "right:", right_count)
+                '''print("orig:", len(response_entities), "answer:", len(answer), "right:", right_count)
                 print("Precision:", precision),
                 print("Recall:", recall)
-                print('===============================')
+                print('===============================')'''
+                logging.info("orig:%d, answer:%d, right:%d", len(response_entities), len(answer), right_count)
+                logging.info("Precision:%f", precision)
+                logging.info("Recall:%f", recall)
+                logging.info("============================")
             # print answer
-        print ("bool_right_count: "+str(bool_right_count))
-        print ("count_right_count: "+str(count_right_count))
-        print ("total_num::total_right::total_answer::total_response: "+str(num)+'::'+str(total_right_count)+'::'+str(total_answer_count)+'::'+str(total_response_count))
+        string_bool_right = "bool_right_count: %d" %bool_right_count
+        string_count_right_count = "count_right_count: %d" %count_right_count
+        string_total_num = "total_num::total_right::total_answer::total_response -> %d::%d::%d::%d" %(num, total_right_count, total_answer_count, total_response_count)
+        print (string_bool_right)
+        print (string_count_right_count)
+        print (string_total_num)
+        logging.info("bool_right_count:%d", bool_right_count)
+        logging.info("count_right_count:%d", count_right_count)
+        logging.info("total_num::total_right::total_answer::total_response -> %d::%d::%d::%d", num, total_right_count, total_answer_count, total_response_count)
+        linelist.append(string_bool_right + '\r\n')
+        linelist.append(string_count_right_count + '\r\n')
+        linelist.append(string_total_num + '\r\n')
+
         mean_pre = total_precision / num
         mean_recall = total_recall / num
         mean_pre2 = float(total_right_count) / total_answer_count
         mean_recall2 = float(total_right_count) / total_response_count
-        print(state + "::mean_pre::mean_recall", mean_pre, mean_recall)
-        print(state + "::mean_pre2::mean_recall2", mean_pre2, mean_recall2)
+        string_mean_pre = str(state) + "::mean_pre::mean_recall", mean_pre, mean_recall
+        string_mean_pre2 = str(state) + "::mean_pre2::mean_recall2", mean_pre2, mean_recall2
+        print(string_mean_pre)
+        print(string_mean_pre2)
         print("++++++++++++++")
-
+        logging.info("state::mean_pre::mean_recall->%s::%f::%f", state, mean_pre, mean_recall)
+        logging.info("state::mean_pre2::mean_recall2->%s::%f::%f", state, mean_pre2, mean_recall2)
+        logging.info("++++++++++++++")
+        linelist.append(string_mean_pre + '\r\n')
+        linelist.append(string_mean_pre2 + '\r\n')
+        linelist.append('++++++++++++++\r\n')
+        return linelist
 
 def list2dict(list):
     final_list = []
@@ -168,10 +206,15 @@ if __name__ == "__main__":
     # Verification(Boolean)(All)
     # SimpleQuestion(Direct)
     # LogicalReasoning(All)
+    fw = open('../data/auto_QA_data/test_result/sample_testdataset_result_without_magic.txt', 'w', encoding="UTF-8")
     state_list = ["SimpleQuestion(Direct)","Verification(Boolean)(All)","QuantitativeReasoning(Count)(All)","QuantitativeReasoning(All)",
                   "ComparativeReasoning(Count)(All)",
                   "ComparativeReasoning(All)","LogicalReasoning(All)"]
     # for state in state_list:
     #     transMask2Action(state)
-    transMask2Action("ComparativeReasoning(Count)(All)")
+    linelist = list()
+    linelist += transMask2Action("SimpleQuestion(Direct)")
+    linelist += transMask2Action("Verification(Boolean)(All)")
+    fw.writelines(linelist)
+    fw.close()
 # print (calc_pression('D:/study/nmt/nmt/nmt/csqa/data/dev.action', 'D:/study/nmt/nmt/nmt/csqa/data/nmt_model/shuffle52k/output_dev', 'D:/study/nmt/nmt/nmt/csqa/data/nmt_model/shuffle52k'))

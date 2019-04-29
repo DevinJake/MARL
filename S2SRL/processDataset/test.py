@@ -14,6 +14,9 @@ def test():
     answer = 111
     orig_response = 222
     print (str(answer) + "::" + str(orig_response))
+    print ("%s::%s" %(answer, orig_response))
+    temp_string = "%s::%s" %(answer, orig_response)
+    print (temp_string)
 
 if __name__ == "__main__":
     test()
