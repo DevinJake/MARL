@@ -29,12 +29,12 @@ class Symbolics():
 
     def executor(self):
         for symbolic in self.seq:
-            key = symbolic.keys()[0]
+            key = list(symbolic.keys())[0]
             e = symbolic[key][0].strip()
             r = symbolic[key][1].strip()
             t = symbolic[key][2].strip()
             if ("A1" in symbolic):
-                self.answer = self.select(e, r.encode("utf-8"), t.encode("utf-8"))
+                self.answer = self.select(e, r, t)
                 self.print_answer()
             elif ("A2" in symbolic or "A16" in symbolic):
                 self.answer = self.select_all(e, r, t)
@@ -212,7 +212,7 @@ class Symbolics():
         # 进行 union 操作 todo 这里前面都和select部分一样 所以还是应该拆开？ union单独做 好处是union可以不止合并两个 字典里的都可以合并
         union_key = ""
         union_value = set([])
-        for k, v in answer_dict.iteritems():
+        for k, v in answer_dict.items():
             if v == None: v = []
             union_value = union_value | set(v)
         union_key = "|"
@@ -235,7 +235,7 @@ class Symbolics():
         # 进行 inter 类似 union
         inter_key = ""
         inter_value = set([])
-        for k, v in answer_dict.iteritems():
+        for k, v in answer_dict.items():
             if v == None: v = []
             if len(inter_value) > 0:
                 inter_value = inter_value & set(v)
@@ -259,7 +259,7 @@ class Symbolics():
         # 进行 diff 操作 类似 union
         diff_key = ""
         diff_value = set([])
-        for k, v in answer_dict.iteritems():
+        for k, v in answer_dict.items():
             if v == None: v = []
             if k != e:
                 diff_value.update(set(v))
@@ -292,7 +292,7 @@ class Symbolics():
         #         self.answer.pop(k)
         # return self.answer
         answer_keys = []
-        for k, v in self.answer.iteritems():
+        for k, v in self.answer.items():
             if len(v) >= int(N):
                 answer_keys.append(k)
         return answer_keys
@@ -309,7 +309,7 @@ class Symbolics():
 
     def equal(self, N):
         answer_keys = []
-        for k, v in self.answer.iteritems():
+        for k, v in self.answer.items():
             #print k,len(v)
             if len(v) == int(N):
                 answer_keys.append(k)
@@ -321,7 +321,7 @@ class Symbolics():
             dict_temp = self.select_all(e,r,t)
             N = len(dict_temp)
         answer_keys = []
-        for k, v in self.answer.iteritems():
+        for k, v in self.answer.items():
             # print k, len(v),abs(len(v)-int(N)),(int(N)/2)
             if abs(len(v)-int(N))<(int(N)*0.6):
                 answer_keys.append(k)
@@ -335,7 +335,7 @@ class Symbolics():
     def print_answer(self):
         pass
         # if(type(self.answer) == dict):
-        #     for k,v in self.answer.iteritems():
+        #     for k,v in self.answer.items():
         #         #print self.item_data[k],": ",
         #         for value in v:
         #         #    print self.item_data[value], ",",
