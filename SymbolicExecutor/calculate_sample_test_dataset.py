@@ -156,7 +156,7 @@ def transMask2Action(state):
         logging.info("++++++++++++++")
         linelist.append(string_mean_pre + '\r\n')
         linelist.append(string_mean_pre2 + '\r\n')
-        linelist.append('++++++++++++++\r\n')
+        linelist.append('++++++++++++++\n\n')
         return linelist
 
 def list2dict(list):
@@ -206,15 +206,14 @@ if __name__ == "__main__":
     # Verification(Boolean)(All)
     # SimpleQuestion(Direct)
     # LogicalReasoning(All)
-    fw = open('../data/auto_QA_data/test_result/sample_testdataset_result_without_magic.txt', 'w', encoding="UTF-8")
-    state_list = ["SimpleQuestion(Direct)","Verification(Boolean)(All)","QuantitativeReasoning(Count)(All)","QuantitativeReasoning(All)",
-                  "ComparativeReasoning(Count)(All)",
-                  "ComparativeReasoning(All)","LogicalReasoning(All)"]
-    # for state in state_list:
-    #     transMask2Action(state)
     linelist = list()
-    linelist += transMask2Action("SimpleQuestion(Direct)")
-    linelist += transMask2Action("Verification(Boolean)(All)")
+    fw = open('../data/auto_QA_data/test_result/sample_testdataset_result_without_magic.txt', 'w', encoding="UTF-8")
+    # state_list = ["SimpleQuestion(Direct)","Verification(Boolean)(All)","QuantitativeReasoning(Count)(All)","QuantitativeReasoning(All)",
+    #               "ComparativeReasoning(Count)(All)",
+    #               "ComparativeReasoning(All)","LogicalReasoning(All)"]
+    state_list = ["SimpleQuestion(Direct)", "Verification(Boolean)(All)"]
+    for state in state_list:
+        linelist += transMask2Action(state)
     fw.writelines(linelist)
     fw.close()
 # print (calc_pression('D:/study/nmt/nmt/nmt/csqa/data/dev.action', 'D:/study/nmt/nmt/nmt/csqa/data/nmt_model/shuffle52k/output_dev', 'D:/study/nmt/nmt/nmt/csqa/data/nmt_model/shuffle52k'))
