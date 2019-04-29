@@ -8,7 +8,7 @@
 '''
 
 import json
-from SymbolicExecutor.symbolics import Symbolics
+from symbolics import Symbolics
 import logging
 log1 = logging.basicConfig(level=logging.INFO,#控制台打印的日志级别
                     filename='../data/auto_QA_data/test_result/sample_testdataset_result_without_magic.log',
