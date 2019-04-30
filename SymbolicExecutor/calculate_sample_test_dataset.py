@@ -169,7 +169,6 @@ def list2dict(list):
             continue
         if (a == ")"):
             if ("-" in new_list):
-                if(new_list.index("-") == len(new_list)): break
                 new_list[new_list.index("-") + 1] = "-" + new_list[new_list.index("-") + 1]
                 new_list.remove("-")
             if (new_list == []):
@@ -209,7 +208,7 @@ if __name__ == "__main__":
     # LogicalReasoning(All)
     linelist = list()
     fw = open('../data/auto_QA_data/test_result/sample_testdataset_result_without_magic.txt', 'w', encoding="UTF-8")
-    state_list = ["ComparativeReasoning(All)","Verification(Boolean)(All)","QuantitativeReasoning(Count)(All)","QuantitativeReasoning(All)",
+    state_list = ["SimpleQuestion(Direct)","Verification(Boolean)(All)","QuantitativeReasoning(Count)(All)","QuantitativeReasoning(All)",
                   "ComparativeReasoning(Count)(All)","ComparativeReasoning(All)","LogicalReasoning(All)"]
     # state_list = ["SimpleQuestion(Direct)", "Verification(Boolean)(All)"]
     for state in state_list:
