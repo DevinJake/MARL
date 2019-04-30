@@ -185,6 +185,7 @@ class Symbolics():
 
     def greater_than(self, e, r, t):
         content = self.answer
+        if type(content) != dict: return []
         if e in content and not content[e] == None:
             N = len(content[e])
         else:
@@ -193,6 +194,7 @@ class Symbolics():
 
     def less_than(self, e, r, t):
         content = self.answer
+        if type(content) != dict: return []
         if e in content and not content[e] == None:
             N = len(content[e])
         else:
