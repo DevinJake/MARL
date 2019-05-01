@@ -8,7 +8,6 @@
 '''
 
 import json
-
 from SymbolicExecutor.symbolics import Symbolics
 
 

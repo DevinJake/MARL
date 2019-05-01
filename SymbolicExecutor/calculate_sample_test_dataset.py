@@ -168,7 +168,7 @@ def list2dict(list):
             new_list = []
             continue
         if (a == ")"):
-            if ("-" in new_list):
+            if ("-" in new_list and new_list[-1] != "-"):
                 new_list[new_list.index("-") + 1] = "-" + new_list[new_list.index("-") + 1]
                 new_list.remove("-")
             if (new_list == []):
