@@ -208,9 +208,9 @@ if __name__ == "__main__":
     # LogicalReasoning(All)
     linelist = list()
     fw = open('../data/auto_QA_data/test_result/sample_testdataset_result_without_magic.txt', 'w', encoding="UTF-8")
-    state_list = ["SimpleQuestion(Direct)","Verification(Boolean)(All)","QuantitativeReasoning(Count)(All)","QuantitativeReasoning(All)",
-                  "ComparativeReasoning(Count)(All)","ComparativeReasoning(All)","LogicalReasoning(All)"]
-    # state_list = ["SimpleQuestion(Direct)", "Verification(Boolean)(All)"]
+    # state_list = ["SimpleQuestion(Direct)","Verification(Boolean)(All)","QuantitativeReasoning(Count)(All)","QuantitativeReasoning(All)",
+    #               "ComparativeReasoning(Count)(All)","ComparativeReasoning(All)","LogicalReasoning(All)"]
+    state_list = ["Verification(Boolean)(All)"]
     for state in state_list:
         linelist += transMask2Action(state)
     fw.writelines(linelist)
