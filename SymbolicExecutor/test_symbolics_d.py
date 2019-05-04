@@ -1,16 +1,10 @@
 # -*- coding: utf-8 -*-
-# @Time    : 2019/05/03 20:21
+# @Time     : 2019/05/03 20:21
+# @Author   : Devin Hua
 import sys
 sys.path.append('..')
 import os
-import pickle
-import json
-import random
 import time
-from unittest import TestCase
-#from urllib import urlencode
-from urllib.parse import urlencode
-import requests
 from symbolics import Symbolics
 
 def test_folder(fpath):
@@ -36,8 +30,8 @@ def test_file(root, f):
     for line in qa_file:
         if line.startswith("symbolic_seq.append"):
             flag = 1
-            key = line[line.find("{") + 1:line.find('}')].split(':')[0].replace('\"', '').strip()
-            val = line[line.find("{") + 1:line.find('}')].split(':')[1].strip()
+            key = line[line.find("{")+1: line.find('}')].split(':')[0].replace('\"', '').strip()
+            val = line[line.find("{")+1: line.find('}')].split(':')[1].strip()
             val = val.replace('[', '').replace(']', '').replace("\'", "").split(',')
 
             sym_seq.append({key: val})
@@ -50,14 +44,19 @@ def test_file(root, f):
 
         if (line.startswith("-----------") and flag == 1):
             time_start = time.time()
+            # Actions execution.
             symbolic_exe = Symbolics(sym_seq)
             answer = symbolic_exe.executor()
 
+            # To judge the returned answers are in dict format or boolean format.
             if (type(answer) == dict):
                 temp = []
-                for key,value in answer.items():
-                    if(value):
-                        temp.extend(list(value))
+                if '|BOOL_RESULT|' in answer:
+                    temp.extend(answer['|BOOL_RESULT|'])
+                else:
+                    for key,value in answer.items():
+                        if(value):
+                            temp.extend(list(value))
                 answer = temp
 
             elif type(answer) == type([]) or type(answer) == type(set([])):

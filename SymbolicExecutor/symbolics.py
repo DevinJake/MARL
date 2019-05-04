@@ -6,7 +6,6 @@ try:
 except ImportError:
     from urllib.parse import urlencode
 
-from stack import Stack
 import pickle
 import requests
 def get_id(idx):
@@ -27,6 +26,7 @@ class Symbolics():
         self.seq = seq
         self.answer = {}
         self.temp_set = set([])
+        self.temp_bool_dict = {}
 
     def executor(self):
         for symbolic in self.seq:
@@ -34,14 +34,22 @@ class Symbolics():
             e = symbolic[key][0].strip()
             r = symbolic[key][1].strip()
             t = symbolic[key][2].strip()
+            # The execution result from A1 is in dict format.
             if ("A1" in symbolic):
-                self.answer = self.select(e, r, t)
+                temp_result = self.select(e, r, t)
+                self.answer = temp_result
+                self.temp_bool_dict = temp_result
                 self.print_answer()
             elif ("A2" in symbolic or "A16" in symbolic):
                 self.answer = self.select_all(e, r, t)
                 self.print_answer()
             elif ("A3" in symbolic):
-                self.answer = self.is_bool(e)
+                bool_temp_result = self.is_bool(e)
+                if '|BOOL_RESULT|' in self.answer:
+                    self.answer['|BOOL_RESULT|'].append(bool_temp_result)
+                else:
+                    temp = [bool_temp_result]
+                    self.answer.setdefault('|BOOL_RESULT|', temp)
                 self.print_answer()
             elif ("A4" in symbolic):
                 self.answer = self.arg_min()
@@ -163,8 +171,9 @@ class Symbolics():
     def is_bool(self, e):
         # print("A3: is_bool")
         if type(self.answer) == bool: return True
-        for key in self.answer:
-            if (self.answer[key] != None and e in self.answer[key]):
+        if self.temp_bool_dict == None: return False
+        for key in self.temp_bool_dict:
+            if (self.temp_bool_dict[key] != None and e in self.temp_bool_dict[key]):
                 return True
         return False
 
@@ -390,16 +399,3 @@ if __name__ == "__main__":
         val = result_dict[e]
         for v in val:
             print(v, kb.is_A(v))
-
-    AStack = Stack()
-    AStack.add("Mon")
-    AStack.add("Tue")
-    print(AStack.peek())
-    AStack.add("Wed")
-    AStack.add("Thu")
-    print(AStack.peek())
-    print(AStack.pop())
-    print(AStack.pop())
-    print(AStack.pop())
-    print(AStack.pop())
-    print(AStack.pop())

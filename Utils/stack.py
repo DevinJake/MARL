@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-# @Time    : 2019/05/01 16:39
-# @Author  : DevinHua
+# @Time     : 2019/05/01 16:39
+# @Author   : Devin Hua
 
 class Stack:
 
