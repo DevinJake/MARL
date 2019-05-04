@@ -6,6 +6,7 @@ try:
 except ImportError:
     from urllib.parse import urlencode
 
+from stack import Stack
 import pickle
 import requests
 def get_id(idx):
@@ -122,9 +123,11 @@ class Symbolics():
             # content = requests.post("http://127.0.0.1:5000/post", json=json_pack).json()['content']
             content = requests.post("http://10.201.19.151:5000/post", json=json_pack).json()['content']
             if content is not None:
+                # Store records in set.
                 content = set(content)
             else:
                 content = set([])
+            # A dict is returned whose key is the subject and whose value is set of entities.
             return {e:content}
 
     def select_all(self, et, r, t):
@@ -380,7 +383,23 @@ if __name__ == "__main__":
     kb = Symbolics(None,'online')
     # for e in kb.find('Q2619632', 'P138'):
     #     print(e,kb.is_A(e))
-    for e in kb.select('Q2619632', 'P138', 'Q355304'):
-        val = kb.select('Q2619632', 'P138', 'Q355304')[e]
+    # 'e' is the keys of returned dictionary.
+    result_dict = kb.select('Q2619632', 'P138', 'Q355304')
+    for e in result_dict:
+        # 'val' is the set corresponding to the key.
+        val = result_dict[e]
         for v in val:
             print(v, kb.is_A(v))
+
+    AStack = Stack()
+    AStack.add("Mon")
+    AStack.add("Tue")
+    print(AStack.peek())
+    AStack.add("Wed")
+    AStack.add("Thu")
+    print(AStack.peek())
+    print(AStack.pop())
+    print(AStack.pop())
+    print(AStack.pop())
+    print(AStack.pop())
+    print(AStack.pop())
