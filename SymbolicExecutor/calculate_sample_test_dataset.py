@@ -19,6 +19,26 @@ log1 = logging.basicConfig(level=logging.INFO,#控制台打印的日志级别
                     #日志格式
                     )
 
+# Transform boolean results into string format.
+def transformBooleanToString(list):
+    temp_set = set()
+    if len(list) == 0:
+        return ''
+    else:
+        for i, item in enumerate(list):
+            if item == True:
+                list[i] = "YES"
+                temp_set.add(list[i])
+            elif item == False:
+                list[i] = "NO"
+                temp_set.add(list[i])
+            else:
+                return ''
+    if len(temp_set) == 1:
+        return temp_set.pop()
+    if len(temp_set) > 1:
+        return ((' and '.join(list)).strip() + ' respectively')
+
 def transMask2Action(state):
     with open("../data/auto_QA_data/CSQA_ANNOTATIONS_test.json", 'r') as load_f, open("../data/saves/rl_even/sample_final_predict.actions", 'r') as predict_actions \
             , open("../data/auto_QA_data/mask_test/SAMPLE_FINAL_test.question", 'r') as RL_test:
@@ -45,6 +65,7 @@ def transMask2Action(state):
                                                                                       "response_entities"] != None else ""
                 response_entities = response_entities.strip().split("|")
                 orig_response = load_dict[id]["orig_response"].strip() if load_dict[id]["type_mask"] != None else ""
+                # Update(add) elements in dict.
                 entity_mask.update(relation_mask)
                 entity_mask.update(type_mask)
                 new_action = list()
@@ -86,20 +107,28 @@ def transMask2Action(state):
                             count_right_count += 1
                             '''print ("count_right_count+1")'''
                             logging.info("count_right_count+1")
+                # For boolean, the returned answer is a list.
                 if state.startswith("Verification(Boolean)(All)"):
-                    if answer == True:
-                        answer = "YES"
-                    if answer == False:
-                        answer = "NO"
-                    if answer == orig_response:
-                        bool_right_count+=1
-                        '''print("bool_right_count+1")'''
-                        logging.info("bool_right_count+1")
+                    # To judge the returned answers are in dict format or boolean format.
+                    if (type(answer) == dict):
+                        temp = []
+                        if '|BOOL_RESULT|' in answer:
+                            temp.extend(answer['|BOOL_RESULT|'])
+                        answer = temp
+                        answer_string = transformBooleanToString(answer)
+                        if answer_string!='' and answer_string == orig_response:
+                            bool_right_count += 1
+                            '''print("bool_right_count+1")'''
+                            logging.info("bool_right_count+1")
+                # To judge the returned answers are in dict format or boolean format.
                 if (type(answer) == dict):
                     temp = []
-                    for key, value in answer.items():
-                        if (value):
-                            temp.extend(list(value))
+                    if '|BOOL_RESULT|' in answer:
+                        temp.extend(answer['|BOOL_RESULT|'])
+                    else:
+                        for key, value in answer.items():
+                            if (value):
+                                temp.extend(list(value))
                     answer = temp
 
                 elif type(answer) == type([]) or type(answer) == type(set([])):
