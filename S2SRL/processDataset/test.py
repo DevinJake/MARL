@@ -2,6 +2,25 @@
 """
 This file is used to test certain functions or methods.
 """
+def transformBooleanToString(list):
+    temp_set = set()
+    if len(list) == 0:
+        return ''
+    else:
+        for i, item in enumerate(list):
+            if item == True:
+                list[i] = "YES"
+                temp_set.add(list[i])
+            elif item == False:
+                list[i] = "NO"
+                temp_set.add(list[i])
+            else:
+                return ''
+    if len(temp_set) == 1:
+        return temp_set.pop()
+    if len(temp_set) > 1:
+        return ((' and '.join(list)).strip() + ' respectively')
+
 def test():
     a = [2 - 1.5] * 10
     print (a)
@@ -46,6 +65,14 @@ def test():
     for item in temp_list:
         print (item.__class__)
 
+    print (transformBooleanToString([True, False, True]))
+    print (transformBooleanToString([True, False]))
+    print (transformBooleanToString([True, True]))
+    print (transformBooleanToString([False, False]))
+    print (transformBooleanToString([False, False, True]))
+    print (transformBooleanToString([False, False, False]))
+    print (transformBooleanToString([False, False, 'DEVIN']))
+    print (transformBooleanToString([]))
 
 if __name__ == "__main__":
     test()
