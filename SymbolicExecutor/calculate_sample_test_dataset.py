@@ -114,12 +114,22 @@ def transMask2Action(state):
                         temp = []
                         if '|BOOL_RESULT|' in answer:
                             temp.extend(answer['|BOOL_RESULT|'])
-                        answer = temp
-                        answer_string = transformBooleanToString(answer)
-                        if answer_string!='' and answer_string == orig_response:
+                            answer = temp
+                            answer_string = transformBooleanToString(answer)
+                            if answer_string!='' and answer_string == orig_response:
+                                bool_right_count += 1
+                                '''print("bool_right_count+1")'''
+                                logging.info("bool_right_count+1")
+                    else:
+                        if answer == True:
+                            answer = "YES"
+                        if answer == False:
+                            answer = "NO"
+                        if answer == orig_response:
                             bool_right_count += 1
                             '''print("bool_right_count+1")'''
                             logging.info("bool_right_count+1")
+
                 # To judge the returned answers are in dict format or boolean format.
                 if (type(answer) == dict):
                     temp = []
