@@ -165,6 +165,7 @@ class Symbolics():
 
         if self.answer:
             for k, v in self.answer.items():
+                # Combine the retrieved entities with existed retrieved entities related to same subject.
                 content.setdefault(k, []).extend(v)
         return content
 
@@ -330,15 +331,37 @@ class Symbolics():
         return answer_keys
 
     def around(self,N,r=None,t=None):
-        if(r!=None) and  (t!=None):
+        if(r!=None) and (t!=None):
             e = N
             dict_temp = self.select_all(e,r,t)
-            N = len(dict_temp)
+            number = len(dict_temp)
+        elif N.isdigit():
+            number = int(N)
+        else:
+            content = self.answer
+            if type(content) == dict:
+                if N in content and not content[N] == None:
+                    number = len(content[N])
+                else:
+                    number = 0
         answer_keys = []
-        for k, v in self.answer.items():
-            # print k, len(v),abs(len(v)-int(N)),(int(N)/2)
-            if abs(len(v)-int(N))<(int(N)*0.6):
-                answer_keys.append(k)
+        if number == 0 or 1< number <=5:
+            for k, v in self.answer.items():
+                if abs(len(v)-int(number)) <= 1:
+                    answer_keys.append(k)
+        if number == 1:
+            for k, v in self.answer.items():
+                if abs(len(v) - int(number)) < (int(number) * 0.6):
+                    answer_keys.append(k)
+        elif number > 5:
+            for k, v in self.answer.items():
+                if abs(len(v)-int(number)) <= 5:
+                    answer_keys.append(k)
+        else:
+            for k, v in self.answer.items():
+                # print k, len(v),abs(len(v)-int(N)),(int(N)/2)
+                if abs(len(v)-int(number)) < (int(number)*0.6):
+                    answer_keys.append(k)
         self.temp_set = set(answer_keys)
         return answer_keys
 

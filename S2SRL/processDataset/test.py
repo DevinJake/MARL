@@ -74,5 +74,16 @@ def test():
     print (transformBooleanToString([False, False, 'DEVIN']))
     print (transformBooleanToString([]))
 
+    n = '16'
+    print (n.isdigit())
+    n = 'Q12416'
+    print (n.isalnum())
+
+    number = 1
+    if number == 0 or 1 < number <= 5:
+        print (True)
+    else:
+        print (False)
+
 if __name__ == "__main__":
     test()
