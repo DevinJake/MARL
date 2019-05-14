@@ -90,13 +90,18 @@ def test_file(root, f):
 
 if __name__ == "__main__":
     #test_folder("/home/zhangjingyao/demoqa/")
-    fname = "Comparative_else.txt"
+    # fname = "Comparative_else.txt"
+    # test_file("../data/demoqa2/", fname)
+    # fname = "appro_quant_countOver_multi_et.txt"
+    # test_file("../data/demoqa2/", fname)
+    # fname = "appro_quant_atleast_single_et.txt"
+    # test_file("../data/demoqa2/", fname)
+    # fname = "appro_quant_atleast_multi_et.txt"
+    # test_file("../data/demoqa2/", fname)
+    # fname = "appro_quant_countOver_single_et.txt"
+    # test_file("../data/demoqa2/", fname)
+    # fname = "Comparative_Count_else.txt"
+    # test_file("../data/demoqa2/", fname)
+    fname = "train_bool_all.txt"
     test_file("../data/demoqa2/", fname)
-    fname = "appro_quant_countOver_multi_et.txt"
-    test_file("../data/demoqa2/", fname)
-    fname = "appro_quant_atleast_single_et.txt"
-    test_file("../data/demoqa2/", fname)
-    fname = "appro_quant_countOver_single_et.txt"
-    test_file("../data/demoqa2/", fname)
-    fname = "appro_quant_atleast_multi_et.txt"
-    test_file("../data/demoqa2/", fname)
+

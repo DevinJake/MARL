@@ -85,5 +85,14 @@ def test():
     else:
         print (False)
 
+    context_entities = "Q910670|Q205576|Q334"
+    context_entities = [x.strip() for x in context_entities.split('|')]
+    context = "In Q333 does Q910670 share the border with Q205576 ?"
+    entity_index = {x : (context.find(x) if context.find(x)!=-1 else 100000) for x in context_entities}
+    entity_index = sorted(entity_index.items(), key = lambda item:item[1])
+    temp_string = ','.join([x[0].strip() for x in entity_index])
+    print (entity_index)
+    print (temp_string)
+
 if __name__ == "__main__":
     test()
