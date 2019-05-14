@@ -3,6 +3,7 @@
 '''
 from itertools import islice
 import json
+LINE_SIZE = 100000
 
 # To arrange the order of entities in input sequence.
 def rearrangeEntities(context_entities, context):

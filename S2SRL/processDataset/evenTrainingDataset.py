@@ -113,7 +113,7 @@ def getTrainingDatasetForPytorch():
     fwTrainA.close()
     fwTestQ.close()
     fwTestA.close()
-    print ("Getting PYTORCH processDataset is done!")
+    print ("Getting SEQUENCE2SEQUENCE processDataset is done!")
 
 def getTrainingDatasetForRl():
     fwTrainQ = open('../../data/auto_QA_data/mask_even/RL_train.question', 'w', encoding="UTF-8")

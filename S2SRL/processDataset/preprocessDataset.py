@@ -189,6 +189,7 @@ def getQuestionsAndActions(annotationPath, origPath):
         count += 5
     return question_dict
 
+# Get training data for sequence2sequence.
 def getTrainingDatasetForPytorch():
     fwTrainQ = open('../../data/auto_QA_data/mask/PT_train.question', 'w', encoding="UTF-8")
     fwTrainA = open('../../data/auto_QA_data/mask/PT_train.action', 'w', encoding="UTF-8")
@@ -267,8 +268,9 @@ def getTrainingDatasetForPytorch():
     fwTrainA.close()
     fwTestQ.close()
     fwTestA.close()
-    print ("Getting PYTORCH processDataset is done!")
+    print ("Getting SEQUENCE2SEQUENCE processDataset is done!")
 
+# Get training data for REINFORCE.
 def getTrainingDatasetForRl():
     fwTrainQ = open('../../data/auto_QA_data/mask/RL_train.question', 'w', encoding="UTF-8")
     fwTrainA = open('../../data/auto_QA_data/mask/RL_train.action', 'w', encoding="UTF-8")
