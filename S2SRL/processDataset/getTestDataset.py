@@ -148,7 +148,7 @@ def getSampleTestDataset():
 
 # Run getTestDataset to get the final test processDataset.
 if __name__ == "__main__":
-    # getTestDataset()
+    getTestDataset()
     getSampleTestDataset()
 
 

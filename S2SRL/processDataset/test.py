@@ -2,6 +2,7 @@
 """
 This file is used to test certain functions or methods.
 """
+import random
 def transformBooleanToString(list):
     temp_set = set()
     if len(list) == 0:
@@ -93,6 +94,15 @@ def test():
     temp_string = ','.join([x[0].strip() for x in entity_index])
     print (entity_index)
     print (temp_string)
+
+    d = {'a': 1, 'b': 2, 'c': 3, 'd': 4}
+    print(d)
+    l = list(d.items())
+    random.shuffle(l)
+    d = dict(l)
+    print (d)
+
+    print (type(d) == type({}))
 
 if __name__ == "__main__":
     test()

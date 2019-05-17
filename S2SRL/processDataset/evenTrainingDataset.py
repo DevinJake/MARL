@@ -12,9 +12,10 @@ import json
 #Python codes to read the binary files.
 import numpy as np
 import random
-SEED = 1987
+SEED = 1988
 LINE_SIZE = 100000
 CATEGORY_SIZE = 2000
+COMP_SIZE = 1300
 from random import shuffle
 
 special_counting_characters = {'-','|','&'}
@@ -29,9 +30,16 @@ def getTrainingDatasetForPytorch():
         train_action_string_list, test_action_string_list, train_question_string_list, test_question_string_list = list(), list(), list(), list()
         dict_list = list()
         load_dict = json.load(load_f)
-        count_dict = {'simple_': 0, 'logical_': 0, 'quantative_': 0, 'count_': 0, 'bool_': 0, 'comp_': 0, 'compcount_': 0}
+        list_of_load_dict = list(load_dict.items())
+        random.seed(SEED)
+        random.shuffle(list_of_load_dict)
+        load_dict = dict(list_of_load_dict)
+        count_dict = {'simple_': 0, 'logical_': 0, 'quantative_': 0, 'count_': 0, 'bool_': 0, 'comp_': 0, 'compcount_': 0, 'compcountappro_': 0, 'compappro_': 0}
         for key, value in load_dict.items():
-            actions = eval(str(value['mask_action_sequence_list']))
+            try:
+                actions = eval(str(value['mask_action_sequence_list']))
+            except SyntaxError:
+                pass
             if len(actions) > 0:
                 if 'simple_' in key and count_dict['simple_'] < CATEGORY_SIZE:
                     count_dict['simple_'] = count_dict['simple_'] + 1
@@ -43,16 +51,20 @@ def getTrainingDatasetForPytorch():
                     count_dict['count_'] = count_dict['count_'] + 1
                 elif 'bool_' in key and count_dict['bool_'] < CATEGORY_SIZE:
                     count_dict['bool_'] = count_dict['bool_'] + 1
-                elif 'comp_' in key and count_dict['comp_'] < CATEGORY_SIZE:
+                elif 'comp_' in key and count_dict['comp_'] < COMP_SIZE:
                     count_dict['comp_'] = count_dict['comp_'] + 1
-                elif 'compcount_' in key and count_dict['compcount_'] < CATEGORY_SIZE:
+                elif 'compcount_' in key and count_dict['compcount_'] < COMP_SIZE:
                     count_dict['compcount_'] = count_dict['compcount_'] + 1
+                elif 'compcountappro_' in key and count_dict['compcountappro_'] < COMP_SIZE:
+                    count_dict['compcountappro_'] = count_dict['compcountappro_'] + 1
+                elif 'compappro_' in key and count_dict['compappro_'] < COMP_SIZE:
+                    count_dict['compappro_'] = count_dict['compappro_'] + 1
                 else:
                     continue
                 action_string = ''
                 action = actions[0]
-                for dict in action:
-                    for temp_key, temp_value in dict.items():
+                for temp_dict in action:
+                    for temp_key, temp_value in temp_dict.items():
                         action_string += temp_key + ' ( '
                         for token in temp_value:
                             if '-' in token:
@@ -94,7 +106,7 @@ def getTrainingDatasetForPytorch():
                 dict_temp.setdefault('a', str(key) + ' ' + action_string)
                 dict_list.append(dict_temp)
 
-    random.seed(SEED)
+    random.seed(SEED+1)
     random.shuffle(dict_list)
     # train_size = int(len(dict_list) * 0.95)
     train_size = int(len(dict_list))
@@ -128,9 +140,16 @@ def getTrainingDatasetForRl():
         train_action_string_list, test_action_string_list, train_question_string_list, test_question_string_list = list(), list(), list(), list()
         dict_list = list()
         load_dict = json.load(load_f)
-        count_dict = {'simple_': 0, 'logical_': 0, 'quantative_': 0, 'count_': 0, 'bool_': 0, 'comp_': 0, 'compcount_': 0}
+        list_of_load_dict = list(load_dict.items())
+        random.seed(SEED)
+        random.shuffle(list_of_load_dict)
+        load_dict = dict(list_of_load_dict)
+        count_dict = {'simple_': 0, 'logical_': 0, 'quantative_': 0, 'count_': 0, 'bool_': 0, 'comp_': 0, 'compcount_': 0, 'compcountappro_': 0, 'compappro_': 0}
         for key, value in load_dict.items():
-            actions = eval(str(value['mask_action_sequence_list']))
+            try:
+                actions = eval(str(value['mask_action_sequence_list']))
+            except SyntaxError:
+                pass
             if len(actions) > 0:
                 if 'simple_' in key and count_dict['simple_'] < CATEGORY_SIZE:
                     count_dict['simple_'] = count_dict['simple_'] + 1
@@ -142,17 +161,21 @@ def getTrainingDatasetForRl():
                     count_dict['count_'] = count_dict['count_'] + 1
                 elif 'bool_' in key and count_dict['bool_'] < CATEGORY_SIZE:
                     count_dict['bool_'] = count_dict['bool_'] + 1
-                elif 'comp_' in key and count_dict['comp_'] < CATEGORY_SIZE:
+                elif 'comp_' in key and count_dict['comp_'] < COMP_SIZE:
                     count_dict['comp_'] = count_dict['comp_'] + 1
-                elif 'compcount_' in key and count_dict['compcount_'] < CATEGORY_SIZE:
+                elif 'compcount_' in key and count_dict['compcount_'] < COMP_SIZE:
                     count_dict['compcount_'] = count_dict['compcount_'] + 1
+                elif 'compcountappro_' in key and count_dict['compcountappro_'] < COMP_SIZE:
+                    count_dict['compcountappro_'] = count_dict['compcountappro_'] + 1
+                elif 'compappro_' in key and count_dict['compappro_'] < COMP_SIZE:
+                    count_dict['compappro_'] = count_dict['compappro_'] + 1
                 else:
                     continue
                 action_string_list = list()
                 for action in actions:
                     action_string = ''
-                    for dict in action:
-                        for temp_key, temp_value in dict.items():
+                    for temp_dict in action:
+                        for temp_key, temp_value in temp_dict.items():
                             action_string += temp_key + ' ( '
                             for token in temp_value:
                                 if '-' in token:
@@ -209,7 +232,7 @@ def getTrainingDatasetForRl():
             elif len(actions) == 0:
                 no_action_question_list.append(str(key) + ' ' + str(value['question']).lower().replace('?', '').strip() + '\n')
 
-    random.seed(SEED)
+    random.seed(SEED+1)
     random.shuffle(dict_list)
     train_size = int(len(dict_list))
     # train_size = int(len(dict_list) * 0.95)

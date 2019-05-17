@@ -91,5 +91,4 @@ def getBooleanLogs():
 
 # Run to get the logs of manually annotation for boolean questions.
 if __name__ == "__main__":
-    # getTestDataset()
     getBooleanLogs()
