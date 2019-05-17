@@ -331,6 +331,7 @@ class Symbolics():
         return answer_keys
 
     def around(self,N,r=None,t=None):
+        number = 0
         if(r!=None) and (t!=None):
             e = N
             dict_temp = self.select_all(e,r,t)
@@ -345,24 +346,25 @@ class Symbolics():
                 else:
                     number = 0
         answer_keys = []
-        if number == 0 or 1< number <=5:
-            for k, v in self.answer.items():
-                if abs(len(v)-int(number)) <= 1:
-                    answer_keys.append(k)
-        if number == 1:
-            for k, v in self.answer.items():
-                if abs(len(v) - int(number)) < (int(number) * 0.6):
-                    answer_keys.append(k)
-        elif number > 5:
-            for k, v in self.answer.items():
-                if abs(len(v)-int(number)) <= 5:
-                    answer_keys.append(k)
-        else:
-            for k, v in self.answer.items():
-                # print k, len(v),abs(len(v)-int(N)),(int(N)/2)
-                if abs(len(v)-int(number)) < (int(number)*0.6):
-                    answer_keys.append(k)
-        self.temp_set = set(answer_keys)
+        if type(self.answer) == type({}):
+            if number == 0 or 1< number <=5:
+                for k, v in self.answer.items():
+                    if abs(len(v)-int(number)) <= 1:
+                        answer_keys.append(k)
+            if number == 1:
+                for k, v in self.answer.items():
+                    if abs(len(v) - int(number)) < (int(number) * 0.6):
+                        answer_keys.append(k)
+            elif number > 5:
+                for k, v in self.answer.items():
+                    if abs(len(v)-int(number)) <= 5:
+                        answer_keys.append(k)
+            else:
+                for k, v in self.answer.items():
+                    # print k, len(v),abs(len(v)-int(N)),(int(N)/2)
+                    if abs(len(v)-int(number)) < (int(number)*0.6):
+                        answer_keys.append(k)
+            self.temp_set = set(answer_keys)
         return answer_keys
 
     def EOQ(self):
@@ -422,3 +424,4 @@ if __name__ == "__main__":
         val = result_dict[e]
         for v in val:
             print(v, kb.is_A(v))
+

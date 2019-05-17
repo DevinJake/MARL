@@ -36,6 +36,12 @@ def getAllQuestionsAndActions():
     question_dicts = dict(question_dicts,
                           **(getQuestionsAndActions('../../data/annotation_logs/compcount_auto.log',
                                                     '../../data/annotation_logs/compcount_orig.log')))
+    question_dicts = dict(question_dicts,
+                          **(getQuestionsAndActions('../../data/annotation_logs/compappro_auto.log',
+                                                    '../../data/annotation_logs/compappro_orig.log')))
+    question_dicts = dict(question_dicts,
+                          **(getQuestionsAndActions('../../data/annotation_logs/compcountappro_auto.log',
+                                                    '../../data/annotation_logs/compcountappro_orig.log')))
     fw.writelines(json.dumps(question_dicts, indent=1, ensure_ascii=False))
     fw.close()
     print ("Writing JSON is done!")
@@ -78,7 +84,7 @@ def getQuestionsAndActions(annotationPath, origPath):
                 ID_string = 'logical_' + string_list[0]
             elif 'quantative_' in str(annotationPath):
                 ID_string = 'quantative_' + string_list[0]
-            elif 'count_' in str(origPath) and 'compcount_' not in str(origPath):
+            elif 'count_' in str(annotationPath) and 'compcount_' not in str(annotationPath):
                 ID_string = 'count_' + string_list[0]
             elif 'bool_' in str(annotationPath):
                 ID_string = 'bool_' + string_list[0]
@@ -86,6 +92,10 @@ def getQuestionsAndActions(annotationPath, origPath):
                 ID_string = 'comp_' + string_list[0]
             elif 'compcount_' in str(annotationPath):
                 ID_string = 'compcount_' + string_list[0]
+            elif 'compcountappro_' in str(annotationPath):
+                ID_string = 'compcountappro_' + string_list[0]
+            elif 'compappro_' in str(annotationPath):
+                ID_string = 'compappro_' + string_list[0]
             question_string = ' '.join(string_list[1:])
             actionSequenceList = list()
             count += 1
@@ -115,6 +125,10 @@ def getQuestionsAndActions(annotationPath, origPath):
             ID_string = 'comp_' + str(orig_list[count]).strip()
         elif 'compcount_' in str(origPath):
             ID_string = 'compcount_' + str(orig_list[count]).strip()
+        elif 'compcountappro_' in str(origPath):
+            ID_string = 'compcountappro_' + str(orig_list[count]).strip()
+        elif 'compappro_' in str(annotationPath):
+            ID_string = 'compappro_' + str(orig_list[count]).strip()
         if ID_string in question_dict:
             question_info_new = question_dict.get(ID_string)
             entity_list = list()
@@ -201,7 +215,10 @@ def getTrainingDatasetForPytorch():
         dict_list = list()
         load_dict = json.load(load_f)
         for key, value in load_dict.items():
-            actions = eval(str(value['mask_action_sequence_list']))
+            try:
+                actions = eval(str(value['mask_action_sequence_list']))
+            except SyntaxError:
+                pass
             if len(actions) > 0:
                 count += 1
                 action_string = ''
@@ -288,7 +305,10 @@ def getTrainingDatasetForRl():
         dict_list = list()
         load_dict = json.load(load_f)
         for key, value in load_dict.items():
-            actions = eval(str(value['mask_action_sequence_list']))
+            try:
+                actions = eval(str(value['mask_action_sequence_list']))
+            except SyntaxError:
+                pass
             if len(actions) > 0:
                 action_string_list = list()
                 count += 1
@@ -446,7 +466,5 @@ if __name__ == "__main__":
     getTrainingDatasetForPytorch()
     getTrainingDatasetForRl()
     print (getShareVocabulary())
-
-
 
 
