@@ -102,7 +102,7 @@ if __name__ == "__main__":
     # test_file("../data/demoqa2/", fname)
     # fname = "Comparative_Count_else.txt"
     # test_file("../data/demoqa2/", fname)
-    fname = "train_bool_all.txt"
-    # fname = "bool_test.txt"
+    # fname = "train_bool_all.txt"
+    fname = "bool_test.txt"
     test_file("../data/demoqa2/", fname)
 
