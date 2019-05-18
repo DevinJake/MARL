@@ -15,14 +15,10 @@ DIC_PATH = '../data/auto_QA_data/share.question'
 if __name__ == "__main__":
     logging.basicConfig(format="%(asctime)-15s %(levelname)s %(message)s", level=logging.INFO)
 
-    # # command line parameters for seq2seq
-    # sys.argv = ['data_test.py', '-m=pre_bleu_0.929_01.dat', '-p=pt', '--n=crossent']
-
-    # # command line parameters for REINFORCE
-    # sys.argv = ['data_test.py', '-m=epoch_000_0.944_0.946.dat', '-p=rl', '--n=rl']
-
     # command line parameters for final test
-    sys.argv = ['data_test.py', '-m=bleu_0.984_09.dat', '-p=sample_final', '--n=rl_even']
+    sys.argv = ['data_test.py', '-m=bleu_0.984_09.dat', '-p=final', '--n=rl_even']
+    # # command line parameters for final test (subset data)
+    # sys.argv = ['data_test.py', '-m=bleu_0.984_09.dat', '-p=sample_final', '--n=rl_even']
 
     parser = argparse.ArgumentParser()
     # parser.add_argument("--data", required=True,
