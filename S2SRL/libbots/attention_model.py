@@ -4,8 +4,8 @@ import torch
 import torch.nn as nn
 import torch.nn.utils.rnn as rnn_utils
 import torch.nn.functional as F
-
 from . import utils
+from torch.nn.utils.rnn import PackedSequence
 
 HIDDEN_STATE_SIZE = 128
 EMBEDDING_DIM = 50
@@ -13,9 +13,52 @@ EMBEDDING_DIM = 50
 class DecoderLSTM(nn.Module):
     def __init__(self, emb_size, hid_size):
         super(DecoderLSTM, self).__init__()
-        self.decoder = nn.LSTM(input_size=emb_size, hidden_size=hid_size,
+        self.decoder = nn.GRU(input_size=emb_size, hidden_size=hid_size,
                                num_layers=1, batch_first=True)
 
+    def forward(self, input, hx=None):
+        is_packed = isinstance(input, PackedSequence)
+        if is_packed:
+            input, batch_sizes = input
+            max_batch_size = int(batch_sizes[0])
+        else:
+            batch_sizes = None
+            max_batch_size = input.size(0) if self.batch_first else input.size(1)
+
+        if hx is None:
+            num_directions = 2 if self.bidirectional else 1
+            hx = input.new_zeros(self.num_layers * num_directions,
+                                 max_batch_size, self.hidden_size,
+                                 requires_grad=False)
+            if self.mode == 'LSTM':
+                hx = (hx, hx)
+
+        has_flat_weights = list(p.data.data_ptr() for p in self.parameters()) == self._data_ptrs
+        if has_flat_weights:
+            first_data = next(self.parameters()).data
+            assert first_data.storage().size() == self._param_buf_size
+            flat_weight = first_data.new().set_(first_data.storage(), 0, torch.Size([self._param_buf_size]))
+        else:
+            flat_weight = None
+
+        self.check_forward_args(input, hx, batch_sizes)
+        func = self._backend.RNN(
+            self.mode,
+            self.input_size,
+            self.hidden_size,
+            num_layers=self.num_layers,
+            batch_first=self.batch_first,
+            dropout=self.dropout,
+            train=self.training,
+            bidirectional=self.bidirectional,
+            dropout_state=self.dropout_state,
+            variable_length=is_packed,
+            flat_weight=flat_weight
+        )
+        output, hidden = func(input, self.all_weights, hx, batch_sizes)
+        if is_packed:
+            output = PackedSequence(output, batch_sizes)
+        return output, hidden
 
 class PhraseModel(nn.Module):
     def __init__(self, emb_size, dict_size, hid_size):
@@ -29,7 +72,7 @@ class PhraseModel(nn.Module):
         #                                               num_layers=2, batch_first=True)
 
         # LSTM
-        self.encoder = nn.LSTM(input_size=emb_size, hidden_size=hid_size,
+        self.encoder = nn.GRU(input_size=emb_size, hidden_size=hid_size,
                                num_layers=1, batch_first=True)
         self.decoder = DecoderLSTM(emb_size, hid_size).decoder
         self.output = nn.Sequential(
@@ -38,15 +81,15 @@ class PhraseModel(nn.Module):
 
     # hidden stat;
     def encode(self, x):
-        _, hid = self.encoder(x)
-        return hid
+        out, hid = self.encoder(x)
+        return out, hid
 
     def get_encoded_item(self, encoded, index):
-        # For RNN
-        # return encoded[:, index:index+1]
-        # For LSTM
-        return encoded[0][:, index:index+1].contiguous(), \
-               encoded[1][:, index:index+1].contiguous()
+        #For RNN
+        return encoded[:, index:index+1]
+        # # For LSTM
+        # return encoded[0][:, index:index+1].contiguous(), \
+        #        encoded[1][:, index:index+1].contiguous()
 
     def decode_teacher(self, hid, input_seq):
         # Method assumes batch of size=1
