@@ -7,7 +7,7 @@ import numpy as np
 import sys
 from tensorboardX import SummaryWriter
 
-from libbots import data, model_attention, utils
+from libbots import data, attention_model, utils
 
 import torch
 import torch.optim as optim
@@ -17,7 +17,7 @@ SAVES_DIR = "../data/saves"
 
 BATCH_SIZE = 32
 LEARNING_RATE = 1e-3
-MAX_EPOCHES = 30
+MAX_EPOCHES = 20
 MAX_TOKENS = 40
 
 log = logging.getLogger("train")
@@ -32,8 +32,8 @@ def run_test(test_data, net, end_token, device="cpu"):
     bleu_sum = 0.0
     bleu_count = 0
     for p1, p2 in test_data:
-        input_seq = model_attention.pack_input(p1, net.emb, device)
-        enc = net.encode(input_seq)
+        input_seq = attention_model.pack_input(p1, net.emb, device)
+        _, enc = net.encode(input_seq)
         # Return logits (N*outputvocab), res_tokens (1*N)
         _, tokens = net.decode_chain_argmax(enc, input_seq.data[0:1],
                                             seq_len=data.MAX_TOKENS,
@@ -79,8 +79,8 @@ if __name__ == "__main__":
     train_data, test_data = data.split_train_test(train_data)
     log.info("Train set has %d phrases, test %d", len(train_data), len(test_data))
 
-    net = model_attention.PhraseModel(emb_size=model_attention.EMBEDDING_DIM, dict_size=len(emb_dict),
-                            hid_size=model_attention.HIDDEN_STATE_SIZE).to(device)
+    net = attention_model.PhraseModel(emb_size=attention_model.EMBEDDING_DIM, dict_size=len(emb_dict),
+                            hid_size=attention_model.HIDDEN_STATE_SIZE).to(device)
     # 转到cuda
     net.cuda()
     log.info("Model: %s", net)
@@ -108,18 +108,20 @@ if __name__ == "__main__":
         [ 2.1937, -0.5535, -0.9000,  ..., -0.1032,  0.3514, -1.2759],
         [-0.8078,  0.1575,  1.1064,  ...,  0.1365,  0.4121, -0.4211]],
        device='cuda:0')'''
-            input_seq, out_seq_list, _, out_idx = model_attention.pack_batch(batch, net.emb, device)
-            enc = net.encode(input_seq)
+            input_seq, out_seq_list, _, out_idx = attention_model.pack_batch(batch, net.emb, device)
+            # 1*32*128,表示batch中32个样本的最后一个step的hidden state;
+            encoder_output, enc = net.encode(input_seq)
 
             net_results = []
             net_targets = []
+            # 对于batch中每一个样本，得到encoder的hidden state作为decoder的hidden输入；
             for idx, out_seq in enumerate(out_seq_list):
                 ref_indices = out_idx[idx][1:]
                 enc_item = net.get_encoded_item(enc, idx)
                 # teacher forcing做训练；
                 if random.random() < TEACHER_PROB:
                     r = net.decode_teacher(enc_item, out_seq)
-                    blue_temp = model_attention.seq_bleu(r, ref_indices)
+                    blue_temp = attention_model.seq_bleu(r, ref_indices)
                     bleu_sum += blue_temp
                     # Get predicted tokens.
                     seq = torch.max(r.data, dim=1)[1]
