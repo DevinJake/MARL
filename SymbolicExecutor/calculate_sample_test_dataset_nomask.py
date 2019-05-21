@@ -231,7 +231,7 @@ def list2dict(list):
 
     i = 0
     for a in list:
-        if (a.startswith("A")) and len(temp_list) > 0:
+        if (a.startswith("A")) and 0 < len(temp_list) and i < len(temp_list):
             try:
                 final_list.append({a: temp_list[i]})
                 # temp_dict[a] = temp_list[i]
