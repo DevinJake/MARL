@@ -11,7 +11,7 @@ import json
 from symbolics import Symbolics
 import logging
 log1 = logging.basicConfig(level=logging.INFO,#控制台打印的日志级别
-                    filename='../data/auto_QA_data/test_result/sample_testdataset_result_without_magic.log',
+                    filename='../data/auto_QA_data/test_result/sample_testdataset_result_without_magic_nomask.log',
                     filemode='w',##模式，有w和a，w就是写模式，每次都会重新写日志，覆盖之前的日志
                     #a是追加模式，默认如果不写的话，就是追加模式
                     format=
@@ -41,7 +41,7 @@ def transformBooleanToString(list):
 
 def transMask2Action(state):
     with open("../data/auto_QA_data/CSQA_ANNOTATIONS_test.json", 'r') as load_f, open("../data/saves/nomask_rl_even/sample_final_predict.actions", 'r') as predict_actions \
-            , open("../data/auto_QA_data/mask_test/SAMPLE_FINAL_test.question", 'r') as RL_test:
+            , open("../data/auto_QA_data/nomask_test/SAMPLE_FINAL_test.question", 'r') as RL_test:
         linelist = list()
         load_dict = json.load(load_f)
         num = 0
@@ -70,10 +70,10 @@ def transMask2Action(state):
                 entity_mask.update(type_mask)
                 new_action = list()
                 for act in action.split():
-                    for k, v in entity_mask.items():
-                        if act == v:
-                            act = k
-                            break
+                    # for k, v in entity_mask.items():
+                    #     if act == v:
+                    #         act = k
+                    #         break
                     new_action.append(act)
                 print("{0}".format(num))
                 '''print("{0}: {1}->{2}".format(num, id, action))'''
@@ -86,6 +86,7 @@ def transMask2Action(state):
                 #     symbolic_seq[-1] = {"A3":["","",""]} if not symbolic_seq[-1].has_key("A3") else symbolic_seq[-1]### A3
                 # if state.startswith("QuantitativeReasoning(Count)(All)") or state.startswith("ComparativeReasoning(Count)(All)"):
                 #     symbolic_seq[-1] = {"A11": ["", "", ""]} if not symbolic_seq[-1].has_key("A11") else symbolic_seq[-1]
+                print (symbolic_seq)
                 symbolic_exe = Symbolics(symbolic_seq)
                 answer = symbolic_exe.executor()
 
@@ -246,7 +247,7 @@ if __name__ == "__main__":
     # SimpleQuestion(Direct)
     # LogicalReasoning(All)
     linelist = list()
-    fw = open('../data/auto_QA_data/test_result/sample_testdataset_result_without_magic.txt', 'w', encoding="UTF-8")
+    fw = open('../data/auto_QA_data/test_result/sample_testdataset_result_without_magic_nomask.txt', 'w', encoding="UTF-8")
     state_list = ["SimpleQuestion(Direct)","Verification(Boolean)(All)","QuantitativeReasoning(Count)(All)","QuantitativeReasoning(All)","ComparativeReasoning(Count)(All)","ComparativeReasoning(All)","LogicalReasoning(All)"]
     # state_list = ["Verification(Boolean)(All)"]
     for state in state_list:
