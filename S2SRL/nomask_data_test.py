@@ -8,9 +8,9 @@ from libbots import data, model, utils
 
 import torch
 
-log = logging.getLogger("data_test")
+log = logging.getLogger("nomask_data_test")
 
-DIC_PATH = '../data/auto_QA_data/share.question'
+DIC_PATH = '../data/auto_QA_data/nomask_share.question'
 
 if __name__ == "__main__":
     logging.basicConfig(format="%(asctime)-15s %(levelname)s %(message)s", level=logging.INFO)
@@ -18,7 +18,7 @@ if __name__ == "__main__":
     # # command line parameters for final test
     # sys.argv = ['data_test.py', '-m=bleu_0.984_09.dat', '-p=final', '--n=rl_even']
     # command line parameters for final test (subset data)
-    sys.argv = ['data_test.py', '-m=bleu_0.984_09.dat', '-p=sample_final', '--n=nomask_rl_even']
+    sys.argv = ['nomask_data_test.py', '-m=bleu_0.984_09.dat', '-p=sample_final', '--n=nomask_rl_even']
 
     parser = argparse.ArgumentParser()
     # parser.add_argument("--data", required=True,
