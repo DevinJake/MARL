@@ -31,6 +31,8 @@ class Symbolics():
     def executor(self):
         for symbolic in self.seq:
             key = list(symbolic.keys())[0]
+            if len(symbolic[key]) != 3:
+                continue
             e = symbolic[key][0].strip()
             r = symbolic[key][1].strip()
             t = symbolic[key][2].strip()
