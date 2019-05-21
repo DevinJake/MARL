@@ -228,7 +228,9 @@ class Symbolics():
         answer_dict = self.answer
         if type(answer_dict) == bool: return False
         if e in answer_dict and answer_dict[e]!=None:
-            answer_dict[e] = set(answer_dict[e]) | set(self.select(e, r, t)[e])
+            temp_set = self.select(e, r, t)
+            if e in temp_set:
+                answer_dict[e] = set(answer_dict[e]) | set(temp_set[e])
         else:
             answer_dict.update(self.select(e, r, t))
 
