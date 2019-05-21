@@ -252,7 +252,9 @@ class Symbolics():
         if not e.startswith("Q"): return {}
         answer_dict = self.answer
         if e in answer_dict and answer_dict[e]!=None:
-            answer_dict[e] = set(answer_dict[e]) & set(self.select(e, r, t)[e])
+            temp_set = self.select(e, r, t)
+            if e in temp_set:
+                answer_dict[e] = set(answer_dict[e]) & set(temp_set[e])
         else:
             s = self.select(e, r, t)
             answer_dict.update(s)
@@ -278,7 +280,9 @@ class Symbolics():
         if e == "": return {}
         answer_dict = self.answer
         if e in answer_dict and answer_dict[e]!=None:
-            answer_dict[e] = set(answer_dict[e]) - set(self.select(e, r, t)[e])
+            temp_set = self.select(e, r, t)
+            if e in temp_set:
+                answer_dict[e] = set(answer_dict[e]) - set(temp_set[e])
         else:
             answer_dict.update(self.select(e, r, t))
         # 进行 diff 操作 类似 union
