@@ -232,12 +232,13 @@ def list2dict(list):
     i = 0
     for a in list:
         if (a.startswith("A")) and len(temp_list) > 0:
-            final_list.append({a: temp_list[i]})
-            # temp_dict[a] = temp_list[i]
-            i += 1
-
+            try:
+                final_list.append({a: temp_list[i]})
+                # temp_dict[a] = temp_list[i]
+                i += 1
+            except OSError:
+                pass
     return final_list
-
 
 if __name__ == "__main__":
     # QuantitativeReasoning(Count)(All)
