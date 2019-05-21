@@ -222,6 +222,7 @@ class Symbolics():
     def union(self, e, r, t):
         #print("A9:", e, r, t)
         if e == "": return {}
+        if t!="" and 'Q' not in t: return{}
         answer_dict = self.answer
         if type(answer_dict) == bool: return False
         if e in answer_dict and answer_dict[e]!=None:
