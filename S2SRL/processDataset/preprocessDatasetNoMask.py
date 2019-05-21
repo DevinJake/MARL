@@ -227,9 +227,10 @@ def getTrainingDatasetForPytorch():
                     for temp_key, temp_value in dict.items():
                         action_string += temp_key + ' ( '
                         for token in temp_value:
-                            if '-' in token:
-                                token = '- ' + token.replace('-','')
-                            action_string += str(token) + ' '
+                            if not token == "":
+                                if '-' in token:
+                                    token = '- ' + token.replace('-','')
+                                action_string += str(token) + ' '
                         action_string += ') '
                 question_string = '<E> '
                 entities = value['entity_mask']
@@ -318,9 +319,10 @@ def getTrainingDatasetForRl():
                         for temp_key, temp_value in dict.items():
                             action_string += temp_key + ' ( '
                             for token in temp_value:
-                                if '-' in token:
-                                    token = '- ' + token.replace('-','')
-                                action_string += str(token) + ' '
+                                if not token == "":
+                                    if '-' in token:
+                                        token = '- ' + token.replace('-', '')
+                                    action_string += str(token) + ' '
                             action_string += ') '
                     action_string = action_string.strip() + '\n'
                     action_string_list.append(action_string)
