@@ -109,8 +109,9 @@ if __name__ == "__main__":
         [-0.8078,  0.1575,  1.1064,  ...,  0.1365,  0.4121, -0.4211]],
        device='cuda:0')'''
             input_seq, out_seq_list, _, out_idx = attention_model.pack_batch(batch, net.emb, device)
-            # 1*32*128,表示batch中32个样本的最后一个step的hidden state;
+            # enc的size为1*32*128,表示batch中32个样本的最后一个step的hidden state;
             encoder_output, enc = net.encode(input_seq)
+            padded_encoder_output, _ = torch.nn.utils.rnn.pad_packed_sequence(encoder_output, batch_first=True)
 
             net_results = []
             net_targets = []

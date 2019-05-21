@@ -64,7 +64,7 @@ def transMask2Action(state):
                 response_entities = load_dict[id]["response_entities"].strip() if load_dict[id][
                                                                                       "response_entities"] != None else ""
                 response_entities = response_entities.strip().split("|")
-                orig_response = load_dict[id]["orig_response"].strip() if load_dict[id]["type_mask"] != None else ""
+                orig_response = load_dict[id]["orig_response"].strip() if load_dict[id]["orig_response"] != None else ""
                 # Update(add) elements in dict.
                 entity_mask.update(relation_mask)
                 entity_mask.update(type_mask)

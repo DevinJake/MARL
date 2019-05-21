@@ -5,60 +5,22 @@ import torch.nn as nn
 import torch.nn.utils.rnn as rnn_utils
 import torch.nn.functional as F
 from . import utils
-from torch.nn.utils.rnn import PackedSequence
 
 HIDDEN_STATE_SIZE = 128
 EMBEDDING_DIM = 50
+PADDING_SIZE = 40
 
-class DecoderLSTM(nn.Module):
-    def __init__(self, emb_size, hid_size):
-        super(DecoderLSTM, self).__init__()
+class Decoder(nn.Module):
+    def __init__(self, emb_size, hid_size, dropout_p=0.1,):
+        super(Decoder, self).__init__()
+        self.dropout_p = dropout_p
         self.decoder = nn.GRU(input_size=emb_size, hidden_size=hid_size,
                                num_layers=1, batch_first=True)
 
-    def forward(self, input, hx=None):
-        is_packed = isinstance(input, PackedSequence)
-        if is_packed:
-            input, batch_sizes = input
-            max_batch_size = int(batch_sizes[0])
-        else:
-            batch_sizes = None
-            max_batch_size = input.size(0) if self.batch_first else input.size(1)
+    # def forward(self, input_x, hidden, encoder_outputs):
 
-        if hx is None:
-            num_directions = 2 if self.bidirectional else 1
-            hx = input.new_zeros(self.num_layers * num_directions,
-                                 max_batch_size, self.hidden_size,
-                                 requires_grad=False)
-            if self.mode == 'LSTM':
-                hx = (hx, hx)
 
-        has_flat_weights = list(p.data.data_ptr() for p in self.parameters()) == self._data_ptrs
-        if has_flat_weights:
-            first_data = next(self.parameters()).data
-            assert first_data.storage().size() == self._param_buf_size
-            flat_weight = first_data.new().set_(first_data.storage(), 0, torch.Size([self._param_buf_size]))
-        else:
-            flat_weight = None
 
-        self.check_forward_args(input, hx, batch_sizes)
-        func = self._backend.RNN(
-            self.mode,
-            self.input_size,
-            self.hidden_size,
-            num_layers=self.num_layers,
-            batch_first=self.batch_first,
-            dropout=self.dropout,
-            train=self.training,
-            bidirectional=self.bidirectional,
-            dropout_state=self.dropout_state,
-            variable_length=is_packed,
-            flat_weight=flat_weight
-        )
-        output, hidden = func(input, self.all_weights, hx, batch_sizes)
-        if is_packed:
-            output = PackedSequence(output, batch_sizes)
-        return output, hidden
 
 class PhraseModel(nn.Module):
     def __init__(self, emb_size, dict_size, hid_size):
@@ -74,7 +36,7 @@ class PhraseModel(nn.Module):
         # LSTM
         self.encoder = nn.GRU(input_size=emb_size, hidden_size=hid_size,
                                num_layers=1, batch_first=True)
-        self.decoder = DecoderLSTM(emb_size, hid_size).decoder
+        self.decoder = Decoder(emb_size, hid_size).decoder
         self.output = nn.Sequential(
             nn.Linear(hid_size, dict_size)
         )
@@ -107,10 +69,15 @@ class PhraseModel(nn.Module):
         #                     [ 2],
         #                     [ 3],
         #                     [ 4]])
+        # input_x: 1*embedding_size; temp_a: 1*1*embedding_size (second '1' is batch size)
+        temp_a = input_x.unsqueeze(0)
+        # out and new_hid: 1*1*hidden_size (second '1' is batch size);
         out, new_hid = self.decoder(input_x.unsqueeze(0), hid)
-        # Self.output(out) using nn.Linear(hid_size, dict_size) to transform logits to distribution over output vocab.
+        # Self.output(out) using nn.Linear(hid_size, dict_size) to transform logits to distribution over output vocab. out : 1*1*vocab_size (second '1' is batch size);
         out = self.output(out)
         # squeeze: Returns a tensor with all the dimensions of :attr:`input` of size `1` removed.
+        # out.squeeze(dim=0): 1*vocab_size ('1' is batch size);
+        temp_a = out.squeeze(dim=0)
         return out.squeeze(dim=0), new_hid
 
     def decode_chain_argmax(self, hid, begin_emb, seq_len, stop_at_token=None):
@@ -227,6 +194,8 @@ def pack_batch_no_out(batch, embeddings, device="cpu"):
     lens = list(map(len, input_idx))
     # 以最长的句子来建立batch*最长句子长度的全0矩阵；
     input_mat = np.zeros((len(batch), lens[0]), dtype=np.int64)
+    # 以固定的句子长度来建立batch*固定长句子长度的全0矩阵；
+    # input_mat = np.zeros((len(batch), PADDING_SIZE), dtype=np.int64)
     # 将batch中每个句子的tokens对应的ID向量填入全0矩阵完成padding；
     # idx：index，x：token ID 组成的向量；
     for idx, x in enumerate(input_idx):
