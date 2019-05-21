@@ -79,7 +79,7 @@ def transMask2Action(state):
                 '''print("{0}: {1}->{2}".format(num, id, action))'''
                 logging.info("%d: %s -> %s", num, id, action)
                 #print(" ".join(new_action))
-                symbolic_seq = list2dict(action)
+                symbolic_seq = list2dict(new_action)
                 # symbolic_seq.append({"A11":["","",""]})### A11
                 # Modify with magic.
                 # if state.startswith("Verification(Boolean)(All)"):
