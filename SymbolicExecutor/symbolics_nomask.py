@@ -305,6 +305,8 @@ class Symbolics():
         #print("A11:Count")
         if type(self.answer) == type([]):
             return len(self.answer)
+        elif type(self.answer) != type({}):
+            return 0
         elif e!='' and e and e in self.answer:
             if e not in self.answer and len(self.answer.keys()) == 1:
                 return len(self.answer.popitem())
