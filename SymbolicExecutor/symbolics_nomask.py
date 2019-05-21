@@ -147,7 +147,7 @@ class Symbolics():
         content = {}
         if et == "" or r =="" or t =="":
             return {}
-        elif not ('Q' in e and 'Q' in t and 'P' in r):
+        elif not ('Q' in et and 'Q' in t and 'P' in r):
             return {}
         if self.graph is not None and self.par_dict is not None:
             keys = self.par_dict[get_id(et)]
