@@ -230,7 +230,7 @@ def list2dict(list):
 
     i = 0
     for a in list:
-        if (a.startswith("A")):
+        if (a.startswith("A")) and len(temp_list) > 0:
             final_list.append({a: temp_list[i]})
             # temp_dict[a] = temp_list[i]
             i += 1
