@@ -80,13 +80,13 @@ def transMask2Action(state):
                 logging.info("%d: %s -> %s", num, id, action)
                 #print(" ".join(new_action))
                 symbolic_seq = list2dict(new_action)
+                print (new_action)
                 # symbolic_seq.append({"A11":["","",""]})### A11
                 # Modify with magic.
                 # if state.startswith("Verification(Boolean)(All)"):
                 #     symbolic_seq[-1] = {"A3":["","",""]} if not symbolic_seq[-1].has_key("A3") else symbolic_seq[-1]### A3
                 # if state.startswith("QuantitativeReasoning(Count)(All)") or state.startswith("ComparativeReasoning(Count)(All)"):
                 #     symbolic_seq[-1] = {"A11": ["", "", ""]} if not symbolic_seq[-1].has_key("A11") else symbolic_seq[-1]
-                print (symbolic_seq)
                 symbolic_exe = Symbolics(symbolic_seq)
                 answer = symbolic_exe.executor()
 
