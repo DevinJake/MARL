@@ -120,6 +120,8 @@ class Symbolics():
     def select(self, e, r, t):
         if e == "":
             return {}
+        if not ('Q' in e and 'Q' in t and 'P' in r):
+            return {}
         if self.graph is not None:
             if 'sub' in self.graph[get_id(e)] and r in self.graph[get_id(e)]['sub']:
                 return {e:[ee for ee in self.graph[get_id(e)]['sub'][r] if self.is_A(ee) == t]}
