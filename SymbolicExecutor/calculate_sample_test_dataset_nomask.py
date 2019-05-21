@@ -53,7 +53,7 @@ def transMask2Action(state):
         bool_right_count = 0
         count_right_count = 0
         for x, y in zip(predict_actions, RL_test):
-            print (action = x.strip().split(":")[0])
+            print (x.strip().split(":")[0])
             action = x.strip().split(":")[1]
             id = y.strip().split()[0]
 
