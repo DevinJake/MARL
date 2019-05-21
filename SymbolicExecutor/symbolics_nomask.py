@@ -38,13 +38,10 @@ class Symbolics():
             t = symbolic[key][2].strip()
             # The execution result from A1 is in dict format.
             if ("A1" in symbolic):
-                if 'Q' in e and 'Q' in t and 'P' in r:
-                    temp_result = self.select(e, r, t)
-                    self.answer = temp_result
-                    self.temp_bool_dict = temp_result
-                    self.print_answer()
-                else:
-                    self.answer = {}
+                temp_result = self.select(e, r, t)
+                self.answer = temp_result
+                self.temp_bool_dict = temp_result
+                self.print_answer()
             elif ("A2" in symbolic or "A16" in symbolic):
                 self.answer = self.select_all(e, r, t)
                 self.print_answer()
@@ -148,6 +145,10 @@ class Symbolics():
     def select_all(self, et, r, t):
         #print("A2:", et, r, t)
         content = {}
+        if et == "" or r =="" or t =="":
+            return {}
+        elif not ('Q' in e and 'Q' in t and 'P' in r):
+            return {}
         if self.graph is not None and self.par_dict is not None:
             keys = self.par_dict[get_id(et)]
             for key in keys:
