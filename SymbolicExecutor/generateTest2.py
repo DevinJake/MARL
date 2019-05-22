@@ -44,7 +44,7 @@ def testGenerate():
                 orig_response_val.append(o)
                 q_val.append(c)
         val.append(v)
-    with open("CSQA_ANNOTATIONS_test.json", 'w', encoding="UTF-8") as test_json, open("test_entities.txt", 'r', encoding="UTF-8") as test_entities\
+    with open("CSQA_ANNOTATIONS_test.json", 'w', encoding="UTF-8") as test_json, open("new_entities.txt", 'r', encoding="UTF-8") as test_entities\
             , open("test_questions.txt", 'r', encoding="UTF-8") as test_questions, open("test_types.txt", 'r', encoding="UTF-8") as test_types \
             , open("test_relations.txt", 'r', encoding="UTF-8") as test_relations:
         count = 1
