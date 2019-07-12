@@ -8,8 +8,7 @@
 '''
 
 import json
-
-from symbolics import Symbolics
+from SymbolicExecutor.symbolics import Symbolics
 
 
 def transMask2Action(state):
@@ -51,27 +50,27 @@ def transMask2Action(state):
                 #print(" ".join(new_action))
                 symbolic_seq = list2dict(new_action)
                 # symbolic_seq.append({"A11":["","",""]})### A11
-                if state.startswith("Verification(Boolean)(All)"):
-                    symbolic_seq[-1] = {"A3":["","",""]} if not symbolic_seq[-1].has_key("A3") else symbolic_seq[-1]### A3
-                if state.startswith("QuantitativeReasoning(Count)(All)") or state.startswith("ComparativeReasoning(Count)(All)"):
-                    symbolic_seq[-1] = {"A11": ["", "", ""]} if not symbolic_seq[-1].has_key("A11") else symbolic_seq[-1]
+                # if state.startswith("Verification(Boolean)(All)"):
+                #     symbolic_seq[-1] = {"A3":["","",""]} if not symbolic_seq[-1].has_key("A3") else symbolic_seq[-1]### A3
+                # if state.startswith("QuantitativeReasoning(Count)(All)") or state.startswith("ComparativeReasoning(Count)(All)"):
+                #     symbolic_seq[-1] = {"A11": ["", "", ""]} if not symbolic_seq[-1].has_key("A11") else symbolic_seq[-1]
                 symbolic_exe = Symbolics(symbolic_seq)
                 answer = symbolic_exe.executor()
 
                 if state.startswith("QuantitativeReasoning(Count)(All)") or state.startswith("ComparativeReasoning(Count)(All)"):
-                    print symbolic_seq
-                    print "answer::orig_response", answer, orig_response
+                    print(symbolic_seq)
+                    print("answer::orig_response", answer, orig_response)
 
                     if orig_response.isdigit() and answer == int(orig_response):
                         count_right_count += 1
-                        print "count_right_count+1"
+                        print("count_right_count+1")
                     else:
                         import re
                         orig_response = re.findall(r"\d+\.?\d*", orig_response)
                         orig_response = sum([int(i) for i in orig_response])
                         if answer == orig_response:
                             count_right_count += 1
-                            print "count_right_count+1"
+                            print("count_right_count+1")
                 if state.startswith("Verification(Boolean)(All)"):
                     if answer == True:
                         answer = "YES"
@@ -109,9 +108,9 @@ def transMask2Action(state):
                 print("Recall:", recall)
                 print('===============================')
             # print answer
-        print "bool_right_count", bool_right_count
-        print "count_right_count", count_right_count
-        print "total_num::total_right::total_answer::total_response", num, total_right_count, total_answer_count, total_response_count
+        print("bool_right_count", bool_right_count)
+        print("count_right_count", count_right_count)
+        print("total_num::total_right::total_answer::total_response", num, total_right_count, total_answer_count, total_response_count)
         mean_pre = total_precision / num
         mean_recall = total_recall / num
         mean_pre2 = float(total_right_count) / total_answer_count

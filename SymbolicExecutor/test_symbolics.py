@@ -9,14 +9,15 @@ import json
 import random
 import time
 from unittest import TestCase
-from urllib import urlencode
+#from urllib import urlencode
+from urllib.parse import urlencode
 
 import requests
 
 from Model.seq2seq import Seq2Seq
 from Preprocess.load_qadata import load_qadata
 from Preprocess.question_parser import QuestionParser
-from symbolics import Symbolics
+from SymbolicExecutor.symbolics import Symbolics
 from params import get_params
 
 
@@ -31,9 +32,9 @@ def test_sparql(self,e='Q148',r = 'P17',t = 'Q4022'):
                            }",
               "format" : "json",
               }
-    print sparql
+    # print sparql
     sparql =  urlencode(sparql)
-    print sparql
+    print(sparql)
     url = 'https://query.wikidata.org/sparql?'+sparql
     r = requests.get(url)
     #print r.json()["results"]
@@ -88,7 +89,7 @@ def test_select(self):
             print("answer is :", answer)
             if (type(answer) == dict):
                 for key in answer:
-                    print [v for v in answer[key]]
+                    print([v for v in answer[key]])
 
             time_end = time.time()
             print('time cost:', time_end - time_start)
@@ -101,13 +102,13 @@ def test_select(self):
 def test_folder(fpath):
     # 读取qa文件集
     for root, dirnames, filenames in os.walk(fpath):
-        print root
+        print(root)
         filenames = [ff for ff in filenames if not ff.endswith("result.txt")]
         for f in  filenames:
             time_start = time.time()
             test_file(root, f)
             time_end = time.time()
-            print f, ('time cost:', time_end - time_start)
+            print (f, 'time cost:', time_end - time_start)
 
 def test_file(root, f):
     params = get_params("/data/zjy/csqa_data", "/home/zhangjingyao/preprocessed_data_10k")
@@ -159,22 +160,21 @@ def test_file(root, f):
                 answer_entities = ['None']
 
             if len(answer) > 500:
-                print >> qa_result, ("answer is :", list(answer)[:500])
+                print(("answer is :", list(answer)[:500]), end="", file=qa_result)
             else:
-                print >> qa_result, ("answer is :", list(answer))
-            print >> qa_result, ('time cost:', time_end - time_start)
-
+                print(("answer is :", list(answer)), end="", file=qa_result)
+            print(('time cost:', time_end - time_start), end="", file=qa_result)
             for e in answer_entities:
                 if (e in answer):
                     count += 1
 
-            print >> qa_result, ("orig:", len(answer_entities), "answer:", len(answer), "right:", count)
-            print >> qa_result, ('===============================')
+            print(("orig:", len(answer_entities), "answer:", len(answer), "right:", count), end="", file=qa_result)
+            print('===============================', end="", file=qa_result)
             flag = 0
             sym_seq = []
 
         if ("response") in line or line.startswith("context_utterance") or line.replace("\n", "").isdigit() or "state" in line:
-            print >> qa_result, line,
+            print((qa_result, line,), end="", file=qa_result)
 
 if __name__ == "__main__":
     #test_folder("/home/zhangjingyao/demoqa/")
