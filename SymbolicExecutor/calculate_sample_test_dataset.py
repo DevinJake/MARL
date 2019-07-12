@@ -40,7 +40,7 @@ def transformBooleanToString(list):
         return ((' and '.join(list)).strip() + ' respectively')
 
 def transMask2Action(state):
-    with open("../data/auto_QA_data/CSQA_ANNOTATIONS_test.json", 'r') as load_f, open("../data/saves/rl_even_0.2%_/sample_final_predict.actions", 'r') as predict_actions \
+    with open("../data/auto_QA_data/CSQA_ANNOTATIONS_test.json", 'r') as load_f, open("../data/saves/rl_even_0.2%/sample_final_predict.actions", 'r') as predict_actions \
             , open("../data/auto_QA_data/mask_test/SAMPLE_FINAL_test.question", 'r') as RL_test:
         linelist = list()
         load_dict = json.load(load_f)
