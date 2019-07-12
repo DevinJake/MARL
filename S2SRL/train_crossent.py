@@ -6,7 +6,7 @@ import logging
 import numpy as np
 import sys
 from tensorboardX import SummaryWriter
-
+import time
 from libbots import data, model, utils
 
 import torch
@@ -24,8 +24,8 @@ log = logging.getLogger("train")
 
 TEACHER_PROB = 1.0
 
-TRAIN_QUESTION_PATH = '../data/auto_QA_data/mask_even/PT_train.question'
-TRAIN_ACTION_PATH = '../data/auto_QA_data/mask_even/PT_train.action'
+TRAIN_QUESTION_PATH = '../data/auto_QA_data/mask_even_0.2%/PT_train.question'
+TRAIN_ACTION_PATH = '../data/auto_QA_data/mask_even_0.2%/PT_train.action'
 DIC_PATH = '../data/auto_QA_data/share.question'
 
 def run_test(test_data, net, end_token, device="cpu"):
@@ -47,7 +47,7 @@ if __name__ == "__main__":
     logging.basicConfig(format="%(asctime)-15s %(levelname)s %(message)s", level=logging.INFO)
 
     # command line parameters
-    sys.argv = ['train_crossent.py', '--cuda', '--n=crossent_even']
+    sys.argv = ['train_crossent.py', '--cuda', '--n=crossent_even_0.2%']
 
     parser = argparse.ArgumentParser()
     # parser.add_argument("--data", required=True, help="Category to use for training. "
@@ -89,6 +89,9 @@ if __name__ == "__main__":
 
     optimiser = optim.Adam(net.parameters(), lr=LEARNING_RATE)
     best_bleu = None
+
+    time_start = time.time()
+
     for epoch in range(MAX_EPOCHES):
         losses = []
         bleu_sum = 0.0
@@ -170,4 +173,9 @@ if __name__ == "__main__":
                                     (epoch, bleu, bleu_test))
             torch.save(net.state_dict(), out_name)
         print ("------------------Epoch " + str(epoch) + ": training is over.------------------")
+
+    time_end = time.time()
+    log.info("Training time is %.3fs." %(time_end-time_start))
+    print ("Training time is %.3fs." %(time_end - time_start))
+
     writer.close()
