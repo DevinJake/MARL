@@ -14,18 +14,25 @@ import numpy as np
 import random
 SEED = 1988
 LINE_SIZE = 100000
-CATEGORY_SIZE = 2000
-COMP_SIZE = 1300
+
+CATEGORY_SIZE = 1600
+COMP_SIZE = 622
+COMP_APPRO_SIZE = 1040
+COMP_COUNT_SIZE = 370
+COMP_COUNT_APPRO_SIZE = 1025
+QUANTATIVE_SIZE = 1254
+COUNT_SIZE = 489
+BOOL_SIZE = 285
 from random import shuffle
 
 special_counting_characters = {'-','|','&'}
 special_characters = {'(',')','-','|','&'}
 
 def getTrainingDatasetForPytorch():
-    fwTrainQ = open('../../data/auto_QA_data/mask_even/PT_train.question', 'w', encoding="UTF-8")
-    fwTrainA = open('../../data/auto_QA_data/mask_even/PT_train.action', 'w', encoding="UTF-8")
-    fwTestQ = open('../../data/auto_QA_data/mask_even/PT_test.question', 'w', encoding="UTF-8")
-    fwTestA = open('../../data/auto_QA_data/mask_even/PT_test.action', 'w', encoding="UTF-8")
+    fwTrainQ = open('../../data/auto_QA_data/mask_even_0.8%/PT_train.question', 'w', encoding="UTF-8")
+    fwTrainA = open('../../data/auto_QA_data/mask_even_0.8%/PT_train.action', 'w', encoding="UTF-8")
+    fwTestQ = open('../../data/auto_QA_data/mask_even_0.8%/PT_test.question', 'w', encoding="UTF-8")
+    fwTestA = open('../../data/auto_QA_data/mask_even_0.8%/PT_test.action', 'w', encoding="UTF-8")
     with open("../../data/auto_QA_data/CSQA_ANNOTATIONS_full.json", 'r', encoding="UTF-8") as load_f:
         train_action_string_list, test_action_string_list, train_question_string_list, test_question_string_list = list(), list(), list(), list()
         dict_list = list()
@@ -45,19 +52,19 @@ def getTrainingDatasetForPytorch():
                     count_dict['simple_'] = count_dict['simple_'] + 1
                 elif 'logical_' in key and count_dict['logical_'] < CATEGORY_SIZE:
                     count_dict['logical_'] = count_dict['logical_'] + 1
-                elif 'quantative_' in key and count_dict['quantative_'] < CATEGORY_SIZE:
+                elif 'quantative_' in key and count_dict['quantative_'] < QUANTATIVE_SIZE:
                     count_dict['quantative_'] = count_dict['quantative_'] + 1
-                elif 'count_' in key and 'compcount_' not in key and count_dict['count_'] < CATEGORY_SIZE:
+                elif 'count_' in key and 'compcount_' not in key and count_dict['count_'] < COUNT_SIZE:
                     count_dict['count_'] = count_dict['count_'] + 1
-                elif 'bool_' in key and count_dict['bool_'] < CATEGORY_SIZE:
+                elif 'bool_' in key and count_dict['bool_'] < BOOL_SIZE:
                     count_dict['bool_'] = count_dict['bool_'] + 1
                 elif 'comp_' in key and count_dict['comp_'] < COMP_SIZE:
                     count_dict['comp_'] = count_dict['comp_'] + 1
-                elif 'compcount_' in key and count_dict['compcount_'] < COMP_SIZE:
+                elif 'compcount_' in key and count_dict['compcount_'] < COMP_COUNT_SIZE:
                     count_dict['compcount_'] = count_dict['compcount_'] + 1
-                elif 'compcountappro_' in key and count_dict['compcountappro_'] < COMP_SIZE:
+                elif 'compcountappro_' in key and count_dict['compcountappro_'] < COMP_COUNT_APPRO_SIZE:
                     count_dict['compcountappro_'] = count_dict['compcountappro_'] + 1
-                elif 'compappro_' in key and count_dict['compappro_'] < COMP_SIZE:
+                elif 'compappro_' in key and count_dict['compappro_'] < COMP_APPRO_SIZE:
                     count_dict['compappro_'] = count_dict['compappro_'] + 1
                 else:
                     continue
@@ -128,10 +135,10 @@ def getTrainingDatasetForPytorch():
     print ("Getting SEQUENCE2SEQUENCE processDataset is done!")
 
 def getTrainingDatasetForRl():
-    fwTrainQ = open('../../data/auto_QA_data/mask_even/RL_train.question', 'w', encoding="UTF-8")
-    fwTrainA = open('../../data/auto_QA_data/mask_even/RL_train.action', 'w', encoding="UTF-8")
-    fwTestQ = open('../../data/auto_QA_data/mask_even/RL_test.question', 'w', encoding="UTF-8")
-    fwTestA = open('../../data/auto_QA_data/mask_even/RL_test.action', 'w', encoding="UTF-8")
+    fwTrainQ = open('../../data/auto_QA_data/mask_even_0.8%/RL_train.question', 'w', encoding="UTF-8")
+    fwTrainA = open('../../data/auto_QA_data/mask_even_0.8%/RL_train.action', 'w', encoding="UTF-8")
+    fwTestQ = open('../../data/auto_QA_data/mask_even_0.8%/RL_test.question', 'w', encoding="UTF-8")
+    fwTestA = open('../../data/auto_QA_data/mask_even_0.8%/RL_test.action', 'w', encoding="UTF-8")
     # fwNoaction = open('../../data/auto_QA_data/mask_even/no_action_question.txt', 'w', encoding="UTF-8")
     no_action_question_list = list()
     questionSet = set()
@@ -155,19 +162,19 @@ def getTrainingDatasetForRl():
                     count_dict['simple_'] = count_dict['simple_'] + 1
                 elif 'logical_' in key and count_dict['logical_'] < CATEGORY_SIZE:
                     count_dict['logical_'] = count_dict['logical_'] + 1
-                elif 'quantative_' in key and count_dict['quantative_'] < CATEGORY_SIZE:
+                elif 'quantative_' in key and count_dict['quantative_'] < QUANTATIVE_SIZE:
                     count_dict['quantative_'] = count_dict['quantative_'] + 1
-                elif 'count_' in key and 'compcount_' not in key and count_dict['count_'] < CATEGORY_SIZE:
+                elif 'count_' in key and 'compcount_' not in key and count_dict['count_'] < COUNT_SIZE:
                     count_dict['count_'] = count_dict['count_'] + 1
-                elif 'bool_' in key and count_dict['bool_'] < CATEGORY_SIZE:
+                elif 'bool_' in key and count_dict['bool_'] < BOOL_SIZE:
                     count_dict['bool_'] = count_dict['bool_'] + 1
                 elif 'comp_' in key and count_dict['comp_'] < COMP_SIZE:
                     count_dict['comp_'] = count_dict['comp_'] + 1
-                elif 'compcount_' in key and count_dict['compcount_'] < COMP_SIZE:
+                elif 'compcount_' in key and count_dict['compcount_'] < COMP_COUNT_SIZE:
                     count_dict['compcount_'] = count_dict['compcount_'] + 1
-                elif 'compcountappro_' in key and count_dict['compcountappro_'] < COMP_SIZE:
+                elif 'compcountappro_' in key and count_dict['compcountappro_'] < COMP_COUNT_APPRO_SIZE:
                     count_dict['compcountappro_'] = count_dict['compcountappro_'] + 1
-                elif 'compappro_' in key and count_dict['compappro_'] < COMP_SIZE:
+                elif 'compappro_' in key and count_dict['compappro_'] < COMP_APPRO_SIZE:
                     count_dict['compappro_'] = count_dict['compappro_'] + 1
                 else:
                     continue
