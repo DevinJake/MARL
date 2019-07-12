@@ -67,8 +67,8 @@ if __name__ == "__main__":
     phrase_pairs, emb_dict = data.load_data_from_existing_data(TRAIN_QUESTION_PATH, TRAIN_ACTION_PATH, DIC_PATH, MAX_TOKENS)
     # Index -> word.
     rev_emb_dict = {idx: word for word, idx in emb_dict.items()}
-    log.info("Obtained %d phrase pairs with %d uniq words",
-             len(phrase_pairs), len(emb_dict))
+    log.info("Obtained %d phrase pairs with %d uniq words from %s and %s.",
+             len(phrase_pairs), len(emb_dict), TRAIN_QUESTION_PATH, TRAIN_ACTION_PATH)
     data.save_emb_dict(saves_path, emb_dict)
     end_token = emb_dict[data.END_TOKEN]
     # 将tokens转换为emb_dict中的indices;

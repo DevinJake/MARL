@@ -81,7 +81,7 @@ if __name__ == "__main__":
     # phrase_pairs, emb_dict = data.load_data('comedy')
     # List of (seq1, [seq*]) pairs, the training pairs are in format of 1:N.
     phrase_pairs, emb_dict = data.load_RL_data(TRAIN_QUESTION_PATH, TRAIN_ACTION_PATH, DIC_PATH, MAX_TOKENS)
-    log.info("Obtained %d phrase pairs with %d uniq words", len(phrase_pairs), len(emb_dict))
+    log.info("Obtained %d phrase pairs with %d uniq words from %s and %s.", len(phrase_pairs), len(emb_dict), TRAIN_QUESTION_PATH, TRAIN_ACTION_PATH)
     data.save_emb_dict(saves_path, emb_dict)
     end_token = emb_dict[data.END_TOKEN]
     train_data = data.encode_phrase_pairs(phrase_pairs, emb_dict)
