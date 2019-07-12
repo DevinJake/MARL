@@ -110,7 +110,7 @@ class Symbolics():
             json_pack = dict()
             json_pack['op']="is_A"
             json_pack['entity']=e
-            content = requests.post("http://10.201.19.151:5000/post", json=json_pack).json()['content']
+            content = requests.post("http://10.201.18.49:5000/post", json=json_pack).json()['content']
             # content=requests.post("http://127.0.0.1:5000/post",json=json_pack).json()['content']
             return content
 
@@ -131,7 +131,7 @@ class Symbolics():
             json_pack['pre'] = r
             json_pack['obj'] = t
             # content = requests.post("http://127.0.0.1:5000/post", json=json_pack).json()['content']
-            content = requests.post("http://10.201.19.151:5000/post", json=json_pack).json()['content']
+            content = requests.post("http://10.201.18.49:5000/post", json=json_pack).json()['content']
             if content is not None:
                 # Store records in set.
                 content = set(content)
@@ -160,7 +160,7 @@ class Symbolics():
             json_pack['pre'] = r
             json_pack['obj'] = t
 
-        content = requests.post("http://10.201.19.151:5000/post", json=json_pack).json()['content']
+        content = requests.post("http://10.201.18.49:5000/post", json=json_pack).json()['content']
         # content = requests.post("http://127.0.0.1:5000/post", json=json_pack).json()['content']
         # for k, v in content.items():
         #   if len(v) == 0: content.pop(k)
