@@ -12,7 +12,7 @@ from libbots import data, model, utils
 import torch
 import torch.optim as optim
 import torch.nn.functional as F
-
+import time
 import ptan
 
 SAVES_DIR = "../data/saves"
@@ -23,14 +23,14 @@ MAX_EPOCHES = 30
 MAX_TOKENS = 40
 TRAIN_RATIO = 0.985
 
-TRAIN_QUESTION_PATH = '../data/auto_QA_data/mask_even/RL_train.question'
-TRAIN_ACTION_PATH = '../data/auto_QA_data/mask_even/RL_train.action'
+TRAIN_QUESTION_PATH = '../data/auto_QA_data/mask_even_0.2%/RL_train.question'
+TRAIN_ACTION_PATH = '../data/auto_QA_data/mask_even_0.2%/RL_train.action'
 DIC_PATH = '../data/auto_QA_data/share.question'
 
 log = logging.getLogger("train")
 
 # Calculate bleus for samples in test dataset.
-def run_test(test_data, net, end_token, device="cpu"):
+def run_test(test_data, net, end_token, device="cuda"):
     bleu_sum = 0.0
     bleu_count = 0
     # p1 is one sentence, p2 is sentence list.
@@ -61,7 +61,7 @@ if __name__ == "__main__":
     # command line parameters
     # sys.argv = ['train_crossent.py', '--cuda', '-l=../data/saves/crossent/pre_bleu_0.942_18.dat', '-n=rl']
 
-    sys.argv = ['train_crossent.py', '--cuda', '-l=../data/saves/crossent_even/pre_bleu_0.942_26.dat', '-n=rl_even']
+    sys.argv = ['train_crossent.py', '--cuda', '-l=../data/saves/crossent_even_0.2%/pre_bleu_0.942_26.dat', '-n=rl_even_0.2%']
     parser = argparse.ArgumentParser()
     # parser.add_argument("--data", required=True, help="Category to use for training. Empty string to train on full processDataset")
     parser.add_argument("--cuda", action='store_true', default=False, help="Enable cuda")
@@ -117,6 +117,9 @@ if __name__ == "__main__":
         optimiser = optim.Adam(net.parameters(), lr=LEARNING_RATE, eps=1e-3)
         batch_idx = 0
         best_bleu = None
+
+        time_start = time.time()
+
         # Loop in epoches.
         for epoch in range(MAX_EPOCHES):
             random.shuffle(train_data)
@@ -252,5 +255,9 @@ if __name__ == "__main__":
                 torch.save(net.state_dict(), os.path.join(saves_path, "bleu_%.3f_%02d.dat" % (bleu_test, epoch)))
             if epoch % 10 == 0:
                 torch.save(net.state_dict(), os.path.join(saves_path, "epoch_%03d_%.3f_%.3f.dat" % (epoch, bleu, bleu_test)))
+
+        time_end = time.time()
+        log.info("Training time is %.3fs." % (time_end - time_start))
+        print("Training time is %.3fs." % (time_end - time_start))
 
     writer.close()
