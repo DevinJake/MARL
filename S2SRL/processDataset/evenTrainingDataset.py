@@ -15,24 +15,24 @@ import random
 SEED = 1988
 LINE_SIZE = 100000
 
-CATEGORY_SIZE = 1600
-COMP_SIZE = 622
-COMP_APPRO_SIZE = 1040
-COMP_COUNT_SIZE = 370
-COMP_COUNT_APPRO_SIZE = 1025
-QUANTATIVE_SIZE = 1254
-COUNT_SIZE = 489
-BOOL_SIZE = 285
+CATEGORY_SIZE = 2800
+COMP_SIZE = 932
+COMP_APPRO_SIZE = 1769
+COMP_COUNT_SIZE = 554
+COMP_COUNT_APPRO_SIZE = 1536
+QUANTATIVE_SIZE = 1880
+COUNT_SIZE = 733
+BOOL_SIZE = 427
 from random import shuffle
 
 special_counting_characters = {'-','|','&'}
 special_characters = {'(',')','-','|','&'}
 
 def getTrainingDatasetForPytorch():
-    fwTrainQ = open('../../data/auto_QA_data/mask_even_0.8%/PT_train.question', 'w', encoding="UTF-8")
-    fwTrainA = open('../../data/auto_QA_data/mask_even_0.8%/PT_train.action', 'w', encoding="UTF-8")
-    fwTestQ = open('../../data/auto_QA_data/mask_even_0.8%/PT_test.question', 'w', encoding="UTF-8")
-    fwTestA = open('../../data/auto_QA_data/mask_even_0.8%/PT_test.action', 'w', encoding="UTF-8")
+    fwTrainQ = open('../../data/auto_QA_data/mask_even_1.2%/PT_train.question', 'w', encoding="UTF-8")
+    fwTrainA = open('../../data/auto_QA_data/mask_even_1.2%/PT_train.action', 'w', encoding="UTF-8")
+    fwTestQ = open('../../data/auto_QA_data/mask_even_1.2%/PT_test.question', 'w', encoding="UTF-8")
+    fwTestA = open('../../data/auto_QA_data/mask_even_1.2%/PT_test.action', 'w', encoding="UTF-8")
     with open("../../data/auto_QA_data/CSQA_ANNOTATIONS_full.json", 'r', encoding="UTF-8") as load_f:
         train_action_string_list, test_action_string_list, train_question_string_list, test_question_string_list = list(), list(), list(), list()
         dict_list = list()
@@ -135,10 +135,10 @@ def getTrainingDatasetForPytorch():
     print ("Getting SEQUENCE2SEQUENCE processDataset is done!")
 
 def getTrainingDatasetForRl():
-    fwTrainQ = open('../../data/auto_QA_data/mask_even_0.8%/RL_train.question', 'w', encoding="UTF-8")
-    fwTrainA = open('../../data/auto_QA_data/mask_even_0.8%/RL_train.action', 'w', encoding="UTF-8")
-    fwTestQ = open('../../data/auto_QA_data/mask_even_0.8%/RL_test.question', 'w', encoding="UTF-8")
-    fwTestA = open('../../data/auto_QA_data/mask_even_0.8%/RL_test.action', 'w', encoding="UTF-8")
+    fwTrainQ = open('../../data/auto_QA_data/mask_even_1.2%/RL_train.question', 'w', encoding="UTF-8")
+    fwTrainA = open('../../data/auto_QA_data/mask_even_1.2%/RL_train.action', 'w', encoding="UTF-8")
+    fwTestQ = open('../../data/auto_QA_data/mask_even_1.2%/RL_test.question', 'w', encoding="UTF-8")
+    fwTestA = open('../../data/auto_QA_data/mask_even_1.2%/RL_test.action', 'w', encoding="UTF-8")
     # fwNoaction = open('../../data/auto_QA_data/mask_even/no_action_question.txt', 'w', encoding="UTF-8")
     no_action_question_list = list()
     questionSet = set()
