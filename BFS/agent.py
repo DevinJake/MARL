@@ -11,9 +11,9 @@ class KB(object):
     def __init__(self,mode='online'): 
         if mode!='online':
             print("loading knowledge base...")
-            self.graph=pickle.load(open('/data/wuwei/data/wikidata.pkl','rb'))
-            self.type_dict=pickle.load(open('/data/wuwei/data/type_kb.pkl','rb'))
-            self.par_dict=pickle.load(open('/data/wuwei/data/par_dict.pkl','rb'))
+            self.graph=pickle.load(open('/data/zjy/wikidata.pkl','rb'))
+            self.type_dict=pickle.load(open('/data/zjy/type_kb.pkl','rb'))
+            self.par_dict=pickle.load(open('/data/zjy/par_dict.pkl','rb'))
             print("Load done!")
         else:
             self.graph=None
@@ -131,23 +131,24 @@ class KB(object):
 if __name__ == "__main__":
     print("Building knowledge base....")
     kb = KB()#Q26971562 | Q502895 | Q234460
-    print(kb.is_All('Q15617994'))
-    for e in kb.is_All('Q234460'):
+    # for e in kb.is_All('Q234460'):
+    #
+    #     a = kb.find(e, 'P110')
+    #     if a:
+    #         print(a, kb.is_A(list(a)[0]))
 
-        a = kb.find(e, 'P110')
-        if a:
-            print(a, kb.is_A(list(a)[0]))
+    print(kb.find_reverse('Q819603','P159'))
+    #a.update(kb.select_All('Q56061', 'P138', 'Q82799'))
+    # for e in kb.is_All('Q56061'):
+    #     if kb.find(e,'P138'):
+    #         print(e,kb.find(e,'P138'))
 
-    for e in kb.is_All('Q56061'):
-        if kb.find(e,'P138'):
-            print(e,kb.find(e,'P138'))
-
-    print(len(kb.select_All('Q515','P740','Q215380').keys()))
-    print(kb.is_A('Q23'))#Q11552013,P108,Q3918
-    for e in kb.select('Q1348664', 'P749', 'Q43229'):
-        val = kb.select('Q1348664', 'P749', 'Q43229')[e]
-        for v in val:
-            print(v, kb.is_A(v))
+    #print(len(kb.select_All('Q515','P740','Q215380').keys()))
+    # print(kb.is_A('Q23'))#Q11552013,P108,Q3918
+    # for e in kb.select('Q1348664', 'P749', 'Q43229'):
+    #     val = kb.select('Q1348664', 'P749', 'Q43229')[e]
+    #     for v in val:
+    #         print(v, kb.is_A(v))
         
         
         
