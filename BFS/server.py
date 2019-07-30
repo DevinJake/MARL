@@ -8,7 +8,9 @@ def get_id(idx):
     return int(idx[1:])
 
 def select(e,r,t):
-    if 'sub' in graph[get_id(e)] and r in graph[get_id(e)]['sub']:
+    if r.startswith("-") and 'obj' in graph[get_id(e)] and r[1:] in graph[get_id(e)]['obj']:
+        return [ee for ee in graph[get_id(e)]['obj'][r[1:]] if t in is_A(ee)]
+    elif 'sub' in graph[get_id(e)] and r in graph[get_id(e)]['sub']:
         return [ee for ee in graph[get_id(e)]['sub'][r] if t in  is_A(ee)]
     elif 'obj' in graph[get_id(e)] and r in graph[get_id(e)]['obj']:
         return [ee for ee in graph[get_id(e)]['obj'][r] if t in is_A(ee)]
@@ -37,7 +39,6 @@ def is_All(t):
     # return entities which type is t
     return par_dict[get_id(t)]
 
-
 def select_All(et, r, t):
     content = {}
     if r.startswith("-"):
@@ -47,16 +48,14 @@ def select_All(et, r, t):
             for key in keys:
                 if 'obj' in graph[get_id(key)] and r in graph[get_id(key)]['obj']:
                     val = [ee for ee in graph[get_id(key)]['obj'][r] if t in is_A(ee)]
-                    if val:
-                        content[key] = val
-
+                    content[key] = val
     else:
         if graph is not None and par_dict is not None:
             keys = par_dict[get_id(et)]
             for key in keys:
                 if 'sub' in graph[get_id(key)] and r in graph[get_id(key)]['sub']:
                     val = [ee for ee in graph[get_id(key)]['sub'][r] if t in is_A(ee)]
-                    if val:  content[key] = val
+                    content[key] = val
     return content
 
 
@@ -88,7 +87,7 @@ if __name__ == '__main__':
     print("graph Load done!")
     global type_dict
     type_dict=pickle.load(open('/data/wuwei/data/child_par.pkl','rb'))
-    print("type_dict Load done!")
+    print("type_dict Load done!",len(type_dict))
     global par_dict
     par_dict = pickle.load(open('/data/wuwei/data/par_child.pkl', 'rb'))
     print("par_dict Load done!")
