@@ -69,6 +69,7 @@ def transMask2Action(state):
                 entity_mask.update(relation_mask)
                 entity_mask.update(type_mask)
                 new_action = list()
+                # Default separator of split() method is any whitespace.
                 for act in action.split():
                     for k, v in entity_mask.items():
                         if act == v:

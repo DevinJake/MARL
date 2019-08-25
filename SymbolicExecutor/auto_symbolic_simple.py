@@ -117,12 +117,13 @@ def auto_test():
         context_relations = qa['context_relations'].replace("\n", "").split("|")
         context_types = qa['context_types'].replace("\n", "").split("|")
         context_ints = qa['context_ints'].replace("\n", "")
+        # Get reverse relation: has_child and -has_child.
         context_relations.extend(['-' + r for r in context_relations])
         response_entities = qa['response_entities'].replace("\n", "").split("|")
         orig_response = qa['orig_response'].replace("\n", "")
         logging.info(str(a)+" "+context_utterance)
         #print context_utterance
-        print a, time.time()
+        print(a, time.time())
         flag = 0
         a += 1
         for seq in [['A1']]:
