@@ -17,15 +17,15 @@ SAVES_DIR = "../data/saves"
 
 BATCH_SIZE = 32
 LEARNING_RATE = 1e-3
-MAX_EPOCHES = 70
+MAX_EPOCHES = 50
 MAX_TOKENS = 40
 
 log = logging.getLogger("train")
 
 TEACHER_PROB = 1.0
 
-TRAIN_QUESTION_PATH = '../data/auto_QA_data/mask_even_0.4%/PT_train.question'
-TRAIN_ACTION_PATH = '../data/auto_QA_data/mask_even_0.4%/PT_train.action'
+TRAIN_QUESTION_PATH = '../data/auto_QA_data/mask_even/PT_train.question'
+TRAIN_ACTION_PATH = '../data/auto_QA_data/mask_even/PT_train.action'
 DIC_PATH = '../data/auto_QA_data/share.question'
 
 def run_test(test_data, net, end_token, device="cuda"):
@@ -47,7 +47,7 @@ if __name__ == "__main__":
     logging.basicConfig(format="%(asctime)-15s %(levelname)s %(message)s", level=logging.INFO)
 
     # command line parameters
-    sys.argv = ['train_crossent.py', '--cuda', '--n=crossent_even_0.4%']
+    sys.argv = ['train_crossent.py', '--cuda', '--n=crossent_even_1%']
 
     parser = argparse.ArgumentParser()
     # parser.add_argument("--data", required=True, help="Category to use for training. "
