@@ -91,4 +91,4 @@ if __name__ == '__main__':
     global par_dict
     par_dict = pickle.load(open('/data/wuwei/data/par_child.pkl', 'rb'))
     print("par_dict Load done!")
-    app.run(host='10.201.19.72', port=5000, use_debugger=True)
+    app.run(host='10.201.44.130', port=5000, use_debugger=True)
