@@ -27,7 +27,7 @@ def getEntitiyID2Label():
 # Also treat the JSON as the file of training set used for REINFORCEMENT learning with denotations.
 def getAllQustionsAndAnswers():
     fw = open('../../data/auto_QA_data/CSQA_DENOTATIONS_full.json', 'w', encoding="UTF-8")
-    qa_set = load_qadata("../../data/official_downloaded_data/train_10k")
+    qa_set = load_qadata("../../data/official_downloaded_data/10k/train_10k")
     qa_map = getQA_by_state_py3(qa_set)
     load_dict = getEntitiyID2Label()
     question_dict = {}
