@@ -2,6 +2,7 @@
 '''Get all questions, annotated actions, entities, relations, types together in JSON format.
 '''
 from itertools import islice
+from Preprocess.load_qadata import load_qadata, getQA_by_state_py3
 import sys
 import json
 #Python codes to read the binary files.
@@ -13,6 +14,137 @@ from random import shuffle
 
 special_counting_characters = {'-','|','&'}
 special_characters = {'(',')','-','|','&'}
+
+# Get items_wikidata_n.json.
+# This json contains a dict with keys as the ids of wikidata entities and values as their string labels.
+def getEntitiyID2Label():
+    with open("../../data/official_downloaded_data/items_wikidata_n.json", 'r', encoding="UTF-8") as load_f:
+        load_dict = json.load(load_f)
+    print ('Reading items_wikidata_n.json is done!')
+    return load_dict
+
+# Get all questions and answers in CQA-10K data-set for REINFORCEMENT learning by using denotations.
+# Also treat the JSON as the file of training set used for REINFORCEMENT learning with denotations.
+def getAllQustionsAndAnswers():
+    fw = open('../../data/auto_QA_data/CSQA_DENOTATIONS_full.json', 'w', encoding="UTF-8")
+    qa_set = load_qadata("../../data/official_downloaded_data/train_10k")
+    qa_map = getQA_by_state_py3(qa_set)
+    load_dict = getEntitiyID2Label()
+    question_dict = {}
+    totality = 0
+    fwQuestionDic = open('../../data/auto_QA_data/mask/dic_rl_tr.question', 'w', encoding="UTF-8")
+    questionSet = set()
+    for qafile_key, qafile_value in qa_map.items():
+        id_prefix = qafile_key
+        count = 0
+        for qa in qafile_value:
+            # context = qa['context'].replace("\n", "").strip()
+            context_utterance = qa['context_utterance'].replace("\n", "").strip()
+            if(len(context_utterance)==0):
+                continue
+            count += 1
+            id = id_prefix.replace("\n", "").strip() + '_' + str(count)
+            context_entities = [] if(len(qa['context_entities'].replace("\n", "").strip())==0) else qa['context_entities'].replace("\n", "").strip().split("|")
+            context_relations = [] if(len(qa['context_relations'].replace("\n", "").strip())==0) else qa['context_relations'].replace("\n", "").strip().split("|")
+            context_types = [] if (len(qa['context_types'].replace("\n", "").strip())==0) else qa['context_types'].replace("\n", "").strip().split("|")
+            context_ints = qa['context_ints'].replace("\n", "").strip()
+            # Get reverse relation: has_child and -has_child.
+            # context_relations.extend(['-' + r for r in context_relations])
+            response_entities = []  if (len(qa['response_entities'].replace("\n", "").strip())==0) else qa['response_entities'].replace("\n", "").strip().split("|")
+            orig_response = qa['orig_response'].replace("\n", "").strip()
+            response_bools = [] if (len(qa['response_bools'].replace("\n", "").strip())==0) else qa['response_bools'].replace("\n", "").strip().split("|")
+            # response_ints = qa['response_ints'].replace("\n", "").split("|")
+            question_info = {}
+            question_info.update({'question': context_utterance,
+                                  'entity': context_entities, 'relation': context_relations,
+                                  'type': context_types,'context_ints': context_ints,
+                                  'response_entities': response_entities,'orig_response': orig_response,
+                                  'response_bools': response_bools})
+            # Get masked entity.
+            entity_maskID = {}
+            if len(context_entities)!=0:
+                context_utterance_low = context_utterance.lower()
+                entity_index_dict = {}
+                for entity in context_entities:
+                    if(entity in load_dict):
+                        entity_name = load_dict.get(entity).lower()
+                        entity_index_dict[entity] = entity_name
+                    else:
+                        entity_index_dict[entity] = entity
+                for key, value in entity_index_dict.items():
+                    if(value in context_utterance_low):
+                        entity_index_dict[key] = context_utterance_low.index(value)
+                    else:
+                        entity_index_dict[key] = LINE_SIZE
+                temp_count = 0
+                # To sort a dict by value.
+                for key, value in sorted(entity_index_dict.items(), key=lambda item: item[1]):
+                    entity_maskID[key] = 'ENTITY' + str(temp_count + 1)
+                    temp_count+=1
+            question_info['entity_mask'] = entity_maskID
+
+            # Get masked relation.
+            relation_maskID = {}
+            if len(context_relations) != 0:
+                relation_index = 0
+                for relation in context_relations:
+                    relation = relation.replace('-', '')
+                    if relation not in relation_maskID:
+                        relation_index += 1
+                        relation_maskID[relation] = 'RELATION' + str(relation_index)
+            question_info['relation_mask'] = relation_maskID
+
+            # Get masked type.
+            type_maskID = {}
+            if len(context_types) != 0:
+                for i, type in enumerate(context_types):
+                    type_maskID[type] = 'TYPE' + str(i + 1)
+            question_info['type_mask'] = type_maskID
+
+            question_string = '<E> '
+            if len(entity_maskID) > 0:
+                for entity_key, entity_value in entity_maskID.items():
+                    if str(entity_value) != '':
+                        question_string += str(entity_value) + ' '
+            question_string += '</E> <R> '
+            if len(relation_maskID) > 0:
+                for relation_key, relation_value in relation_maskID.items():
+                    if str(relation_value) != '':
+                        question_string += str(relation_value) + ' '
+            question_string += '</R> <T> '
+            if len(type_maskID) > 0:
+                for type_key, type_value in type_maskID.items():
+                    if str(type_value) != '':
+                        question_string += str(type_value) + ' '
+            question_string += '</T> '
+
+            question_token = str(context_utterance).lower().replace('?', '')
+            question_token = question_token.replace(',', ' ')
+            question_token = question_token.replace(':', ' ')
+            question_token = question_token.replace('(', ' ')
+            question_token = question_token.replace(')', ' ')
+            question_token = question_token.replace('"', ' ')
+            question_token = question_token.strip()
+            question_string += question_token
+            question_string = question_string.strip()
+            question_tokens = question_string.strip().split(' ')
+            question_tokens_set = set(question_tokens)
+            questionSet = questionSet.union(question_tokens_set)
+            question_info['input'] = question_string
+            question_dict[id] = question_info
+            totality += 1
+            if(totality%1000==0):
+                print(totality)
+    fw.writelines(json.dumps(question_dict, indent=1, ensure_ascii=False))
+    fw.close()
+    questionList = list()
+    for item in questionSet:
+        temp = str(item) + '\n'
+        if temp != '\n':
+            questionList.append(temp)
+    fwQuestionDic.writelines(questionList)
+    fwQuestionDic.close()
+    print("Writing CSQA_DENOTATIONS_full.JSON is done!")
 
 def getAllQuestionsAndActions():
     fw = open('../../data/auto_QA_data/CSQA_ANNOTATIONS_full.json', 'w', encoding="UTF-8")
@@ -209,6 +341,10 @@ def getTrainingDatasetForPytorch():
     fwTrainA = open('../../data/auto_QA_data/mask/PT_train.action', 'w', encoding="UTF-8")
     fwTestQ = open('../../data/auto_QA_data/mask/PT_test.question', 'w', encoding="UTF-8")
     fwTestA = open('../../data/auto_QA_data/mask/PT_test.action', 'w', encoding="UTF-8")
+    fwQuestionDic = open('../../data/auto_QA_data/mask/dic_py.question', 'w', encoding="UTF-8")
+    fwActionDic = open('../../data/auto_QA_data/mask/dic_py.action', 'w', encoding="UTF-8")
+    questionSet = set()
+    actionSet = set()
     with open("../../data/auto_QA_data/CSQA_ANNOTATIONS_full.json", 'r', encoding="UTF-8") as load_f:
         count = 1
         train_action_string_list, test_action_string_list, train_question_string_list, test_question_string_list = list(), list(), list(), list()
@@ -259,7 +395,15 @@ def getTrainingDatasetForPytorch():
                 question_token = question_token.strip()
                 question_string += question_token
                 question_string = question_string.strip() + '\n'
+
                 action_string = action_string.strip() + '\n'
+                action_tokens = action_string.strip().split(' ')
+                action_tokens_set = set(action_tokens)
+                actionSet = actionSet.union(action_tokens_set)
+
+                question_tokens = question_string.strip().split(' ')
+                question_tokens_set = set(question_tokens)
+                questionSet = questionSet.union(question_tokens_set)
 
                 dict_temp = {}
                 dict_temp.setdefault('q', str(key) + ' ' + question_string)
@@ -285,16 +429,29 @@ def getTrainingDatasetForPytorch():
     fwTrainA.close()
     fwTestQ.close()
     fwTestA.close()
+
+    questionList = list()
+    for item in questionSet:
+        temp = str(item) + '\n'
+        if temp != '\n':
+            questionList.append(temp)
+    actionList = list()
+    for item in actionSet:
+        temp = str(item) + '\n'
+        if temp != '\n':
+            actionList.append(temp)
+    fwQuestionDic.writelines(questionList)
+    fwActionDic.writelines(actionList)
     print ("Getting SEQUENCE2SEQUENCE processDataset is done!")
 
-# Get training data for REINFORCE.
+# Get training data for REINFORCE (using annotation instead of denotation as reward).
 def getTrainingDatasetForRl():
     fwTrainQ = open('../../data/auto_QA_data/mask/RL_train.question', 'w', encoding="UTF-8")
     fwTrainA = open('../../data/auto_QA_data/mask/RL_train.action', 'w', encoding="UTF-8")
     fwTestQ = open('../../data/auto_QA_data/mask/RL_test.question', 'w', encoding="UTF-8")
     fwTestA = open('../../data/auto_QA_data/mask/RL_test.action', 'w', encoding="UTF-8")
-    fwQuestionDic = open('../../data/auto_QA_data/mask/dic.question', 'w', encoding="UTF-8")
-    fwActionDic = open('../../data/auto_QA_data/mask/dic.action', 'w', encoding="UTF-8")
+    fwQuestionDic = open('../../data/auto_QA_data/mask/dic_rl.question', 'w', encoding="UTF-8")
+    fwActionDic = open('../../data/auto_QA_data/mask/dic_rl.action', 'w', encoding="UTF-8")
     fwNoaction = open('../../data/auto_QA_data/mask/no_action_question.txt', 'w', encoding="UTF-8")
     no_action_question_list = list()
     questionSet = set()
@@ -415,10 +572,10 @@ def getShareVocabulary():
     questionVocab = set()
     actionVocab = set()
     actionVocab_list = list()
-    with open('../../data/auto_QA_data/mask/dic.question', 'r', encoding="UTF-8") as infile:
+    with open('../../data/auto_QA_data/mask/dic_py.question', 'r', encoding="UTF-8") as infile1, open('../../data/auto_QA_data/mask/dic_rl.question', 'r', encoding="UTF-8") as infile2, open('../../data/auto_QA_data/mask/dic_rl_tr.question', 'r', encoding="UTF-8") as infile3:
         count = 0
         while True:
-            lines_gen = list(islice(infile, LINE_SIZE))
+            lines_gen = list(islice(infile1, LINE_SIZE))
             if not lines_gen:
                 break
             for line in lines_gen:
@@ -426,10 +583,40 @@ def getShareVocabulary():
                 questionVocab.add(token)
             count = count + 1
             print(count)
-    with open('../../data/auto_QA_data/mask/dic.action', 'r', encoding="UTF-8") as infile:
         count = 0
         while True:
-            lines_gen = list(islice(infile, LINE_SIZE))
+            lines_gen = list(islice(infile2, LINE_SIZE))
+            if not lines_gen:
+                break
+            for line in lines_gen:
+                token = line.strip()
+                questionVocab.add(token)
+            count = count + 1
+            print(count)
+        count = 0
+        while True:
+            lines_gen = list(islice(infile3, LINE_SIZE))
+            if not lines_gen:
+                break
+            for line in lines_gen:
+                token = line.strip()
+                questionVocab.add(token)
+            count = count + 1
+            print(count)
+    with open('../../data/auto_QA_data/mask/dic_py.action', 'r', encoding="UTF-8") as infile1, open('../../data/auto_QA_data/mask/dic_rl.action', 'r', encoding="UTF-8") as infile2:
+        count = 0
+        while True:
+            lines_gen = list(islice(infile1, LINE_SIZE))
+            if not lines_gen:
+                break
+            for line in lines_gen:
+                token = line.strip()
+                actionVocab.add(token)
+            count = count + 1
+            print(count)
+        count = 0
+        while True:
+            lines_gen = list(islice(infile2, LINE_SIZE))
             if not lines_gen:
                 break
             for line in lines_gen:
@@ -458,13 +645,15 @@ def getShareVocabulary():
     return action_size
 
 # Run getAllQuestionsAndActions to get the JSON file which contains all information related to questions.
+# Run getAllQustionsAndAnswers() to get the JSON file which contains all information and answers related to questions.
 # Run getTrainingDatasetForPytorch() to get training and test processDataset for seq2seq model training.
 # Run getTrainingDatasetForRl() to get training and test processDataset for REINFORCE-seq2seq model training.
 # Run getShareVocabulary() to get vocabulary in all training processDataset.
 if __name__ == "__main__":
-    getAllQuestionsAndActions()
-    getTrainingDatasetForPytorch()
-    getTrainingDatasetForRl()
-    print (getShareVocabulary())
+    # getAllQuestionsAndActions()
+    # getTrainingDatasetForPytorch()
+    # getTrainingDatasetForRl()
+    getAllQustionsAndAnswers()
+    print(getShareVocabulary())
 
 
