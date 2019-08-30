@@ -8,7 +8,7 @@
 '''
 
 import json
-from S2SRL.SymbolicExecutor import symbolics
+from . import symbolics
 import logging
 log1 = logging.basicConfig(level=logging.INFO,#控制台打印的日志级别
                     filename='../data/auto_QA_data/test_result/0.2%1_sample_testdataset_result_without_magic.log',

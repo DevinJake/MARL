@@ -12,7 +12,7 @@ import requests
 from Model.seq2seq import Seq2Seq
 from Preprocess.load_qadata import load_qadata
 from Preprocess.question_parser import QuestionParser
-from S2SRL.SymbolicExecutor import symbolics
+from . import symbolics
 from params import get_params
 
 
