@@ -5,7 +5,7 @@ import sys
 sys.path.append('..')
 import os
 import time
-from symbolics import Symbolics
+from .symbolics import Symbolics
 
 def test_folder(fpath):
     # 读取qa文件集

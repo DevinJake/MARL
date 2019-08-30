@@ -56,7 +56,7 @@ if __name__ == "__main__":
     # # command line parameters
     # sys.argv = ['train_crossent.py', '--cuda', '-l=../data/saves/crossent/pre_bleu_0.942_18.dat', '-n=rl']
 
-    sys.argv = ['train_crossent.py', '--cuda', '-l=../data/saves/crossent_even_1%/pre_bleu_0.943_30.dat', '-n=rl_even_true_1%', '-s=5']
+    sys.argv = ['train_crossent.py', '--cuda', '-l=../data/saves/crossent_even_1%/pre_bleu_0.946_55.dat', '-n=rl_even_true_1%', '-s=5']
     parser = argparse.ArgumentParser()
     # parser.add_argument("--data", required=True, help="Category to use for training. Empty string to train on full processDataset")
     parser.add_argument("--cuda", action='store_true', default=False, help="Enable cuda")
@@ -152,6 +152,7 @@ if __name__ == "__main__":
                     # Get IDs of reference sequences' tokens corresponding to idx-th input sequence in batch.
                     qa_info = output_batch[idx]
                     # print("%s is training..." % (qa_info['qid']))
+                    # print (qa_info['qid'])
                     # # Get the (two-layer) hidden state of encoder of idx-th input sequence in batch.
                     item_enc = net.get_encoded_item(enc, idx)
                     # # 'r_argmax' is the list of out_logits list and 'actions' is the list of output tokens.

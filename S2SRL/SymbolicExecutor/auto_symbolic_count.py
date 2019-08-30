@@ -1,14 +1,4 @@
 # -*- coding: utf-8 -*-
-# @Time    : 2019/5/8 15:51
-# @Author  : Yaoleo
-# @Blog    : yaoleo.github.io
-
-# -*- coding: utf-8 -*-
-# @Time    : 2019/5/7 14:35
-# @Author  : Yaoleo
-# @Blog    : yaoleo.github.io
-
-# -*- coding: utf-8 -*-
 # @Time    : 2019/4/1 14:12
 # @Author  : Yaoleo
 # @Blog    : yaoleo.github.io
@@ -26,17 +16,17 @@ import time
 
 sys.path
 from Preprocess.load_qadata import load_qadata, getQA_by_state
-from symbolics import Symbolics
+from .symbolics import Symbolics
 import logging
 logging.basicConfig(level=logging.INFO,#控制台打印的日志级别
-                    filename='/data/zjy/comp_count_appro_auto.log',
+                    filename='/data/zjy/count_auto.log',
                     filemode='a',##模式，有w和a，w就是写模式，每次都会重新写日志，覆盖之前的日志
                     #a是追加模式，默认如果不写的话，就是追加模式
                     format=
                     '%(message)s'
                     #日志格式
                     )
-continue_num = 0
+continue_num = 436
 class Node(object):
     def __init__(self, value=None):
         self.value = value  # 节点值
@@ -52,11 +42,27 @@ def init():
     '''
 
     symbolics = [Node('A' + str(i)) for i in range(0, 17)]
-
+    symbolics[0].add_child(symbolics[1])
+    symbolics[0].add_child(symbolics[2])
     symbolics[0].add_child(symbolics[16])  # a17 = a2
     symbolics[16].add_child(symbolics[2])
+
+    symbolics[1].add_child(symbolics[3])
+    symbolics[1].add_child(symbolics[8])
+    symbolics[1].add_child(symbolics[9])
+    symbolics[1].add_child(symbolics[10])
+    symbolics[1].add_child(symbolics[11])
+
+
+    symbolics[2].add_child(symbolics[11])
+    symbolics[2].add_child(symbolics[12])
+    symbolics[2].add_child(symbolics[13])
+    symbolics[2].add_child(symbolics[14])
     symbolics[2].add_child(symbolics[15])
 
+    symbolics[8].add_child(symbolics[11])
+    symbolics[9].add_child(symbolics[11])
+    symbolics[10].add_child(symbolics[11])
 
     return symbolics[0]
 
@@ -109,13 +115,10 @@ def auto_test():
 
     symbolic_seqs = auto_generate()
     a = 0
-    for qa in qa_map['Comparative Reasoning (Count) (All)\n']:
+    for qa in qa_map['Quantitative Reasoning (Count) (All)\n']:
 
         context = qa['context'].replace("\n", "").strip()
         context_utterance = qa['context_utterance'].replace("\n", "")
-        if ("around" not in context_utterance and "approximately" not in context_utterance):
-            # print(context_utterance)
-            continue
         context_entities = qa['context_entities'].replace("\n", "").split("|")
         context_relations = qa['context_relations'].replace("\n", "").split("|")
         context_types = qa['context_types'].replace("\n", "").split("|")
@@ -148,11 +151,11 @@ def auto_test():
                             for t in context_types:
                                 seq_with_param[i].append({symbolic: (et, r, t)})
                                 # print symbolic,e,r,t
-                # if (int(symbolic[1:]) in [12,13,14,15] and context_ints != ""):
-                #     for N in [int(n) for n in context_ints.split()]:
-                #         seq_with_param[i].append({symbolic: (str(N), '', '')})
+                if (int(symbolic[1:]) in [12,13,14,15] and context_ints != ""):
+                    for N in [int(n) for n in context_ints.split()]:
+                        seq_with_param[i].append({symbolic: (str(N), '', '')})
 
-                if (int(symbolic[1:]) in [15]):
+                if (int(symbolic[1:]) in [6,7]):
                     for e in context_entities:
                         seq_with_param[i].append({symbolic: (e, '', '')})
 
@@ -161,8 +164,9 @@ def auto_test():
                     seq_with_param[i].append({symbolic: ('&', '', '')})
                     seq_with_param[i].append({symbolic: ('-', '', '')})
                     seq_with_param[i].append({symbolic: ('|', '', '')})
+            print (time.time()-start_time)
+            if (len(seq_with_param) == 3 and  seq_with_param[2]!=[] and "A11" in seq_with_param[2][0] and time.time()-start_time<120):
 
-            if (len(seq_with_param) == 3):
                 for sym1 in seq_with_param[0]:
                     if flag == 4:
                         break
@@ -170,18 +174,24 @@ def auto_test():
                         if flag == 4:
                             break
                         for sym3 in seq_with_param[2]:
-                            if flag == 4:
-                                break
-                            #print (flag)
+                            if flag == 4: break
                             sym_seq = [sym1, sym2, sym3]
                             symbolic_exe = Symbolics(sym_seq)
                             answer = symbolic_exe.executor()
-
-                            #print(sym_seq)
-                            Uset = list(set(answer).intersection(set(response_entities)))
-                            #print(Uset[:10])
-                            if len(Uset) > len(response_entities)/2:
-
+                            answer_e = Symbolics(sym_seq[0:2]).executor()
+                            answer_entities = []
+                            if('|' in answer_e):
+                                answer_entities = answer_e['|']
+                            elif ('&' in answer_e):
+                                answer_entities = answer_e['&']
+                            elif ('-' in answer_e):
+                                answer_entities = answer_e['-']
+                            else:
+                                answer_entities = answer_e.keys()
+                            print(sym_seq, answer,orig_response)
+                            # print sorted(answer_entities), sorted(response_entities)
+                            if cal_precesion(orig_response,answer_entities, response_entities, answer):
+                                print (sorted(answer_entities), sorted(response_entities))
                                 flag += 1
                                 logging.info(sym_seq)
                                 print(sym_seq,time.time())

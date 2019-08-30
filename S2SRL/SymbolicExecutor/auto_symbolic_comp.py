@@ -21,7 +21,7 @@ import time
 
 sys.path
 from Preprocess.load_qadata import load_qadata, getQA_by_state
-from symbolics import Symbolics
+from .symbolics import Symbolics
 import logging
 logging.basicConfig(level=logging.INFO,#控制台打印的日志级别
                     filename='/data/zjy/comp_appro_auto.log',
