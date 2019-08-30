@@ -1,8 +1,8 @@
 import string
 from nltk.translate import bleu_score
 from nltk.tokenize import TweetTokenizer
-from S2SRL.SymbolicExecutor.symbolics import Symbolics
-from S2SRL.SymbolicExecutor.calculate_sample_test_dataset import list2dict, transformBooleanToString
+from SymbolicExecutor.symbolics import Symbolics
+from SymbolicExecutor.calculate_sample_test_dataset import list2dict, transformBooleanToString
 
 W_1 = 0.2
 W_2 = 0.8
