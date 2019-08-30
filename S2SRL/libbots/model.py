@@ -156,7 +156,7 @@ class PhraseModel(nn.Module):
 
 
 def pack_batch_no_out(batch, embeddings, device="cpu"):
-    # Assert statements are a convenient way to insert debugging assertions into a program.
+    # Asserting statements is a convenient way to insert debugging assertions into a program.
     # To guarantee that the batch is a list.
     assert isinstance(batch, list)
     # The format of batch is a list of tuple: ((tuple),[[list of token ID list]])
@@ -167,6 +167,10 @@ def pack_batch_no_out(batch, embeddings, device="cpu"):
     batch.sort(key=lambda s: len(s[0]), reverse=True)
     # input_idx：一个batch的输入句子的tokens对应的ID矩阵；Each row is corresponding to one input sentence.
     # output_idx：一个batch的输出句子的tokens对应的ID矩阵；Each row is corresponding to a list of several output sentences.
+    # zip wants a bunch of arguments to zip together, but what you have is a single argument (a list, whose elements are also lists).
+    # The * in a function call "unpacks" a list (or other iterable), making each of its elements a separate argument.
+    # For list p = [[1,2,3],[4,5,6]];
+    # So without the *, you're doing zip( [[1,2,3],[4,5,6]] ). With the *, you're doing zip([1,2,3], [4,5,6]) = [(1, 4), (2, 5), (3, 6)].
     input_idx, output_idx = zip(*batch)
     # create padded matrix of inputs
     # map() function returns a list of the results after applying the given function to each item of a given iterable (list, tuple etc.)
@@ -187,16 +191,31 @@ def pack_batch_no_out(batch, embeddings, device="cpu"):
     input_v = torch.tensor(input_mat).to(device)
     input_v = input_v.cuda()
     # 封装成PackedSequence类型的对象；
+    # The padded sequence is the transposed matrix which is ``B x T x *``,
+    # where `T` is the length of the longest sequence and `B` is the batch size.
+    # Following the matrix is the list of lengths of each sequence in the batch (also in transposed format).
+    # For instance:
+    # [ a b c c d d d ]
+    # [ a b c d ]
+    # [ a b c ]
+    # [ a b ]
+    # could be transformed into [a,a,a,a,b,b,b,b,c,c,c,c,d,d,d,d] with batch size [4,4,3,2,1,1,1].
     input_seq = rnn_utils.pack_padded_sequence(input_v, lens, batch_first=True)
     input_seq = input_seq.cuda()
-    # lookup embeddings；embeddings为模型已经建立的词向量矩阵；
     r = embeddings(input_seq.data)
+    # lookup embeddings；embeddings为模型已经建立的词向量矩阵；
+    # r: the [B x T x dimension] matrix of the embeddings of the occurred words in input sequence.
+    # The order is followed by the order in input_seq.
+    # Which is transforming [a,a,a,a,b,b,b,b,c,c,c,c,d,d,d,d] into [embedding(a), embedding(a), ..., embedding(d), embedding(d)]
     r = r.cuda()
     # 加入了词嵌入的input_seq；
+    # For instance, given data  ``abc`` and `x`
+    #         the :class:`PackedSequence` would contain data ``axbc`` with ``batch_sizes=[2,1,1]``.
+    # emb_input_seq is [B x T x dimension] matrix of the embeddings of the occurred words in input sequence with the batch size.
+    # For instance, emb_input_seq is the padded data: [embedding(a), embedding(a), ..., embedding(d), embedding(d)] with batch size [4,4,3,2,1,1,1].
     emb_input_seq = rnn_utils.PackedSequence(r, input_seq.batch_sizes)
     emb_input_seq = emb_input_seq.cuda()
     return emb_input_seq, input_idx, output_idx
-
 
 def pack_input(input_data, embeddings, device="cpu"):
     input_v = torch.LongTensor([input_data]).to(device)
