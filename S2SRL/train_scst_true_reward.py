@@ -179,7 +179,7 @@ if __name__ == "__main__":
                         # data.decode_words transform IDs to tokens.
                         log.info("Input: %s", utils.untokenize(data.decode_words(inp_idx, rev_emb_dict)))
                         orig_response = qa_info['orig_response']
-                        log.info("Refer: %s", orig_response)
+                        log.info("orig_response: %s", orig_response)
                         log.info("Argmax: %s, bleu=%.4f", utils.untokenize(data.decode_words(actions, rev_emb_dict)),
                                  argmax_reward)
 
