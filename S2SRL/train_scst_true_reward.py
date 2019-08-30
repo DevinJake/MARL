@@ -151,8 +151,7 @@ if __name__ == "__main__":
                     # print (input_tokens)
                     # Get IDs of reference sequences' tokens corresponding to idx-th input sequence in batch.
                     qa_info = output_batch[idx]
-                    print("%s is training..." % (qa_info['qid']))
-                    # print (qa_info['qid'])
+                    # print("%s is training..." % (qa_info['qid']))
                     # # Get the (two-layer) hidden state of encoder of idx-th input sequence in batch.
                     item_enc = net.get_encoded_item(enc, idx)
                     # # 'r_argmax' is the list of out_logits list and 'actions' is the list of output tokens.
