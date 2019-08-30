@@ -110,7 +110,7 @@ def auto_test():
         context = qa['context'].replace("\n", "").strip()
         context_utterance = qa['context_utterance'].replace("\n", "")
         if("atleast" in context_utterance):
-            print context_utterance
+            print (context_utterance)
         continue
         context_entities = qa['context_entities'].replace("\n", "").split("|")
         context_relations = qa['context_relations'].replace("\n", "").split("|")
@@ -120,8 +120,8 @@ def auto_test():
         response_entities = qa['response_entities'].replace("\n", "").split("|")
         orig_response = qa['orig_response'].replace("\n", "")
         logging.info(str(a)+" "+context_utterance)
-        print context_utterance
-        print a, time.time()
+        print (context_utterance)
+        print (a, time.time())
         flag = 0
         a += 1
         for seq in symbolic_seqs:

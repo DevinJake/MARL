@@ -123,8 +123,8 @@ def auto_test():
         response_entities = qa['response_entities'].replace("\n", "").split("|")
         orig_response = qa['orig_response'].replace("\n", "")
         logging.info(str(a)+" "+ context_utterance)
-        print context_utterance
-        print a, time.time()
+        print(context_utterance)
+        print(a, time.time())
         flag = 0
         a += 1
         if a < continue_num:

@@ -117,7 +117,7 @@ def auto_test():
         logging.info('context_relations:' + ",".join(context_relations))
         logging.info('context_types:' + ",".join(context_types))
         if "" in context_entities: context_entities.remove("")
-        print a,context_utterance
+        print (a,context_utterance)
         # start_time = time.time()
         # flag = 0
         a += 1
