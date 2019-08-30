@@ -1,8 +1,13 @@
 import string
 from nltk.translate import bleu_score
 from nltk.tokenize import TweetTokenizer
-from SymbolicExecutor.symbolics import Symbolics
-from SymbolicExecutor.calculate_sample_test_dataset import list2dict, transformBooleanToString
+import sys
+import os
+o_path = os.getcwd()
+sys.path.append(o_path)
+from SymbolicExecutor import symbolics
+from SymbolicExecutor import calculate_sample_test_dataset
+
 
 W_1 = 0.2
 W_2 = 0.8
@@ -28,9 +33,9 @@ def calc_True_Reward(action_sequence, qa_info):
                 act = k
                 break
         new_action.append(act)
-    symbolic_seq = list2dict(new_action)
+    symbolic_seq = calculate_sample_test_dataset.list2dict(new_action)
     # print (symbolic_seq)
-    symbolic_exe = Symbolics(symbolic_seq)
+    symbolic_exe = symbolics.Symbolics(symbolic_seq)
     answer = symbolic_exe.executor()
     return calc_01_reward(answer, qa_info)
 
@@ -59,7 +64,7 @@ def calc_01_reward(answer, qa_info):
             temp = []
             if '|BOOL_RESULT|' in answer:
                 temp.extend(answer['|BOOL_RESULT|'])
-                predicted_answer_string = transformBooleanToString(temp)
+                predicted_answer_string = calculate_sample_test_dataset.transformBooleanToString(temp)
                 if predicted_answer_string != '' and predicted_answer_string == orig_response:
                     true_reward = 1.0
         else:

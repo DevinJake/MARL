@@ -125,14 +125,14 @@ def auto_test():
         orig_response = qa['orig_response'].replace("\n", "")
         logging.info(str(a)+" "+ context_utterance)
         if "" in context_entities: context_entities.remove("")
-        print a,context_utterance
+        print (a,context_utterance)
         start_time = time.time()
         flag = 0
         a += 1
         if a < continue_num:
             continue
         for seq in symbolic_seqs:
-            print seq
+            print (seq)
             seq_with_param = {i: [] for i in range(len(seq))}
             for i in range(len(seq)):
                 symbolic = seq[i]

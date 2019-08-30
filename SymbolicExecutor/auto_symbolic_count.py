@@ -128,14 +128,14 @@ def auto_test():
         orig_response = qa['orig_response'].replace("\n", "")
         logging.info(str(a)+" "+ context_utterance)
         if "" in context_entities: context_entities.remove("")
-        print a,context_utterance
+        print (a,context_utterance)
         start_time = time.time()
         flag = 0
         a += 1
         if a < continue_num:
             continue
         for seq in symbolic_seqs:
-            print seq
+            print (seq)
             seq_with_param = {i: [] for i in range(len(seq))}
             for i in range(len(seq)):
                 symbolic = seq[i]
@@ -164,7 +164,7 @@ def auto_test():
                     seq_with_param[i].append({symbolic: ('&', '', '')})
                     seq_with_param[i].append({symbolic: ('-', '', '')})
                     seq_with_param[i].append({symbolic: ('|', '', '')})
-            print time.time()-start_time
+            print (time.time()-start_time)
             if (len(seq_with_param) == 3 and  seq_with_param[2]!=[] and "A11" in seq_with_param[2][0] and time.time()-start_time<120):
 
                 for sym1 in seq_with_param[0]:
@@ -191,7 +191,7 @@ def auto_test():
                             print(sym_seq, answer,orig_response)
                             # print sorted(answer_entities), sorted(response_entities)
                             if cal_precesion(orig_response,answer_entities, response_entities, answer):
-                                print sorted(answer_entities), sorted(response_entities)
+                                print (sorted(answer_entities), sorted(response_entities))
                                 flag += 1
                                 logging.info(sym_seq)
                                 print(sym_seq,time.time())

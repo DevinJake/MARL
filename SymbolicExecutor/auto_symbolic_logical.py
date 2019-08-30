@@ -120,7 +120,7 @@ def auto_test():
         orig_response = qa['orig_response'].replace("\n", "")
         logging.info(str(a)+" "+context_utterance)
 
-        print a, time.time()
+        print (a, time.time())
         flag = 0
         a += 1
         if a < continue_num:
