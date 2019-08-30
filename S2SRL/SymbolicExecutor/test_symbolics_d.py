@@ -5,7 +5,7 @@ import sys
 sys.path.append('..')
 import os
 import time
-from .symbolics import Symbolics
+from . import symbolics
 
 def test_folder(fpath):
     # 读取qa文件集
@@ -45,7 +45,7 @@ def test_file(root, f):
         if (line.startswith("-----------") and flag == 1):
             time_start = time.time()
             # Actions execution.
-            symbolic_exe = Symbolics(sym_seq)
+            symbolic_exe = symbolics.Symbolics(sym_seq)
             answer = symbolic_exe.executor()
 
             # To judge the returned answers are in dict format or boolean format.
