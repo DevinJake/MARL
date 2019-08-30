@@ -19,7 +19,7 @@ SAVES_DIR = "../data/saves"
 
 BATCH_SIZE = 16
 LEARNING_RATE = 1e-4
-MAX_EPOCHES = 30
+MAX_EPOCHES = 1
 MAX_TOKENS = 40
 TRAIN_RATIO = 0.985
 
@@ -58,10 +58,14 @@ def run_test(test_data, net, end_token, device="cuda"):
 if __name__ == "__main__":
     logging.basicConfig(format="%(asctime)-15s %(levelname)s %(message)s", level=logging.INFO)
 
-    # command line parameters
+    # # command line parameters
     # sys.argv = ['train_crossent.py', '--cuda', '-l=../data/saves/crossent/pre_bleu_0.942_18.dat', '-n=rl']
 
+    # Read optimized parameters from pre-training SEQ2SEQ.
     sys.argv = ['train_crossent.py', '--cuda', '-l=../data/saves/crossent_even_1%/pre_bleu_0.943_30.dat', '-n=rl_even_1%']
+
+    # # Read optimized parameters from pre-training RL.
+    # sys.argv = ['train_crossent.py', '--cuda', '-l=../data/saves/rl_even_1%/bleu_0.995_03.dat', '-n=rl_even_1%']
     parser = argparse.ArgumentParser()
     # parser.add_argument("--data", required=True, help="Category to use for training. Empty string to train on full processDataset")
     parser.add_argument("--cuda", action='store_true', default=False, help="Enable cuda")
@@ -171,6 +175,8 @@ if __name__ == "__main__":
                         skipped_samples += 1
                         continue
 
+                    # In one epoch, when model is optimized for the first time, the optimized result is displayed here.
+                    # After that, all samples in this epoch don't display anymore.
                     if not dial_shown:
                         # data.decode_words transform IDs to tokens.
                         log.info("Input: %s", utils.untokenize(data.decode_words(inp_idx, rev_emb_dict)))
@@ -192,7 +198,6 @@ if __name__ == "__main__":
 
                         net_policies.append(r_sample)
                         net_actions.extend(actions)
-                        # TODO: calculate reward
                         # Regard argmax_bleu calculated from decode_chain_argmax as baseline used in self-critic.
                         # Each token has same reward as 'sample_bleu - argmax_bleu'.
                         # [x] * y: stretch 'x' to [1*y] list in which each element is 'x'.
@@ -200,6 +205,7 @@ if __name__ == "__main__":
                         bleus_sample.append(sample_bleu)
                     dial_shown = True
 
+                # Provided all output samples have higher bleu than 0.99, this epoch has no need to optimize the RL model.
                 if not net_policies:
                     continue
 
@@ -245,7 +251,7 @@ if __name__ == "__main__":
             writer.add_scalar("bleu_argmax", bleu, batch_idx)
             # After one epoch, get the average of the decode_chain_sampling bleus for samples in training dataset.
             writer.add_scalar("bleu_sample", np.mean(bleus_sample), batch_idx)
-            writer.add_scalar("skipped_samples", skipped_samples / total_samples, batch_idx)
+            writer.add_scalar("skipped_samples", skipped_samples/total_samples if total_samples!=0 else 0, batch_idx)
             writer.add_scalar("epoch", batch_idx, epoch)
             log.info("Epoch %d, test BLEU: %.3f", epoch, bleu_test)
             if best_bleu is None or best_bleu < bleu_test:
@@ -254,7 +260,7 @@ if __name__ == "__main__":
                 # Save the updated seq2seq parameters trained by RL.
                 torch.save(net.state_dict(), os.path.join(saves_path, "bleu_%.3f_%02d.dat" % (bleu_test, epoch)))
             if epoch % 10 == 0:
-                torch.save(net.state_dict(), os.path.join(saves_path, "epoch_%03d_%.3f_%.3f.dat" % (epoch, bleu, bleu_test)))
+                torch.save(net.state_dict(), os.path.join(saves_path, "epoch_%03d_%.3f_%.3f.dat" % (epoch, float(bleu), bleu_test)))
 
         time_end = time.time()
         log.info("Training time is %.3fs." % (time_end - time_start))
