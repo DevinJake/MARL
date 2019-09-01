@@ -262,7 +262,7 @@ if __name__ == "__main__":
                 best_true_reward = true_reward_test
                 log.info("Best true reward updated: %.4f", true_reward_test)
                 # Save the updated seq2seq parameters trained by RL.
-                torch.save(net.state_dict(), os.path.join(saves_path, "bleu_%.3f_%02d.dat" % (true_reward_test, epoch)))
+                torch.save(net.state_dict(), os.path.join(saves_path, "truereward_%.3f_%02d.dat" % (true_reward_test, epoch)))
             # if epoch % 10 == 0:
             # # The parameters are stored after each epoch.
             torch.save(net.state_dict(), os.path.join(saves_path, "epoch_%03d_%.3f_%.3f.dat" % (epoch, float(true_reward_armax), true_reward_test)))

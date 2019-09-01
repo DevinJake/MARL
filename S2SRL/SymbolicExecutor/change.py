@@ -8,8 +8,7 @@
 '''
 
 import json
-from S2SRL.SymbolicExecutor import symbolics
-
+from symbolics import Symbolics
 
 def transMask2Action(state):
     with open("CSQA_ANNOTATIONS_test.json", 'r') as load_f, open("final_predict.actions", 'r') as predict_actions \
@@ -54,7 +53,7 @@ def transMask2Action(state):
                 #     symbolic_seq[-1] = {"A3":["","",""]} if not symbolic_seq[-1].has_key("A3") else symbolic_seq[-1]### A3
                 # if state.startswith("QuantitativeReasoning(Count)(All)") or state.startswith("ComparativeReasoning(Count)(All)"):
                 #     symbolic_seq[-1] = {"A11": ["", "", ""]} if not symbolic_seq[-1].has_key("A11") else symbolic_seq[-1]
-                symbolic_exe = symbolics.Symbolics(symbolic_seq)
+                symbolic_exe = Symbolics(symbolic_seq)
                 answer = symbolic_exe.executor()
 
                 if state.startswith("QuantitativeReasoning(Count)(All)") or state.startswith("ComparativeReasoning(Count)(All)"):

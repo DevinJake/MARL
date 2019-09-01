@@ -2,7 +2,7 @@ import string
 from nltk.translate import bleu_score
 from nltk.tokenize import TweetTokenizer
 from SymbolicExecutor.symbolics import Symbolics
-from SymbolicExecutor.calculate_sample_test_dataset import list2dict, transformBooleanToString
+from SymbolicExecutor.transform_util import list2dict, transformBooleanToString
 
 W_1 = 0.2
 W_2 = 0.8
@@ -106,6 +106,7 @@ def calc_01_reward(answer, qa_info):
                             right_count += 1
                     return float(right_count)/float(len(response_entities))
 
+# TODO: NOT TESTED!
 '''
 Adaptive reward 是一种partial reward。
 首先看问题类型是不是对的，若不对，则整个reward为0；
