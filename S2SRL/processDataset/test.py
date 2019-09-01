@@ -3,7 +3,7 @@
 This file is used to test certain functions or methods.
 """
 import random
-
+import os
 import numpy as np
 
 
@@ -114,6 +114,8 @@ def test():
     p = [(1, 2), (3, 4), (5, 6), (7, 8)]
     d = zip(*p)
     print(list(d))
+    print (os.path.abspath(os.path.join(os.getcwd(), "../..")))
+
 
 if __name__ == "__main__":
     test()

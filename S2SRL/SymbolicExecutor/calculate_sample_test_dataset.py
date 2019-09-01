@@ -8,10 +8,11 @@
 '''
 
 import json
-from . import symbolics
+from symbolics import Symbolics
+from transform_util import transformBooleanToString, list2dict
 import logging
 log1 = logging.basicConfig(level=logging.INFO,#控制台打印的日志级别
-                    filename='../data/auto_QA_data/test_result/0.2%1_sample_testdataset_result_without_magic.log',
+                    filename='../../data/auto_QA_data/test_result/1.0%_sample_testdataset_result_s2s.log',
                     filemode='w',##模式，有w和a，w就是写模式，每次都会重新写日志，覆盖之前的日志
                     #a是追加模式，默认如果不写的话，就是追加模式
                     format=
@@ -19,29 +20,9 @@ log1 = logging.basicConfig(level=logging.INFO,#控制台打印的日志级别
                     #日志格式
                     )
 
-# Transform boolean results into string format.
-def transformBooleanToString(list):
-    temp_set = set()
-    if len(list) == 0:
-        return ''
-    else:
-        for i, item in enumerate(list):
-            if item == True:
-                list[i] = "YES"
-                temp_set.add(list[i])
-            elif item == False:
-                list[i] = "NO"
-                temp_set.add(list[i])
-            else:
-                return ''
-    if len(temp_set) == 1:
-        return temp_set.pop()
-    if len(temp_set) > 1:
-        return ((' and '.join(list)).strip() + ' respectively')
-
 def transMask2Action(state):
-    with open("../data/auto_QA_data/CSQA_ANNOTATIONS_test.json", 'r') as load_f, open("../data/saves/rl_even_1%/sample_final_predict.actions", 'r') as predict_actions \
-            , open("../data/auto_QA_data/mask_test/SAMPLE_FINAL_test.question", 'r') as RL_test:
+    with open("../../data/auto_QA_data/CSQA_ANNOTATIONS_test.json", 'r') as load_f, open("../../data/saves/crossent_even_1%/sample_final_predict.actions", 'r') as predict_actions \
+            , open("../../data/auto_QA_data/mask_test/SAMPLE_FINAL_test.question", 'r') as RL_test:
         linelist = list()
         load_dict = json.load(load_f)
         num = 0
@@ -87,7 +68,7 @@ def transMask2Action(state):
                 #     symbolic_seq[-1] = {"A3":["","",""]} if not symbolic_seq[-1].has_key("A3") else symbolic_seq[-1]### A3
                 # if state.startswith("QuantitativeReasoning(Count)(All)") or state.startswith("ComparativeReasoning(Count)(All)"):
                 #     symbolic_seq[-1] = {"A11": ["", "", ""]} if not symbolic_seq[-1].has_key("A11") else symbolic_seq[-1]
-                symbolic_exe = symbolics.Symbolics(symbolic_seq)
+                symbolic_exe = Symbolics(symbolic_seq)
                 answer = symbolic_exe.executor()
 
                 if state.startswith("QuantitativeReasoning(Count)(All)") or state.startswith("ComparativeReasoning(Count)(All)"):
@@ -199,45 +180,6 @@ def transMask2Action(state):
         linelist.append('++++++++++++++\n\n')
         return linelist
 
-def list2dict(list):
-    final_list = []
-    temp_list = []
-    new_list = []
-    for a in list:
-        if (a == "("):
-            new_list = []
-            continue
-        if (a == ")"):
-            if ("-" in new_list and new_list[-1] != "-"):
-                new_list[new_list.index("-") + 1] = "-" + new_list[new_list.index("-") + 1]
-                new_list.remove("-")
-            if (new_list == []):
-                new_list = ["", "", ""]
-            if (len(new_list) == 1):
-                new_list = [new_list[0], "", ""]
-            if ("&" in new_list):
-                new_list = ["&", "", ""]
-            if ("-" in new_list):
-                new_list = ["-", "", ""]
-            if ("|" in new_list):
-                new_list = ["|", "", ""]
-            temp_list.append(new_list)
-            continue
-        if not a.startswith("A"):
-            if a.startswith("E"):  a = "Q17"
-            if a.startswith("T"):  a = "Q17"
-            new_list.append(a)
-
-    i = 0
-    for a in list:
-        if (a.startswith("A")):
-            final_list.append({a: temp_list[i]})
-            # temp_dict[a] = temp_list[i]
-            i += 1
-
-    return final_list
-
-
 if __name__ == "__main__":
     # QuantitativeReasoning(Count)(All)
     # QuantitativeReasoning(All)
@@ -247,7 +189,7 @@ if __name__ == "__main__":
     # SimpleQuestion(Direct)
     # LogicalReasoning(All)
     linelist = list()
-    fw = open('../data/auto_QA_data/test_result/0.2%1_sample_testdataset_result_without_magic.txt', 'w', encoding="UTF-8")
+    fw = open('../../data/auto_QA_data/test_result/0.2%1_sample_testdataset_result_without_magic.txt', 'w', encoding="UTF-8")
     state_list = ["SimpleQuestion(Direct)","Verification(Boolean)(All)","QuantitativeReasoning(Count)(All)","QuantitativeReasoning(All)","ComparativeReasoning(Count)(All)","ComparativeReasoning(All)","LogicalReasoning(All)"]
     # state_list = ["Verification(Boolean)(All)"]
     for state in state_list:
