@@ -189,7 +189,7 @@ if __name__ == "__main__":
     # SimpleQuestion(Direct)
     # LogicalReasoning(All)
     linelist = list()
-    fw = open('../../data/auto_QA_data/test_result/0.2%1_sample_testdataset_result_without_magic.txt', 'w', encoding="UTF-8")
+    fw = open('../../data/auto_QA_data/test_result/1%_sample_testdataset_result_s2s.txt', 'w', encoding="UTF-8")
     state_list = ["SimpleQuestion(Direct)","Verification(Boolean)(All)","QuantitativeReasoning(Count)(All)","QuantitativeReasoning(All)","ComparativeReasoning(Count)(All)","ComparativeReasoning(All)","LogicalReasoning(All)"]
     # state_list = ["Verification(Boolean)(All)"]
     for state in state_list:
