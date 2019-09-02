@@ -128,7 +128,7 @@ class Symbolics():
             # TODO: not tested.
             try:
                 # content=requests.post("http://127.0.0.1:5000/post",json=json_pack).json()['content']
-                content = requests.post("http://10.201.44.130:5000/post", json=json_pack).json()['content']
+                content = requests.post("http://10.201.34.3:5000/post", json=json_pack).json()['content']
             except OSError:
                 pass
             return content
@@ -153,7 +153,7 @@ class Symbolics():
             # TODO: not tested.
             try:
                 # content = requests.post("http://127.0.0.1:5000/post", json=json_pack).json()['content']
-                content = requests.post("http://10.201.44.130:5000/post", json=json_pack).json()['content']
+                content = requests.post("http://10.201.34.3:5000/post", json=json_pack).json()['content']
             except OSError:
                 pass
             if content is not None:
@@ -186,7 +186,7 @@ class Symbolics():
 
         # TODO: not tested.
         try:
-            content = requests.post("http://10.201.44.130:5000/post", json=json_pack).json()['content']
+            content = requests.post("http://10.201.34.3:5000/post", json=json_pack).json()['content']
         except OSError:
             pass
         # content = requests.post("http://127.0.0.1:5000/post", json=json_pack).json()['content']
