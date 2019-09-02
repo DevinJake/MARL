@@ -13,8 +13,8 @@ def calc_bleu_many(cand_seq, ref_sequences):
     return bleu_score.sentence_bleu(ref_sequences, cand_seq,
                                     smoothing_function=sf.method1,
                                     weights=(0.5, 0.5))
+
 def calc_True_Reward(action_sequence, qa_info):
-    true_reward = 0.0
     entity_mask = qa_info['entity_mask'] if 'entity_mask' in qa_info.keys() else {}
     relation_mask = qa_info["relation_mask"] if 'relation_mask' in qa_info.keys() else {}
     type_mask = qa_info['type_mask'] if 'type_mask' in qa_info.keys() else {}
@@ -74,7 +74,7 @@ def calc_01_reward(answer, qa_info):
 
     elif qid.startswith("Simple Question (Direct)_") or qid.startswith("Logical Reasoning (All)_") or qid.startswith("Quantitative Reasoning (All)_") or qid.startswith("Comparative Reasoning (All)_"):
         # To judge the returned answers are in dict format or boolean format.
-        if (type(answer) == dict):
+        if type(answer) == dict:
             temp = []
             for key, value in answer.items():
                 if key != '|BOOL_RESULT|' and value:

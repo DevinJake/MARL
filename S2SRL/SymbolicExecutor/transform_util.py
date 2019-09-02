@@ -23,15 +23,23 @@ def transformBooleanToString(list):
     if len(temp_set) > 1:
         return ((' and '.join(list)).strip() + ' respectively')
 
+# Transform action sequence ['A2', '(', 'Q5058355', 'P361', 'Q5058355', ')', 'A2', '(', 'Q5058355', 'P361', 'Q5058355', ')', 'A15', '(', 'Q22329858', ')'] into list.
 def list2dict(list):
     final_list = []
     temp_list = []
     new_list = []
+    action_list = []
+    left_count, right_count, action_count = 0, 0, 0
     for a in list:
+        if a.startswith("A"):
+            action_count+=1
+            action_list.append(a)
         if (a == "("):
             new_list = []
+            left_count+=1
             continue
         if (a == ")"):
+            right_count+=1
             if ("-" in new_list and new_list[-1] != "-"):
                 new_list[new_list.index("-") + 1] = "-" + new_list[new_list.index("-") + 1]
                 new_list.remove("-")
@@ -46,16 +54,19 @@ def list2dict(list):
             if ("|" in new_list):
                 new_list = ["|", "", ""]
             temp_list.append(new_list)
+            # To handle the error when action sequence is like 'A1 (Q1,P1,Q2) A2 Q3,P2,Q4)'.
+            new_list = []
             continue
         if not a.startswith("A"):
             if a.startswith("E"):  a = "Q17"
             if a.startswith("T"):  a = "Q17"
             new_list.append(a)
 
-    i = 0
-    for a in list:
-        if (a.startswith("A")):
-            final_list.append({a: temp_list[i]})
-            # temp_dict[a] = temp_list[i]
-            i += 1
+    # To handle the error when action sequence is like 'A1 Q1,P1,Q2) A2(Q3,P2,Q4', 'A1(Q1,P1,Q2 A2(Q3,P2,Q4)'.
+    number_list = [left_count, right_count, len(action_list), len(temp_list)]
+    set_temp = set(number_list)
+    # The value of multiple numbers is same.
+    if len(set_temp) == 1:
+        for action, parameter_temp in zip(action_list, temp_list):
+            final_list.append({action: parameter_temp})
     return final_list
