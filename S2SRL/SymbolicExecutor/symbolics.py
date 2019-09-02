@@ -29,88 +29,89 @@ class Symbolics():
         self.temp_bool_dict = {}
 
     def executor(self):
-        for symbolic in self.seq:
-            key = list(symbolic.keys())[0]
-            if len(symbolic[key]) != 3:
-                continue
-            e = symbolic[key][0].strip()
-            r = symbolic[key][1].strip()
-            t = symbolic[key][2].strip()
-            # The execution result from A1 is in dict format.
-            # A1: Select(e，r，t)
-            if ("A1" in symbolic):
-                temp_result = self.select(e, r, t)
-                self.answer = temp_result
-                self.temp_bool_dict = temp_result
-                self.print_answer()
-            # A2: SelectAll (et, r, t)
-            elif ("A2" in symbolic or "A16" in symbolic):
-                self.answer = self.select_all(e, r, t)
-                self.print_answer()
-            # A3: Bool(e)
-            elif ("A3" in symbolic):
-                bool_temp_result = self.is_bool(e)
-                if '|BOOL_RESULT|' in self.answer:
-                    self.answer['|BOOL_RESULT|'].append(bool_temp_result)
+        if len(self.seq) > 0:
+            for symbolic in self.seq:
+                key = list(symbolic.keys())[0]
+                if len(symbolic[key]) != 3:
+                    continue
+                e = symbolic[key][0].strip()
+                r = symbolic[key][1].strip()
+                t = symbolic[key][2].strip()
+                # The execution result from A1 is in dict format.
+                # A1: Select(e，r，t)
+                if ("A1" in symbolic):
+                    temp_result = self.select(e, r, t)
+                    self.answer = temp_result
+                    self.temp_bool_dict = temp_result
+                    self.print_answer()
+                # A2: SelectAll (et, r, t)
+                elif ("A2" in symbolic or "A16" in symbolic):
+                    self.answer = self.select_all(e, r, t)
+                    self.print_answer()
+                # A3: Bool(e)
+                elif ("A3" in symbolic):
+                    bool_temp_result = self.is_bool(e)
+                    if '|BOOL_RESULT|' in self.answer:
+                        self.answer['|BOOL_RESULT|'].append(bool_temp_result)
+                    else:
+                        temp = [bool_temp_result]
+                        self.answer.setdefault('|BOOL_RESULT|', temp)
+                    self.print_answer()
+                # A4: ArgMin
+                elif ("A4" in symbolic):
+                    self.answer = self.arg_min()
+                    self.print_answer()
+                # A5: ArgMax
+                elif ("A5" in symbolic):
+                    self.answer = self.arg_max()
+                    self.print_answer()
+                # A6: GreaterThan(e)
+                elif ("A6" in symbolic):
+                    self.answer = self.greater_than(e,r,t)
+                    self.print_answer()
+                # A7: LessThan(e)
+                elif ("A7" in symbolic):
+                    self.answer = self.less_than(e,r,t)
+                    self.print_answer()
+                # A9: Union(e，r，t)
+                elif ("A9" in symbolic):
+                    self.answer = self.union(e, r, t)
+                    self.print_answer()
+                # A8: Inter(e，r，t)
+                elif ("A8" in symbolic):
+                    self.answer = self.inter(e, r, t)
+                    self.print_answer()
+                # A10: Diff(e，r，t)
+                elif ("A10" in symbolic):
+                    self.answer = self.diff(e, r, t)
+                    self.print_answer()
+                # A11: Count(e)
+                elif ("A11" in symbolic):
+                    self.answer = self.count(e)
+                    self.print_answer()
+                # A12: ATLEAST(N)
+                elif ("A12" in symbolic):
+                    self.answer = self.at_least(e)
+                    self.print_answer()
+                # A13: ATMOST(N)
+                elif ("A13" in symbolic):
+                    self.answer = self.at_most(e)
+                    self.print_answer()
+                # A14: EQUAL(N)
+                elif ("A14" in symbolic):
+                    self.answer = self.equal(e)
+                    self.print_answer()
+                # A15: Almost(N)
+                elif ("A15" in symbolic):
+                    if r == "" and t == "":
+                        self.answer = self.around(e)
+                    else:
+                        self.answer = self.around(e,r,t)
+                    self.print_answer()
+                elif ("A17" in symbolic):
+                    self.print_answer()
                 else:
-                    temp = [bool_temp_result]
-                    self.answer.setdefault('|BOOL_RESULT|', temp)
-                self.print_answer()
-            # A4: ArgMin
-            elif ("A4" in symbolic):
-                self.answer = self.arg_min()
-                self.print_answer()
-            # A5: ArgMax
-            elif ("A5" in symbolic):
-                self.answer = self.arg_max()
-                self.print_answer()
-            # A6: GreaterThan(e)
-            elif ("A6" in symbolic):
-                self.answer = self.greater_than(e,r,t)
-                self.print_answer()
-            # A7: LessThan(e)
-            elif ("A7" in symbolic):
-                self.answer = self.less_than(e,r,t)
-                self.print_answer()
-            # A9: Union(e，r，t)
-            elif ("A9" in symbolic):
-                self.answer = self.union(e, r, t)
-                self.print_answer()
-            # A8: Inter(e，r，t)
-            elif ("A8" in symbolic):
-                self.answer = self.inter(e, r, t)
-                self.print_answer()
-            # A10: Diff(e，r，t)
-            elif ("A10" in symbolic):
-                self.answer = self.diff(e, r, t)
-                self.print_answer()
-            # A11: Count(e)
-            elif ("A11" in symbolic):
-                self.answer = self.count(e)
-                self.print_answer()
-            # A12: ATLEAST(N)
-            elif ("A12" in symbolic):
-                self.answer = self.at_least(e)
-                self.print_answer()
-            # A13: ATMOST(N)
-            elif ("A13" in symbolic):
-                self.answer = self.at_most(e)
-                self.print_answer()
-            # A14: EQUAL(N)
-            elif ("A14" in symbolic):
-                self.answer = self.equal(e)
-                self.print_answer()
-            # A15: Almost(N)
-            elif ("A15" in symbolic):
-                if r == "" and t == "":
-                    self.answer = self.around(e)
-                else:
-                    self.answer = self.around(e,r,t)
-                self.print_answer()
-            elif ("A17" in symbolic):
-                self.print_answer()
-            else:
-                print("wrong symbolic")
+                    print("wrong symbolic")
         return self.answer
 
     def is_A(self,e):
@@ -125,10 +126,11 @@ class Symbolics():
             json_pack['op']="is_A"
             json_pack['entity']=e
             content = "empty"
-            # TODO: not tested.
             try:
                 # content=requests.post("http://127.0.0.1:5000/post",json=json_pack).json()['content']
-                content = requests.post("http://10.201.34.3:5000/post", json=json_pack).json()['content']
+                content_json = requests.post("http://10.201.34.3:5000/post", json=json_pack).json()
+                if 'content' in content_json:
+                    content = content_json['content']
             except OSError:
                 pass
             return content
@@ -150,10 +152,11 @@ class Symbolics():
             json_pack['pre'] = r
             json_pack['obj'] = t
             content = set([])
-            # TODO: not tested.
             try:
                 # content = requests.post("http://127.0.0.1:5000/post", json=json_pack).json()['content']
-                content = requests.post("http://10.201.34.3:5000/post", json=json_pack).json()['content']
+                content_json = requests.post("http://10.201.34.3:5000/post", json=json_pack).json()
+                if 'content' in content_json:
+                    content = content_json['content']
             except OSError:
                 pass
             if content is not None:
@@ -183,16 +186,15 @@ class Symbolics():
             json_pack['sub'] = et
             json_pack['pre'] = r
             json_pack['obj'] = t
-
-        # TODO: not tested.
         try:
-            content = requests.post("http://10.201.34.3:5000/post", json=json_pack).json()['content']
+            content_json = requests.post("http://10.201.34.3:5000/post", json=json_pack).json()
+            if 'content' in content_json:
+                content = content_json['content']
         except OSError:
             pass
         # content = requests.post("http://127.0.0.1:5000/post", json=json_pack).json()['content']
         # for k, v in content.items():
         #   if len(v) == 0: content.pop(k)
-
         if self.answer:
             for k, v in self.answer.items():
                 # Combine the retrieved entities with existed retrieved entities related to same subject.

@@ -127,3 +127,12 @@ if __name__ == "__main__":
     a = [float(i/2) for i in range(4)]
     print(np.mean(a))
     print(float(np.mean(a)))
+
+    answer = {}
+    if type(answer) == dict:
+        temp = []
+        for key, value in answer.items():
+            if key != '|BOOL_RESULT|' and value:
+                temp.extend(list(value))
+        predicted_answer = temp
+    print(predicted_answer)
