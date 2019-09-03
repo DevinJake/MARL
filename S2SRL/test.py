@@ -13,3 +13,4 @@ from SymbolicExecutor.transform_util import list2dict
 if __name__ == "__main__":
     list_temp = ['A2', '(', ')', ')', '(', 'Q6619679', '-', 'P674', 'Q36649', 'A6', 'Q944203']
     print(list2dict(list_temp))
+    print(len(""))

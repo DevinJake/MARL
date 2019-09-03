@@ -17,21 +17,21 @@ import ptan
 
 SAVES_DIR = "../data/saves"
 
-BATCH_SIZE = 16
+BATCH_SIZE = 8
 LEARNING_RATE = 1e-4
 MAX_EPOCHES = 30
 MAX_TOKENS = 40
 TRAIN_RATIO = 0.900
 
 DIC_PATH = '../data/auto_QA_data/share.question'
-TRAIN_QUESTION_ANSWER_PATH = '../data/auto_QA_data/mask_even_1.0%/RL_train_TR.question'
+TRAIN_QUESTION_ANSWER_PATH = '../data/auto_QA_data/mask_even_1.0%/RL_train_TR_debug.question'
 log = logging.getLogger("train")
 
 
 # Calculate true reward for samples in test dataset.
 def run_test(test_data, net, rev_emb_dict, end_token, device="cuda"):
     argmax_reward_sum = 0.0
-    argmax_reward_count = 0
+    argmax_reward_count = 0.0
     # p1 is one sentence, p2 is sentence list.
     for p1, p2 in test_data:
         # Transform sentence to padded embeddings.
@@ -40,8 +40,7 @@ def run_test(test_data, net, rev_emb_dict, end_token, device="cuda"):
         enc = net.encode(input_seq)
         # Decode sequence by feeding predicted token to the net again. Act greedily.
         # Return N*outputvocab, N output token indices.
-        _, tokens = net.decode_chain_argmax(enc, net.emb(beg_token), seq_len=data.MAX_TOKENS,
-                                            stop_at_token=end_token)
+        _, tokens = net.decode_chain_argmax(enc, net.emb(beg_token), seq_len=data.MAX_TOKENS, stop_at_token=end_token)
         # Show what the output action sequence is.
         action_tokens = []
         for temp_idx in tokens:
@@ -54,9 +53,9 @@ def run_test(test_data, net, rev_emb_dict, end_token, device="cuda"):
 if __name__ == "__main__":
     logging.basicConfig(format="%(asctime)-15s %(levelname)s %(message)s", level=logging.INFO)
     # # command line parameters
-    # sys.argv = ['train_crossent.py', '--cuda', '-l=../data/saves/crossent/pre_bleu_0.942_18.dat', '-n=rl']
+    sys.argv = ['train_scst_true_reward.py', '--cuda', '-l=../data/saves/rl_even_true_1%/epoch_005_0.686_0.793.dat', '-n=rl_even_true_1%', '-s=5']
 
-    sys.argv = ['train_crossent.py', '--cuda', '-l=../data/saves/crossent_even_1%/pre_bleu_0.946_55.dat', '-n=rl_even_true_1%', '-s=5']
+    # sys.argv = ['train_scst_true_reward.py', '--cuda', '-l=../data/saves/crossent_even_1%/pre_bleu_0.946_55.dat', '-n=rl_even_true_1%', '-s=5']
     parser = argparse.ArgumentParser()
     # parser.add_argument("--data", required=True, help="Category to use for training. Empty string to train on full processDataset")
     parser.add_argument("--cuda", action='store_true', default=False, help="Enable cuda")
@@ -180,7 +179,7 @@ if __name__ == "__main__":
                         log.info("Input: %s", utils.untokenize(data.decode_words(inp_idx, rev_emb_dict)))
                         orig_response = qa_info['orig_response']
                         log.info("orig_response: %s", orig_response)
-                        log.info("Argmax: %s, bleu=%.4f", utils.untokenize(data.decode_words(actions, rev_emb_dict)),
+                        log.info("Argmax: %s, reward=%.4f", utils.untokenize(data.decode_words(actions, rev_emb_dict)),
                                  argmax_reward)
 
                     for _ in range(args.samples):
@@ -257,7 +256,7 @@ if __name__ == "__main__":
             writer.add_scalar("true_reward_sample", np.mean(true_reward_sample), batch_idx)
             writer.add_scalar("skipped_samples", skipped_samples/total_samples if total_samples!=0 else 0, batch_idx)
             writer.add_scalar("epoch", batch_idx, epoch)
-            log.info("Epoch %d, test BLEU: %.3f", epoch, true_reward_test)
+            log.info("Epoch %d, test reward: %.3f", epoch, true_reward_test)
             if best_true_reward is None or best_true_reward < true_reward_test:
                 best_true_reward = true_reward_test
                 log.info("Best true reward updated: %.4f", true_reward_test)
