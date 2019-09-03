@@ -114,8 +114,11 @@ class Symbolics():
                     print("wrong symbolic")
         return self.answer
 
+    # TODO: NOT TESTED
     def is_A(self,e):
         #return type of entity
+        if e == "":
+            return "empty"
         if self.type_dict is not None:
             try:
                 return self.type_dict[get_id(e)]
@@ -131,12 +134,15 @@ class Symbolics():
                 content_json = requests.post("http://10.201.34.3:5000/post", json=json_pack).json()
                 if 'content' in content_json:
                     content = content_json['content']
-            except OSError:
+            except:
+                print("ERROR for command: is_A(%s)" %e)
                 pass
-            return content
+            finally:
+                return content
 
+    # TODO: NOT TESTED
     def select(self, e, r, t):
-        if e == "":
+        if e == "" or r == "" or t == "":
             return {}
         if self.graph is not None:
             if 'sub' in self.graph[get_id(e)] and r in self.graph[get_id(e)]['sub']:
@@ -157,19 +163,24 @@ class Symbolics():
                 content_json = requests.post("http://10.201.34.3:5000/post", json=json_pack).json()
                 if 'content' in content_json:
                     content = content_json['content']
-            except OSError:
+            except:
+                print("ERROR for command: select(%s,%s,%s)" % (e, r, t))
                 pass
-            if content is not None:
-                # Store records in set.
-                content = set(content)
-            else:
-                content = set([])
-            # A dict is returned whose key is the subject and whose value is set of entities.
-            return {e:content}
+            finally:
+                if content is not None:
+                    # Store records in set.
+                    content = set(content)
+                else:
+                    content = set([])
+                # A dict is returned whose key is the subject and whose value is set of entities.
+                return {e:content}
 
+    # TODO: NOT TESTED
     def select_all(self, et, r, t):
         #print("A2:", et, r, t)
         content = {}
+        if et == "" or r == "" or t == "":
+            return content
         if self.graph is not None and self.par_dict is not None:
             keys = self.par_dict[get_id(et)]
             for key in keys:
@@ -179,27 +190,30 @@ class Symbolics():
                     content[key] = [ee for ee in self.graph[get_id(key)]['obj'][r] if self.is_A(ee) == t]
 
                 else:
-                    content[key] = None
+                    content[key] = []
+            return content
         else:
             json_pack = dict()
             json_pack['op'] = "select_All"
             json_pack['sub'] = et
             json_pack['pre'] = r
             json_pack['obj'] = t
-        try:
-            content_json = requests.post("http://10.201.34.3:5000/post", json=json_pack).json()
-            if 'content' in content_json:
-                content = content_json['content']
-        except OSError:
-            pass
-        # content = requests.post("http://127.0.0.1:5000/post", json=json_pack).json()['content']
-        # for k, v in content.items():
-        #   if len(v) == 0: content.pop(k)
-        if self.answer:
-            for k, v in self.answer.items():
-                # Combine the retrieved entities with existed retrieved entities related to same subject.
-                content.setdefault(k, []).extend(v)
-        return content
+            try:
+                content_json = requests.post("http://10.201.34.3:5000/post", json=json_pack).json()
+                if 'content' in content_json:
+                    content = content_json['content']
+            except:
+                print("ERROR for command: select_all(%s,%s,%s)" %(et,r,t))
+                pass
+            # content = requests.post("http://127.0.0.1:5000/post", json=json_pack).json()['content']
+            # for k, v in content.items():
+            #   if len(v) == 0: content.pop(k)
+            finally:
+                if self.answer:
+                    for k, v in self.answer.items():
+                        # Combine the retrieved entities with existed retrieved entities related to same subject.
+                        content.setdefault(k, []).extend(v)
+                return content
 
     def is_bool(self, e):
         # print("A3: is_bool")

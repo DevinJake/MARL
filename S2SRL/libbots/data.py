@@ -77,7 +77,7 @@ def encode_phrase_pairs_RLTR(phrase_pairs, emb_dict, filter_unknows=True):
     result = []
     for p1, p2 in phrase_pairs:
         p = encode_words(p1, emb_dict), p2
-        '''It is not correct to exclude the sample with 'UNK' from the dataset.'''
+        # STAR: It is not correct to exclude the sample with 'UNK' from the dataset.
         # if unk_token in p[0] or unk_token in p[1]:
         #     continue
         result.append(p)
@@ -136,7 +136,9 @@ def iterate_batches(data, batch_size):
     ofs = 0
     while True:
         batch = data[ofs*batch_size:(ofs+1)*batch_size]
-        if len(batch) <= 1:
+        # STAR: Why can not the length of a batch be one?
+        # if len(batch) <= 1:
+        if len(batch) < 1:
             break
         yield batch
         ofs += 1

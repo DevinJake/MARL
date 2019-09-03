@@ -58,8 +58,6 @@ def select_All(et, r, t):
                     content[key] = val
     return content
 
-
-
 @app.route('/post', methods = ['POST'])
 def post_res():
     response={}
