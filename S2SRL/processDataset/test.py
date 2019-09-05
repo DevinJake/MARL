@@ -141,5 +141,10 @@ if __name__ == "__main__":
     diff_value = diff_value - temp_set
     for temp in diff_value:
         print(temp)
+    a = {1,2,3}
+    if(type(a)== type(set())):
+        print(len(a))
+    print(type({}))
+    print(type(set()))
 
 
