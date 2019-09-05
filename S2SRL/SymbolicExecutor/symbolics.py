@@ -139,7 +139,6 @@ class Symbolics():
             finally:
                 return content
 
-    # TODO: NOT TESTED
     def select(self, e, r, t):
         if e == "" or r == "" or t == "":
             return {}
@@ -173,7 +172,6 @@ class Symbolics():
                 # A dict is returned whose key is the subject and whose value is set of entities.
                 return {e:content}
 
-    # TODO: NOT TESTED
     def select_all(self, et, r, t):
         #print("A2:", et, r, t)
         content = {}
@@ -212,6 +210,7 @@ class Symbolics():
                         content.setdefault(k, []).extend(v)
                 return content
 
+    # TODO: NOT TESTED
     def is_bool(self, e):
         # print("A3: is_bool")
         if type(self.answer) == bool: return True
@@ -231,6 +230,7 @@ class Symbolics():
         self.temp_set = set(min_set)
         return min_set
 
+    # TODO: NOT TESTED
     def arg_max(self):
         # print("A5: arg_max")
         if not self.answer:
@@ -239,6 +239,7 @@ class Symbolics():
         maxN = len(self.answer[maxK])
         return [k for k in self.answer if len(self.answer[k]) == maxN]
 
+    # TODO: NOT TESTED
     def greater_than(self, e, r, t):
         content = self.answer
         if type(content) != dict: return []
@@ -248,6 +249,7 @@ class Symbolics():
             N = 0
         return [k for k in self.answer if len(self.answer[k]) > N]
 
+    # TODO: NOT TESTED
     def less_than(self, e, r, t):
         content = self.answer
         if type(content) != dict: return []
@@ -257,7 +259,6 @@ class Symbolics():
             N = 0
         return [k for k in self.answer if len(self.answer[k]) < N]
 
-    # TODO: NOT TESTED
     def union(self, e, r, t):
         #print("A9:", e, r, t)
         if e == "": return {}
@@ -344,17 +345,32 @@ class Symbolics():
             answer_dict[diff_key] = list(set(diff_value))
             return answer_dict
 
+    # TODO: NOT TESTED
     def count(self,e= None):
         #print("A11:Count")
-        if type(self.answer) == type([]):
-            return len(self.answer)
-        elif e!='' and e and e in self.answer:
-            if e not in self.answer and len(self.answer.keys()) == 1:
-                return len(self.answer.popitem())
-            return len(self.answer[e])
-        else:
-            return len(self.answer.keys()) if type(self.answer) == type({}) else 0
+        try:
+            # list or set
+            if type(self.answer) == type([]) or type(self.answer) == type(set()):
+                return len(self.answer)
+            # dict
+            if type(self.answer) == type({}):
+                if e!='' and e:
+                    if e not in self.answer and len(self.answer.keys()) == 1:
+                        return len(self.answer.popitem())
+                    elif e in self.answer:
+                        return len(self.answer[e])
+                else:
+                    return len(self.answer.keys())
+            # int
+            if type(self.answer) == type(1):
+                return self.answer
+            else:
+                return 0
+        except:
+            print("ERROR! THE ACTION IS count(%s)!" %e)
+            return 0
 
+    # TODO: NOT TESTED
     def at_least(self, N):
         # print("A12: at_least")
         # for k in list(self.answer):
@@ -367,6 +383,7 @@ class Symbolics():
                 answer_keys.append(k)
         return answer_keys
 
+    # TODO: NOT TESTED
     def at_most(self, N):
         # print("A13: at_most")
         answer_keys = []
@@ -377,6 +394,7 @@ class Symbolics():
                 answer_keys.append(k)
         return answer_keys
 
+    # TODO: NOT TESTED
     def equal(self, N):
         answer_keys = []
         for k, v in self.answer.items():

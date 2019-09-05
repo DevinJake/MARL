@@ -32,7 +32,7 @@ def calc_True_Reward(action_sequence, qa_info):
     # print (symbolic_seq)
     symbolic_exe = Symbolics(symbolic_seq)
     answer = symbolic_exe.executor()
-    return calc_01_reward(answer, qa_info)
+    return calc_adaptative_reward(answer, qa_info)
 
 def calc_01_reward(answer, qa_info):
     true_reward = 0.0
@@ -95,7 +95,7 @@ def calc_01_reward(answer, qa_info):
                 return 0.0
         else:
             if len(response_entities) == 0:
-                return 0.0
+                return W_1
             else:
                 if len(predicted_answer) == 0:
                     return 0.0
@@ -186,6 +186,7 @@ def calc_adaptative_reward(answer, qa_info):
     elif qid.startswith("Simple Question (Direct)_") or qid.startswith("Logical Reasoning (All)_") or qid.startswith(
             "Quantitative Reasoning (All)_") or qid.startswith("Comparative Reasoning (All)_"):
         # To judge the returned answers are in dict format or boolean format.
+        R_type = 1.0
         if (type(answer) == dict):
             temp = []
             for key, value in answer.items():
@@ -207,10 +208,10 @@ def calc_adaptative_reward(answer, qa_info):
                 return 0.0
         else:
             if len(response_entities) == 0:
-                return 0.0
+                return R_type * W_1
             else:
                 if len(predicted_answer) == 0:
-                    return 0.0
+                    return R_type * W_1
                 else:
                     right_count = 0
                     for e in response_entities:
@@ -220,7 +221,8 @@ def calc_adaptative_reward(answer, qa_info):
                     precision = float(right_count)/float(len(predicted_answer)) if len(predicted_answer) != 0 else 0
                     recall = float(right_count)/float(len(response_entities)) if len(response_entities) != 0 else 0
                     F1 = 2 * precision * recall / (recall + precision) if (precision!=0 and recall!=0) else 0
-                    return F1
+                    # TODO： NOT TESTED!
+                    return (R_type * (W_1 + W_2 * F1))
 
 def calc_bleu(cand_seq, ref_seq):
     return calc_bleu_many(cand_seq, [ref_seq])
