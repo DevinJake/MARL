@@ -233,3 +233,8 @@ def tokenize(s):
 
 def untokenize(words):
     return "".join([" " + i if not i.startswith("'") and i not in string.punctuation else i for i in words]).strip()
+
+# To judge whether s1 and s2 are same lists or not.
+def duplicate(s1,s2):
+    compare = lambda a,b: len(a)==len(b) and len(a)==sum([1 for i,j in zip(a,b) if i==j])
+    return compare(s1, s2)

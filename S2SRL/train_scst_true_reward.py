@@ -22,9 +22,10 @@ LEARNING_RATE = 1e-4
 MAX_EPOCHES = 30
 MAX_TOKENS = 40
 TRAIN_RATIO = 0.900
+GAMMA = 0.05
 
 DIC_PATH = '../data/auto_QA_data/share.question'
-TRAIN_QUESTION_ANSWER_PATH = '../data/auto_QA_data/mask_even_1.0%/RL_train_TR_debug.question'
+TRAIN_QUESTION_ANSWER_PATH = '../data/auto_QA_data/mask_even_1.0%/RL_train_TR.question'
 log = logging.getLogger("train")
 
 
@@ -53,7 +54,7 @@ def run_test(test_data, net, rev_emb_dict, end_token, device="cuda"):
 if __name__ == "__main__":
     logging.basicConfig(format="%(asctime)-15s %(levelname)s %(message)s", level=logging.INFO)
     # # command line parameters
-    sys.argv = ['train_scst_true_reward.py', '--cuda', '-l=../data/saves/rl_even_true_1%/epoch_005_0.686_0.793.dat', '-n=rl_even_true_1%', '-s=5']
+    sys.argv = ['train_scst_true_reward.py', '--cuda', '-l=../data/saves/crossent_even_1%/pre_bleu_0.946_55.dat', '-n=rl_even_true_1%', '-s=5']
 
     # sys.argv = ['train_scst_true_reward.py', '--cuda', '-l=../data/saves/crossent_even_1%/pre_bleu_0.946_55.dat', '-n=rl_even_true_1%', '-s=5']
     parser = argparse.ArgumentParser()
@@ -144,7 +145,6 @@ if __name__ == "__main__":
                 beg_embedding = beg_embedding.cuda()
 
                 for idx, inp_idx in enumerate(input_batch):
-                    total_samples += 1
                     # # Test whether the input sequence is correctly transformed into indices.
                     # input_tokens = [rev_emb_dict[temp_idx] for temp_idx in inp_idx]
                     # print (input_tokens)
@@ -182,11 +182,28 @@ if __name__ == "__main__":
                         log.info("Argmax: %s, reward=%.4f", utils.untokenize(data.decode_words(actions, rev_emb_dict)),
                                  argmax_reward)
 
+
+                    action_memory = list()
                     for _ in range(args.samples):
                         # 'r_sample' is the list of out_logits list and 'actions' is the list of output tokens.
                         # The output tokens are sampled following probabilitis by using chain_sampling.
                         r_sample, actions = net.decode_chain_sampling(item_enc, beg_embedding,
                                                                       data.MAX_TOKENS, stop_at_token=end_token)
+                        total_samples += 1
+
+                        # Omit duplicate action sequence to decrease the computing time and to avoid the case that
+                        # the probability of such kind of duplicate action sequences would be increased redundantly and abnormally.
+                        duplicate_flag = False
+                        if len(action_memory) > 0:
+                            for temp_list in action_memory:
+                                if utils.duplicate(temp_list, actions):
+                                    duplicate_flag = True
+                                    break
+                        if not duplicate_flag:
+                            action_memory.append(actions)
+                        else:
+                            skipped_samples += 1
+                            continue
                         # Show what the output action sequence is.
                         action_tokens = []
                         for temp_idx in actions:
@@ -203,6 +220,15 @@ if __name__ == "__main__":
                         # Regard argmax_bleu calculated from decode_chain_argmax as baseline used in self-critic.
                         # Each token has same reward as 'sample_bleu - argmax_bleu'.
                         # [x] * y: stretch 'x' to [1*y] list in which each element is 'x'.
+
+                        # # If the argmax_reward is 1.0, then whatever the sample_reward is,
+                        # # the probability of actions that get reward = 1.0 could not be further updated.
+                        # # The GAMMA is used to adjust this scenario.
+                        # if argmax_reward == 1.0:
+                        #     net_advantages.extend([sample_reward - argmax_reward + GAMMA] * len(actions))
+                        # else:
+                        #     net_advantages.extend([sample_reward - argmax_reward] * len(actions))
+
                         net_advantages.extend([sample_reward - argmax_reward] * len(actions))
                         true_reward_sample.append(sample_reward)
                     dial_shown = True
@@ -255,6 +281,7 @@ if __name__ == "__main__":
             # After one epoch, get the average of the decode_chain_sampling bleus for samples in training dataset.
             writer.add_scalar("true_reward_sample", np.mean(true_reward_sample), batch_idx)
             writer.add_scalar("skipped_samples", skipped_samples/total_samples if total_samples!=0 else 0, batch_idx)
+            log.info("Batch %d, skipped_samples: %d, total_samples: %d", batch_idx, skipped_samples, total_samples)
             writer.add_scalar("epoch", batch_idx, epoch)
             log.info("Epoch %d, test reward: %.3f", epoch, true_reward_test)
             if best_true_reward is None or best_true_reward < true_reward_test:
@@ -268,5 +295,4 @@ if __name__ == "__main__":
         time_end = time.time()
         log.info("Training time is %.3fs." % (time_end - time_start))
         print("Training time is %.3fs." % (time_end - time_start))
-
     writer.close()

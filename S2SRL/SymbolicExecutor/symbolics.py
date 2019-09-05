@@ -284,7 +284,7 @@ class Symbolics():
             answer_dict[union_key] = list(set(union_value))
             return answer_dict
 
-    # TODO: NOT TESTED
+
     def inter(self, e, r, t):
         #print("A8:", e, r, t)
         if e == "": return {}
