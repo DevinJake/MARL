@@ -8,10 +8,10 @@
 '''
 
 import json
-from symbolics import Symbolics
+from .symbolics_nomask import Symbolics
 import logging
 log1 = logging.basicConfig(level=logging.INFO,#控制台打印的日志级别
-                    filename='../data/auto_QA_data/test_result/testdataset_result_without_magic.log',
+                    filename='../data/auto_QA_data/test_result/sample_testdataset_result_without_magic_nomask.log',
                     filemode='w',##模式，有w和a，w就是写模式，每次都会重新写日志，覆盖之前的日志
                     #a是追加模式，默认如果不写的话，就是追加模式
                     format=
@@ -40,8 +40,8 @@ def transformBooleanToString(list):
         return ((' and '.join(list)).strip() + ' respectively')
 
 def transMask2Action(state):
-    with open("../data/auto_QA_data/CSQA_ANNOTATIONS_test.json", 'r') as load_f, open("../data/saves/rl_even/final_predict.actions", 'r') as predict_actions \
-            , open("../data/auto_QA_data/mask_test/FINAL_test.question", 'r') as RL_test:
+    with open("../data/auto_QA_data/CSQA_ANNOTATIONS_test.json", 'r') as load_f, open("../data/saves/nomask_rl_even/sample_final_predict.actions", 'r') as predict_actions \
+            , open("../data/auto_QA_data/nomask_test/SAMPLE_FINAL_test.question", 'r') as RL_test:
         linelist = list()
         load_dict = json.load(load_f)
         num = 0
@@ -53,6 +53,7 @@ def transMask2Action(state):
         bool_right_count = 0
         count_right_count = 0
         for x, y in zip(predict_actions, RL_test):
+            print (x.strip().split(":")[0])
             action = x.strip().split(":")[1]
             id = y.strip().split()[0]
 
@@ -64,22 +65,23 @@ def transMask2Action(state):
                 response_entities = load_dict[id]["response_entities"].strip() if load_dict[id][
                                                                                       "response_entities"] != None else ""
                 response_entities = response_entities.strip().split("|")
-                orig_response = load_dict[id]["orig_response"].strip() if load_dict[id]["type_mask"] != None else ""
+                orig_response = load_dict[id]["orig_response"].strip() if load_dict[id]["orig_response"] != None else ""
                 # Update(add) elements in dict.
                 entity_mask.update(relation_mask)
                 entity_mask.update(type_mask)
                 new_action = list()
                 for act in action.split():
-                    for k, v in entity_mask.items():
-                        if act == v:
-                            act = k
-                            break
+                    # for k, v in entity_mask.items():
+                    #     if act == v:
+                    #         act = k
+                    #         break
                     new_action.append(act)
                 print("{0}".format(num))
                 '''print("{0}: {1}->{2}".format(num, id, action))'''
                 logging.info("%d: %s -> %s", num, id, action)
                 #print(" ".join(new_action))
                 symbolic_seq = list2dict(new_action)
+                print (new_action)
                 # symbolic_seq.append({"A11":["","",""]})### A11
                 # Modify with magic.
                 # if state.startswith("Verification(Boolean)(All)"):
@@ -229,13 +231,14 @@ def list2dict(list):
 
     i = 0
     for a in list:
-        if (a.startswith("A")):
-            final_list.append({a: temp_list[i]})
-            # temp_dict[a] = temp_list[i]
-            i += 1
-
+        if (a.startswith("A")) and 0 < len(temp_list) and i < len(temp_list):
+            try:
+                final_list.append({a: temp_list[i]})
+                # temp_dict[a] = temp_list[i]
+                i += 1
+            except OSError:
+                pass
     return final_list
-
 
 if __name__ == "__main__":
     # QuantitativeReasoning(Count)(All)
@@ -246,9 +249,9 @@ if __name__ == "__main__":
     # SimpleQuestion(Direct)
     # LogicalReasoning(All)
     linelist = list()
-    fw = open('../data/auto_QA_data/test_result/testdataset_result_without_magic.txt', 'w', encoding="UTF-8")
-    state_list = ["SimpleQuestion(Direct)","Verification(Boolean)(All)","QuantitativeReasoning(Count)(All)","QuantitativeReasoning(All)","ComparativeReasoning(Count)(All)","ComparativeReasoning(All)","LogicalReasoning(All)"]
-    # state_list = ["Verification(Boolean)(All)"]
+    fw = open('../data/auto_QA_data/test_result/sample_testdataset_result_without_magic_nomask.txt', 'w', encoding="UTF-8")
+    # state_list = ["SimpleQuestion(Direct)","Verification(Boolean)(All)","QuantitativeReasoning(Count)(All)","QuantitativeReasoning(All)","ComparativeReasoning(Count)(All)","ComparativeReasoning(All)","LogicalReasoning(All)"]
+    state_list = ["SimpleQuestion(Direct)"]
     for state in state_list:
         linelist += transMask2Action(state)
     fw.writelines(linelist)

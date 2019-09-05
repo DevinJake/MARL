@@ -3,6 +3,10 @@
 This file is used to test certain functions or methods.
 """
 import random
+import os
+import numpy as np
+
+
 def transformBooleanToString(list):
     temp_set = set()
     if len(list) == 0:
@@ -104,5 +108,38 @@ def test():
 
     print (type(d) == type({}))
 
+    s = "<E> ENTITY1 </E> <R> RELATION1 </R> <T> TYPE1 TYPE2 </T> which"
+    print(len(s))
+
+    p = [(1, 2), (3, 4), (5, 6), (7, 8)]
+    d = zip(*p)
+    print(list(d))
+    print (os.path.abspath(os.path.join(os.getcwd(), "../..")))
+
+
 if __name__ == "__main__":
     test()
+    s = '15'
+    if s.isdigit():
+        print(int(s))
+    for i in range(2-1):
+        print ('hua')
+    a = [float(i/2) for i in range(4)]
+    print(np.mean(a))
+    print(float(np.mean(a)))
+
+    answer = {}
+    if type(answer) == dict:
+        temp = []
+        for key, value in answer.items():
+            if key != '|BOOL_RESULT|' and value:
+                temp.extend(list(value))
+        predicted_answer = temp
+    print(predicted_answer)
+    diff_value = set()
+    temp_set = {1,2,3}
+    diff_value = diff_value - temp_set
+    for temp in diff_value:
+        print(temp)
+
+

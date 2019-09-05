@@ -8,10 +8,10 @@
 '''
 
 import json
-from symbolics import Symbolics
+from .symbolics import Symbolics
 import logging
 log1 = logging.basicConfig(level=logging.INFO,#控制台打印的日志级别
-                    filename='../data/auto_QA_data/test_result/sample_testdataset_result_without_magic.log',
+                    filename='../data/auto_QA_data/test_result/testdataset_result_without_magic.log',
                     filemode='w',##模式，有w和a，w就是写模式，每次都会重新写日志，覆盖之前的日志
                     #a是追加模式，默认如果不写的话，就是追加模式
                     format=
@@ -40,8 +40,8 @@ def transformBooleanToString(list):
         return ((' and '.join(list)).strip() + ' respectively')
 
 def transMask2Action(state):
-    with open("../data/auto_QA_data/CSQA_ANNOTATIONS_test.json", 'r') as load_f, open("../data/saves/rl_even/sample_final_predict.actions", 'r') as predict_actions \
-            , open("../data/auto_QA_data/mask_test/SAMPLE_FINAL_test.question", 'r') as RL_test:
+    with open("../data/auto_QA_data/CSQA_ANNOTATIONS_test.json", 'r') as load_f, open("../data/saves/rl_even/final_predict.actions", 'r') as predict_actions \
+            , open("../data/auto_QA_data/mask_test/FINAL_test.question", 'r') as RL_test:
         linelist = list()
         load_dict = json.load(load_f)
         num = 0
@@ -64,7 +64,7 @@ def transMask2Action(state):
                 response_entities = load_dict[id]["response_entities"].strip() if load_dict[id][
                                                                                       "response_entities"] != None else ""
                 response_entities = response_entities.strip().split("|")
-                orig_response = load_dict[id]["orig_response"].strip() if load_dict[id]["orig_response"] != None else ""
+                orig_response = load_dict[id]["orig_response"].strip() if load_dict[id]["type_mask"] != None else ""
                 # Update(add) elements in dict.
                 entity_mask.update(relation_mask)
                 entity_mask.update(type_mask)
@@ -246,7 +246,7 @@ if __name__ == "__main__":
     # SimpleQuestion(Direct)
     # LogicalReasoning(All)
     linelist = list()
-    fw = open('../data/auto_QA_data/test_result/sample_testdataset_result_without_magic.txt', 'w', encoding="UTF-8")
+    fw = open('../data/auto_QA_data/test_result/testdataset_result_without_magic.txt', 'w', encoding="UTF-8")
     state_list = ["SimpleQuestion(Direct)","Verification(Boolean)(All)","QuantitativeReasoning(Count)(All)","QuantitativeReasoning(All)","ComparativeReasoning(Count)(All)","ComparativeReasoning(All)","LogicalReasoning(All)"]
     # state_list = ["Verification(Boolean)(All)"]
     for state in state_list:

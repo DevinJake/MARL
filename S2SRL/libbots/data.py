@@ -4,6 +4,7 @@ import sys
 import logging
 import itertools
 import pickle
+import json
 
 from . import cornell
 
@@ -65,6 +66,32 @@ def encode_phrase_pairs(phrase_pairs, emb_dict, filter_unknows=True):
         result.append(p)
     return result
 
+def encode_phrase_pairs_RLTR(phrase_pairs, emb_dict, filter_unknows=True):
+    """
+    Convert list of phrase pairs to training data
+    :param phrase_pairs: list of (phrase, phrase)
+    :param emb_dict: embeddings dictionary (word -> id)
+    :return: list of tuples ([input_id_seq], [output_id_seq])
+    """
+    unk_token = emb_dict[UNKNOWN_TOKEN]
+    result = []
+    for p1, p2 in phrase_pairs:
+        p = encode_words(p1, emb_dict), p2
+        # STAR: It is not correct to exclude the sample with 'UNK' from the dataset.
+        # if unk_token in p[0] or unk_token in p[1]:
+        #     continue
+        result.append(p)
+    return result
+
+# Change token list into token tuple.
+def group_train_data_RLTR(training_data):
+    groups = []
+    for p1, p2 in training_data:
+        l = tuple(p1)
+        temp = (l, p2)
+        groups.append(temp)
+    return list(groups)
+
 def group_train_data(training_data):
     """
     Group training pairs by first phrase
@@ -109,7 +136,9 @@ def iterate_batches(data, batch_size):
     ofs = 0
     while True:
         batch = data[ofs*batch_size:(ofs+1)*batch_size]
-        if len(batch) <= 1:
+        # STAR: Why can not the length of a batch be one?
+        # if len(batch) <= 1:
+        if len(batch) < 1:
             break
         yield batch
         ofs += 1
@@ -258,6 +287,28 @@ def load_RL_data(QUESTION_PATH, ACTION_PATH, DIC_PATH, max_tokens = None):
             next_id += 1
     return result, res
 
+def load_RL_data_TR(QUESTION_PATH, DIC_PATH, max_tokens = None):
+    result = []
+    vocab_list = get_vocab(DIC_PATH)
+    res = {UNKNOWN_TOKEN: 0, BEGIN_TOKEN: 1, END_TOKEN: 2}
+    next_id = 3
+    for w in vocab_list:
+        if w not in res:
+            res[w] = next_id
+            next_id += 1
+    with open(QUESTION_PATH, 'r', encoding="UTF-8") as load_f:
+        load_dict = json.load(load_f)
+        for key, value in load_dict.items():
+            length = len(str(value['input']).strip().split(' '))
+            if 'entity_mask' in value and 'relation_mask' in value and 'type_mask' in value and 'response_bools' in value and 'response_entities' in value and 'orig_response' in value and 'question' in value and length <= max_tokens:
+                question_info = {'qid':key,'entity_mask': value['entity_mask'], 'relation_mask': value['relation_mask'],
+                             'type_mask': value['type_mask'], 'response_bools': value['response_bools'],
+                             'response_entities': value['response_entities'], 'orig_response': value['orig_response']}
+                result.append((str(value['input']).strip().split(' '), question_info))
+            else:
+                continue
+    return result, res
+
 def phrase_pairs_dict(phrase_pairs, freq_set):
     """
     Return the dict of words in the dialogues mapped to their IDs
@@ -294,7 +345,6 @@ def dialogues_to_pairs(dialogues, max_tokens=None):
 
 def decode_words(indices, rev_emb_dict):
     return [rev_emb_dict.get(idx, UNKNOWN_TOKEN) for idx in indices]
-
 
 def trim_tokens_seq(tokens, end_token):
     res = []

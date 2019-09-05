@@ -1,20 +1,25 @@
+# -*- coding: utf-8 -*-
+# @Time    : 2019/3/27 10:37
+# @Author  : Yaoleo
+# @Blog    : yaoleo.github.io
+
 # -*- coding:utf-8 -*-
 
 import copy
 import time
 
 from Preprocess.load_qadata import load_qadata, getQA_by_state
-from symbolics import Symbolics
+from . import symbolics
 import logging
 logging.basicConfig(level=logging.INFO,#控制台打印的日志级别
-                    filename='/data/zjy/logical_auto.log',
+                    filename='/data/zjy/count_orig.log',
                     filemode='a',##模式，有w和a，w就是写模式，每次都会重新写日志，覆盖之前的日志
                     #a是追加模式，默认如果不写的话，就是追加模式
                     format=
                     '%(message)s'
                     #日志格式
                     )
-continue_num = 4825
+continue_num = 0
 class Node(object):
     def __init__(self, value=None):
         self.value = value  # 节点值
@@ -97,17 +102,14 @@ def cal_precesion(orig_answer, orig_answer_entities, cal_answer):
 
 
 def auto_test():
-    fname = "quantative_auto_symbolic.txt"
-    qa_result = open(fname, "a+")
-    qa_result.truncate()
-    print >> qa_result, "ssss"
+
     qa_set = load_qadata("/data/zjy/preprocessed_data_10k/train")
 
     qa_map = getQA_by_state(qa_set)
 
     symbolic_seqs = auto_generate()
     a = 0
-    for qa in qa_map['Logical Reasoning (All)\n']:
+    for qa in qa_map['Quantitative Reasoning (Count) (All)\n']:
 
         context = qa['context'].replace("\n", "").strip()
         context_utterance = qa['context_utterance'].replace("\n", "")
@@ -118,42 +120,12 @@ def auto_test():
         context_relations.extend(['-' + r for r in context_relations])
         response_entities = qa['response_entities'].replace("\n", "").split("|")
         orig_response = qa['orig_response'].replace("\n", "")
-        logging.info(str(a)+" "+context_utterance)
-
-        print a, time.time()
-        flag = 0
-        a += 1
-        if a < continue_num:
-            continue
-        for seq in symbolic_seqs:
-            seq_with_param = {i: [] for i in range(len(seq))}
-            for i in range(len(seq)):
-                symbolic = seq[i]
-                if (int(symbolic[1:]) in [1, 8, 9, 10]):
-                    for e in context_entities:
-                        for r in context_relations:
-                            for t in context_types:
-                                seq_with_param[i].append({symbolic: (e, r, t)})
-                                # print symbolic,e,r,t
-                # if (int(symbolic[1:]) in [3]):
-                #     for e in context_entities:
-                #         seq_with_param[i].append({symbolic: (e, '', '')})
-                #         # print symbolic, e
-
-            if (len(seq_with_param) == 2):
-
-                for sym1 in seq_with_param[0]:
-                    if flag == 4:
-                        break
-                    for sym2 in seq_with_param[1]:
-                        if flag == 4:
-                            break
-                        sym_seq = [sym1, sym2]
-                        symbolic_exe = Symbolics(sym_seq)
-                        answer = symbolic_exe.executor()
-                        if cal_precesion(orig_response, response_entities, answer):
-                            flag += 1
-                            logging.info(sym_seq)
+        logging.info(str(a))
+        logging.info("context_utterance:"+context_utterance)
+        logging.info("context_entities:" + ",".join(context_entities))
+        logging.info("context_relations:" + ",".join(context_relations))
+        logging.info("context_types:" + ",".join(context_types))
+        a+=1
 
 
 auto_test()

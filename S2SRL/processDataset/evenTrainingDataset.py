@@ -3,6 +3,7 @@
 Get all questions, annotated actions, entities, relations, types together in JSON format.
 Get the training processDataset and test processDataset for seq2seq (one question to one action ).
 Get the training processDataset and test processDataset for REINFORCE (one question to many actions).
+Get the training processDataset and test processDataset for REINFORCE with True Reward (one question with one answer).
 Make the processDataset with more even distribution as:
 simple: 2K, logical: 2K, quantitative: 2K, count: 1K, bool: 20, comp:40, compcount: 40.
 '''
@@ -14,18 +15,31 @@ import numpy as np
 import random
 SEED = 1988
 LINE_SIZE = 100000
-CATEGORY_SIZE = 2000
-COMP_SIZE = 1300
+
+CATEGORY_SIZE = 2800
+COMP_SIZE = 932
+COMP_APPRO_SIZE = 1769
+COMP_COUNT_SIZE = 554
+COMP_COUNT_APPRO_SIZE = 1536
+QUANTATIVE_SIZE = 1880
+COUNT_SIZE = 733
+BOOL_SIZE = 427
 from random import shuffle
 
 special_counting_characters = {'-','|','&'}
 special_characters = {'(',')','-','|','&'}
 
-def getTrainingDatasetForPytorch():
-    fwTrainQ = open('../../data/auto_QA_data/mask_even/PT_train.question', 'w', encoding="UTF-8")
-    fwTrainA = open('../../data/auto_QA_data/mask_even/PT_train.action', 'w', encoding="UTF-8")
-    fwTestQ = open('../../data/auto_QA_data/mask_even/PT_test.question', 'w', encoding="UTF-8")
-    fwTestA = open('../../data/auto_QA_data/mask_even/PT_test.action', 'w', encoding="UTF-8")
+# Get the training processDataset and test processDataset for seq2seq (one question to one action ).
+def getTrainingDatasetForPytorch(percentage):
+
+    path = '../../data/auto_QA_data/mask_even_' + percentage + '/PT_train.question'
+    fwTrainQ = open(path, 'w', encoding="UTF-8")
+    path = '../../data/auto_QA_data/mask_even_' + percentage + '/PT_train.action'
+    fwTrainA = open(path, 'w', encoding="UTF-8")
+    path = '../../data/auto_QA_data/mask_even_' + percentage + '/PT_test.question'
+    fwTestQ = open(path, 'w', encoding="UTF-8")
+    path = '../../data/auto_QA_data/mask_even_' + percentage + '/PT_test.action'
+    fwTestA = open(path, 'w', encoding="UTF-8")
     with open("../../data/auto_QA_data/CSQA_ANNOTATIONS_full.json", 'r', encoding="UTF-8") as load_f:
         train_action_string_list, test_action_string_list, train_question_string_list, test_question_string_list = list(), list(), list(), list()
         dict_list = list()
@@ -45,19 +59,19 @@ def getTrainingDatasetForPytorch():
                     count_dict['simple_'] = count_dict['simple_'] + 1
                 elif 'logical_' in key and count_dict['logical_'] < CATEGORY_SIZE:
                     count_dict['logical_'] = count_dict['logical_'] + 1
-                elif 'quantative_' in key and count_dict['quantative_'] < CATEGORY_SIZE:
+                elif 'quantative_' in key and count_dict['quantative_'] < QUANTATIVE_SIZE:
                     count_dict['quantative_'] = count_dict['quantative_'] + 1
-                elif 'count_' in key and 'compcount_' not in key and count_dict['count_'] < CATEGORY_SIZE:
+                elif 'count_' in key and 'compcount_' not in key and count_dict['count_'] < COUNT_SIZE:
                     count_dict['count_'] = count_dict['count_'] + 1
-                elif 'bool_' in key and count_dict['bool_'] < CATEGORY_SIZE:
+                elif 'bool_' in key and count_dict['bool_'] < BOOL_SIZE:
                     count_dict['bool_'] = count_dict['bool_'] + 1
                 elif 'comp_' in key and count_dict['comp_'] < COMP_SIZE:
                     count_dict['comp_'] = count_dict['comp_'] + 1
-                elif 'compcount_' in key and count_dict['compcount_'] < COMP_SIZE:
+                elif 'compcount_' in key and count_dict['compcount_'] < COMP_COUNT_SIZE:
                     count_dict['compcount_'] = count_dict['compcount_'] + 1
-                elif 'compcountappro_' in key and count_dict['compcountappro_'] < COMP_SIZE:
+                elif 'compcountappro_' in key and count_dict['compcountappro_'] < COMP_COUNT_APPRO_SIZE:
                     count_dict['compcountappro_'] = count_dict['compcountappro_'] + 1
-                elif 'compappro_' in key and count_dict['compappro_'] < COMP_SIZE:
+                elif 'compappro_' in key and count_dict['compappro_'] < COMP_APPRO_SIZE:
                     count_dict['compappro_'] = count_dict['compappro_'] + 1
                 else:
                     continue
@@ -127,11 +141,16 @@ def getTrainingDatasetForPytorch():
     fwTestA.close()
     print ("Getting SEQUENCE2SEQUENCE processDataset is done!")
 
-def getTrainingDatasetForRl():
-    fwTrainQ = open('../../data/auto_QA_data/mask_even/RL_train.question', 'w', encoding="UTF-8")
-    fwTrainA = open('../../data/auto_QA_data/mask_even/RL_train.action', 'w', encoding="UTF-8")
-    fwTestQ = open('../../data/auto_QA_data/mask_even/RL_test.question', 'w', encoding="UTF-8")
-    fwTestA = open('../../data/auto_QA_data/mask_even/RL_test.action', 'w', encoding="UTF-8")
+# Get the training processDataset and test processDataset for REINFORCE (one question to many actions).
+def getTrainingDatasetForRl(percentage):
+    path = '../../data/auto_QA_data/mask_even_' + percentage + '/RL_train.question'
+    fwTrainQ = open(path, 'w', encoding="UTF-8")
+    path = '../../data/auto_QA_data/mask_even_' + percentage + '/RL_train.action'
+    fwTrainA = open(path, 'w', encoding="UTF-8")
+    path = '../../data/auto_QA_data/mask_even_' + percentage + '/RL_test.question'
+    fwTestQ = open(path, 'w', encoding="UTF-8")
+    path = '../../data/auto_QA_data/mask_even_' + percentage + '/RL_test.action'
+    fwTestA = open(path, 'w', encoding="UTF-8")
     # fwNoaction = open('../../data/auto_QA_data/mask_even/no_action_question.txt', 'w', encoding="UTF-8")
     no_action_question_list = list()
     questionSet = set()
@@ -141,7 +160,7 @@ def getTrainingDatasetForRl():
         dict_list = list()
         load_dict = json.load(load_f)
         list_of_load_dict = list(load_dict.items())
-        random.seed(SEED)
+        random.seed(SEED+2)
         random.shuffle(list_of_load_dict)
         load_dict = dict(list_of_load_dict)
         count_dict = {'simple_': 0, 'logical_': 0, 'quantative_': 0, 'count_': 0, 'bool_': 0, 'comp_': 0, 'compcount_': 0, 'compcountappro_': 0, 'compappro_': 0}
@@ -155,19 +174,19 @@ def getTrainingDatasetForRl():
                     count_dict['simple_'] = count_dict['simple_'] + 1
                 elif 'logical_' in key and count_dict['logical_'] < CATEGORY_SIZE:
                     count_dict['logical_'] = count_dict['logical_'] + 1
-                elif 'quantative_' in key and count_dict['quantative_'] < CATEGORY_SIZE:
+                elif 'quantative_' in key and count_dict['quantative_'] < QUANTATIVE_SIZE:
                     count_dict['quantative_'] = count_dict['quantative_'] + 1
-                elif 'count_' in key and 'compcount_' not in key and count_dict['count_'] < CATEGORY_SIZE:
+                elif 'count_' in key and 'compcount_' not in key and count_dict['count_'] < COUNT_SIZE:
                     count_dict['count_'] = count_dict['count_'] + 1
-                elif 'bool_' in key and count_dict['bool_'] < CATEGORY_SIZE:
+                elif 'bool_' in key and count_dict['bool_'] < BOOL_SIZE:
                     count_dict['bool_'] = count_dict['bool_'] + 1
                 elif 'comp_' in key and count_dict['comp_'] < COMP_SIZE:
                     count_dict['comp_'] = count_dict['comp_'] + 1
-                elif 'compcount_' in key and count_dict['compcount_'] < COMP_SIZE:
+                elif 'compcount_' in key and count_dict['compcount_'] < COMP_COUNT_SIZE:
                     count_dict['compcount_'] = count_dict['compcount_'] + 1
-                elif 'compcountappro_' in key and count_dict['compcountappro_'] < COMP_SIZE:
+                elif 'compcountappro_' in key and count_dict['compcountappro_'] < COMP_COUNT_APPRO_SIZE:
                     count_dict['compcountappro_'] = count_dict['compcountappro_'] + 1
-                elif 'compappro_' in key and count_dict['compappro_'] < COMP_SIZE:
+                elif 'compappro_' in key and count_dict['compappro_'] < COMP_APPRO_SIZE:
                     count_dict['compappro_'] = count_dict['compappro_'] + 1
                 else:
                     continue
@@ -232,7 +251,7 @@ def getTrainingDatasetForRl():
             elif len(actions) == 0:
                 no_action_question_list.append(str(key) + ' ' + str(value['question']).lower().replace('?', '').strip() + '\n')
 
-    random.seed(SEED+1)
+    random.seed(SEED+3)
     random.shuffle(dict_list)
     train_size = int(len(dict_list))
     # train_size = int(len(dict_list) * 0.95)
@@ -267,12 +286,73 @@ def getTrainingDatasetForRl():
     # fwNoaction.close()
     print ("Getting RL processDataset is done!")
 
+# Get the training processDataset and test processDataset for REINFORCE with True Reward (one question with one answer).
+def getTrainingDatasetForRlWithTrueReward(percentage, SIZE):
+    path = '../../data/auto_QA_data/mask_even_' + percentage + '/RL_train_TR.question'
+    fwTrainQ = open(path, 'w', encoding="UTF-8")
+    path = '../../data/auto_QA_data/mask_even_' + percentage + '/RL_test_TR.question'
+    fwTestQ = open(path, 'w', encoding="UTF-8")
+    with open("../../data/auto_QA_data/CSQA_DENOTATIONS_full.json", 'r', encoding="UTF-8") as load_f:
+        dict_list = {}
+        load_dict = json.load(load_f)
+        list_of_load_dict = list(load_dict.items())
+        random.seed(SEED+4)
+        random.shuffle(list_of_load_dict)
+        load_dict = dict(list_of_load_dict)
+        count_dict = {'simple_': 0, 'logical_': 0, 'quantative_': 0, 'count_': 0, 'bool_': 0, 'comp_': 0, 'compcount_': 0}
+        for key, value in load_dict.items():
+            orig_response, question = "", ""
+            try:
+                orig_response = value['orig_response']
+                question = value['question']
+            except SyntaxError:
+                pass
+            if len(orig_response) > 0 and len(question) >0:
+                if 'Simple Question (Direct)_' in key and count_dict['simple_'] < SIZE:
+                    count_dict['simple_'] = count_dict['simple_'] + 1
+                elif 'Logical Reasoning (All)_' in key and count_dict['logical_'] < SIZE:
+                    count_dict['logical_'] = count_dict['logical_'] + 1
+                elif 'Quantitative Reasoning (All)_' in key and count_dict['quantative_'] < SIZE:
+                    count_dict['quantative_'] = count_dict['quantative_'] + 1
+                elif 'Quantitative Reasoning (Count) (All)_' in key and count_dict['count_'] < SIZE:
+                    count_dict['count_'] = count_dict['count_'] + 1
+                elif 'Verification (Boolean) (All)_' in key and count_dict['bool_'] < SIZE:
+                    count_dict['bool_'] = count_dict['bool_'] + 1
+                elif 'Comparative Reasoning (All)_' in key and count_dict['comp_'] < SIZE:
+                    count_dict['comp_'] = count_dict['comp_'] + 1
+                elif 'Comparative Reasoning (Count) (All)_' in key and count_dict['compcount_'] < SIZE:
+                    count_dict['compcount_'] = count_dict['compcount_'] + 1
+                else:
+                    continue
+                dict_list[key] = value
+    dict_train_list, dict_test_list = {}, {}
+    train_size = int(len(dict_list))
+    # train_size = int(len(dict_list) * 0.95)
+    temp_count = 0
+    for key,value in dict_list.items():
+        if temp_count < train_size:
+            dict_train_list[key] = value
+            temp_count+=1
+        elif train_size <= temp_count:
+            dict_test_list[key] = value
+            temp_count+=1
+    fwTrainQ.writelines(json.dumps(dict_train_list, indent=1, ensure_ascii=False))
+    fwTrainQ.close()
+    fwTestQ.writelines(json.dumps(dict_test_list, indent=1, ensure_ascii=False))
+    fwTestQ.close()
+    print ("Getting RL_TR processDataset is done!")
+
 # Run getTrainingDatasetForPytorch() to get evenly-distributed training and test processDataset for seq2seq model training.
 # Run getTrainingDatasetForRl() to get evenly-distributed training and test processDataset for REINFORCE-seq2seq model training.
 # Vocabulary and FINAL_test files are same as the share.question and FINAL-related files used in mask processDataset.
 if __name__ == "__main__":
-    getTrainingDatasetForPytorch()
-    getTrainingDatasetForRl()
+    # percentage represents how much samples (0.2% ~ 1.2%) are drawn from the whole training dataset.
+    percentage = '1.0%'
+    # size = 1479
+    size = 48
+    # getTrainingDatasetForPytorch(percentage)
+    # getTrainingDatasetForRl(percentage)
+    getTrainingDatasetForRlWithTrueReward(percentage, size)
 
 
 

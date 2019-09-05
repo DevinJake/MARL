@@ -17,22 +17,21 @@ import ptan
 
 SAVES_DIR = "../data/saves"
 
-BATCH_SIZE = 16
+BATCH_SIZE = 8
 LEARNING_RATE = 1e-4
-MAX_EPOCHES = 40
+MAX_EPOCHES = 30
 MAX_TOKENS = 40
-TRAIN_RATIO = 0.985
+TRAIN_RATIO = 0.900
 
-TRAIN_QUESTION_PATH = '../data/auto_QA_data/mask_even/RL_train.question'
-TRAIN_ACTION_PATH = '../data/auto_QA_data/mask_even/RL_train.action'
 DIC_PATH = '../data/auto_QA_data/share.question'
-
+TRAIN_QUESTION_ANSWER_PATH = '../data/auto_QA_data/mask_even_1.0%/RL_train_TR_debug.question'
 log = logging.getLogger("train")
 
-# Calculate bleus for samples in test dataset.
-def run_test(test_data, net, end_token, device="cuda"):
-    bleu_sum = 0.0
-    bleu_count = 0
+
+# Calculate true reward for samples in test dataset.
+def run_test(test_data, net, rev_emb_dict, end_token, device="cuda"):
+    argmax_reward_sum = 0.0
+    argmax_reward_count = 0.0
     # p1 is one sentence, p2 is sentence list.
     for p1, p2 in test_data:
         # Transform sentence to padded embeddings.
@@ -41,38 +40,29 @@ def run_test(test_data, net, end_token, device="cuda"):
         enc = net.encode(input_seq)
         # Decode sequence by feeding predicted token to the net again. Act greedily.
         # Return N*outputvocab, N output token indices.
-        _, tokens = net.decode_chain_argmax(enc, input_seq.data[0:1], seq_len=data.MAX_TOKENS,
-                                            stop_at_token=end_token)
-        ref_indices = [
-            # Remove #BEG from sentence.
-            indices[1:]
-            for indices in p2
-        ]
-        # BEG is not included in tokens.
-        # Accept several reference sentences and return the one with the best score.
-        bleu_sum += utils.calc_bleu_many(tokens, ref_indices)
-        bleu_count += 1
-    return bleu_sum / bleu_count
-
+        _, tokens = net.decode_chain_argmax(enc, net.emb(beg_token), seq_len=data.MAX_TOKENS, stop_at_token=end_token)
+        # Show what the output action sequence is.
+        action_tokens = []
+        for temp_idx in tokens:
+            if temp_idx in rev_emb_dict and rev_emb_dict.get(temp_idx) != '#END':
+                action_tokens.append(str(rev_emb_dict.get(temp_idx)).upper())
+        argmax_reward_sum += float(utils.calc_True_Reward(action_tokens, p2))
+        argmax_reward_count += 1
+    return float(argmax_reward_sum) / float(argmax_reward_count)
 
 if __name__ == "__main__":
     logging.basicConfig(format="%(asctime)-15s %(levelname)s %(message)s", level=logging.INFO)
-
     # # command line parameters
-    # sys.argv = ['train_crossent.py', '--cuda', '-l=../data/saves/crossent/pre_bleu_0.942_18.dat', '-n=rl']
+    sys.argv = ['train_scst_true_reward.py', '--cuda', '-l=../data/saves/rl_even_true_1%/epoch_005_0.686_0.793.dat', '-n=rl_even_true_1%', '-s=5']
 
-    # Read optimized parameters from pre-training SEQ2SEQ.
-    sys.argv = ['train_crossent.py', '--cuda', '-l=../data/saves/crossent_even_1%/pre_bleu_0.943_30.dat', '-n=rl_even_1%']
-
-    # # Read optimized parameters from pre-training RL.
-    # sys.argv = ['train_crossent.py', '--cuda', '-l=../data/saves/rl_even_1%/bleu_0.995_03.dat', '-n=rl_even_1%']
+    # sys.argv = ['train_scst_true_reward.py', '--cuda', '-l=../data/saves/crossent_even_1%/pre_bleu_0.946_55.dat', '-n=rl_even_true_1%', '-s=5']
     parser = argparse.ArgumentParser()
     # parser.add_argument("--data", required=True, help="Category to use for training. Empty string to train on full processDataset")
     parser.add_argument("--cuda", action='store_true', default=False, help="Enable cuda")
     parser.add_argument("-n", "--name", required=True, help="Name of the run")
-    parser.add_argument("-l", "--load", required=True, help="Load the s2s model whereby continue training the RL mode")
-    # Number of decoding samples.
-    parser.add_argument("--samples", type=int, default=4, help="Count of samples in prob mode")
+    parser.add_argument("-l", "--load", required=True, help="Load the pre-trained model whereby continue training the RL mode")
+    # # Number of decoding samples.
+    parser.add_argument("-s", "--samples", type=int, default=4, help="Count of samples in prob mode")
     parser.add_argument("--disable-skip", default=False, action='store_true', help="Disable skipping of samples with high argmax BLEU")
     args = parser.parse_args()
     device = torch.device("cuda" if args.cuda else "cpu")
@@ -81,16 +71,15 @@ if __name__ == "__main__":
     saves_path = os.path.join(SAVES_DIR, args.name)
     os.makedirs(saves_path, exist_ok=True)
 
-
-    # phrase_pairs, emb_dict = data.load_data('comedy')
-    # List of (seq1, [seq*]) pairs, the training pairs are in format of 1:N.
-    phrase_pairs, emb_dict = data.load_RL_data(TRAIN_QUESTION_PATH, TRAIN_ACTION_PATH, DIC_PATH, MAX_TOKENS)
-    log.info("Obtained %d phrase pairs with %d uniq words from %s and %s.", len(phrase_pairs), len(emb_dict), TRAIN_QUESTION_PATH, TRAIN_ACTION_PATH)
+    # # List of (question, {question information and answer}) pairs, the training pairs are in format of 1:1.
+    phrase_pairs, emb_dict = data.load_RL_data_TR(TRAIN_QUESTION_ANSWER_PATH, DIC_PATH, MAX_TOKENS)
+    log.info("Obtained %d phrase pairs with %d uniq words from %s.", len(phrase_pairs), len(emb_dict), TRAIN_QUESTION_ANSWER_PATH)
     data.save_emb_dict(saves_path, emb_dict)
     end_token = emb_dict[data.END_TOKEN]
-    train_data = data.encode_phrase_pairs(phrase_pairs, emb_dict)
-    # list of (seq1, [seq*]) pairs，把训练对做成1：N的形式；
-    train_data = data.group_train_data(train_data)
+    train_data = data.encode_phrase_pairs_RLTR(phrase_pairs, emb_dict)
+    # # list of (seq1, [seq*]) pairs，把训练对做成1：N的形式；
+    # train_data = data.group_train_data(train_data)
+    train_data = data.group_train_data_RLTR(train_data)
     rand = np.random.RandomState(data.SHUFFLE_SEED)
     rand.shuffle(train_data)
     train_data, test_data = data.split_train_test(train_data, TRAIN_RATIO)
@@ -100,8 +89,7 @@ if __name__ == "__main__":
     # Index -> word.
     rev_emb_dict = {idx: word for word, idx in emb_dict.items()}
     # PhraseModel.__init__() to establish a LSTM model.
-    net = model.PhraseModel(emb_size=model.EMBEDDING_DIM, dict_size=len(emb_dict),
-                            hid_size=model.HIDDEN_STATE_SIZE).to(device)
+    net = model.PhraseModel(emb_size=model.EMBEDDING_DIM, dict_size=len(emb_dict), hid_size=model.HIDDEN_STATE_SIZE).to(device)
     # Using cuda.
     net.cuda()
     log.info("Model: %s", net)
@@ -120,7 +108,8 @@ if __name__ == "__main__":
     with ptan.common.utils.TBMeanTracker(writer, batch_size=100) as tb_tracker:
         optimiser = optim.Adam(net.parameters(), lr=LEARNING_RATE, eps=1e-3)
         batch_idx = 0
-        best_bleu = None
+        batch_count = 0
+        best_true_reward = None
 
         time_start = time.time()
 
@@ -131,12 +120,13 @@ if __name__ == "__main__":
 
             total_samples = 0
             skipped_samples = 0
-            bleus_argmax = []
-            bleus_sample = []
+            true_reward_argmax = []
+            true_reward_sample = []
 
             for batch in data.iterate_batches(train_data, BATCH_SIZE):
                 batch_idx += 1
                 # Each batch conduct one gradient upweight.
+                batch_count += 1
                 optimiser.zero_grad()
                 # input_seq: the padded and embedded batch-sized input sequence.
                 # input_batch: the token ID matrix of batch-sized input sequence. Each row is corresponding to one input sentence.
@@ -155,57 +145,69 @@ if __name__ == "__main__":
 
                 for idx, inp_idx in enumerate(input_batch):
                     total_samples += 1
+                    # # Test whether the input sequence is correctly transformed into indices.
+                    # input_tokens = [rev_emb_dict[temp_idx] for temp_idx in inp_idx]
+                    # print (input_tokens)
                     # Get IDs of reference sequences' tokens corresponding to idx-th input sequence in batch.
-                    ref_indices = [
-                        indices[1:]
-                        for indices in output_batch[idx]
-                    ]
-                    # Get the (two-layer) hidden state of encoder of idx-th input sequence in batch.
+                    qa_info = output_batch[idx]
+                    print("%s is training..." % (qa_info['qid']))
+                    # print (qa_info['qid'])
+                    # # Get the (two-layer) hidden state of encoder of idx-th input sequence in batch.
                     item_enc = net.get_encoded_item(enc, idx)
-                    # 'r_argmax' is the list of out_logits list and 'actions' is the list of output tokens.
-                    # The output tokens are generated greedily by using chain_argmax (using last setp's output token as current input token).
+                    # # 'r_argmax' is the list of out_logits list and 'actions' is the list of output tokens.
+                    # # The output tokens are generated greedily by using chain_argmax (using last setp's output token as current input token).
                     r_argmax, actions = net.decode_chain_argmax(item_enc, beg_embedding, data.MAX_TOKENS,
                                                                 stop_at_token=end_token)
+                    # Show what the output action sequence is.
+                    action_tokens = []
+                    for temp_idx in actions:
+                        if temp_idx in rev_emb_dict and rev_emb_dict.get(temp_idx) != '#END':
+                            action_tokens.append(str(rev_emb_dict.get(temp_idx)).upper())
                     # Get the highest BLEU score as baseline used in self-critic.
-                    argmax_bleu = utils.calc_bleu_many(actions, ref_indices)
-                    bleus_argmax.append(argmax_bleu)
+                    argmax_reward = utils.calc_True_Reward(action_tokens, qa_info)
+                    true_reward_argmax.append(argmax_reward)
 
-                    # In this case, the BLEU score is so high that it is not needed to train such case with RL.
-                    if not args.disable_skip and argmax_bleu > 0.99:
-                        skipped_samples += 1
-                        continue
+                    # # In this case, the BLEU score is so high that it is not needed to train such case with RL.
+                    # if not args.disable_skip and argmax_reward > 0.99:
+                    #     skipped_samples += 1
+                    #     continue
 
                     # In one epoch, when model is optimized for the first time, the optimized result is displayed here.
                     # After that, all samples in this epoch don't display anymore.
                     if not dial_shown:
                         # data.decode_words transform IDs to tokens.
                         log.info("Input: %s", utils.untokenize(data.decode_words(inp_idx, rev_emb_dict)))
-                        ref_words = [utils.untokenize(data.decode_words(ref, rev_emb_dict)) for ref in ref_indices]
-                        log.info("Refer: %s", " ~~|~~ ".join(ref_words))
-                        log.info("Argmax: %s, bleu=%.4f", utils.untokenize(data.decode_words(actions, rev_emb_dict)),
-                                 argmax_bleu)
+                        orig_response = qa_info['orig_response']
+                        log.info("orig_response: %s", orig_response)
+                        log.info("Argmax: %s, reward=%.4f", utils.untokenize(data.decode_words(actions, rev_emb_dict)),
+                                 argmax_reward)
 
                     for _ in range(args.samples):
                         # 'r_sample' is the list of out_logits list and 'actions' is the list of output tokens.
                         # The output tokens are sampled following probabilitis by using chain_sampling.
                         r_sample, actions = net.decode_chain_sampling(item_enc, beg_embedding,
                                                                       data.MAX_TOKENS, stop_at_token=end_token)
-                        sample_bleu = utils.calc_bleu_many(actions, ref_indices)
+                        # Show what the output action sequence is.
+                        action_tokens = []
+                        for temp_idx in actions:
+                            if temp_idx in rev_emb_dict and rev_emb_dict.get(temp_idx) != '#END':
+                                action_tokens.append(str(rev_emb_dict.get(temp_idx)).upper())
+                        sample_reward = utils.calc_True_Reward(action_tokens, qa_info)
 
                         if not dial_shown:
-                            log.info("Sample: %s, bleu=%.4f", utils.untokenize(data.decode_words(actions, rev_emb_dict)),
-                                     sample_bleu)
+                            log.info("Sample: %s, reward=%.4f", utils.untokenize(data.decode_words(actions, rev_emb_dict)),
+                                     sample_reward)
 
                         net_policies.append(r_sample)
                         net_actions.extend(actions)
                         # Regard argmax_bleu calculated from decode_chain_argmax as baseline used in self-critic.
                         # Each token has same reward as 'sample_bleu - argmax_bleu'.
                         # [x] * y: stretch 'x' to [1*y] list in which each element is 'x'.
-                        net_advantages.extend([sample_bleu - argmax_bleu] * len(actions))
-                        bleus_sample.append(sample_bleu)
+                        net_advantages.extend([sample_reward - argmax_reward] * len(actions))
+                        true_reward_sample.append(sample_reward)
                     dial_shown = True
+                    print("Epoch %d, Batch %d, Sample %d: %s is trained!" %(epoch, batch_count, idx, qa_info['qid']))
 
-                # Provided all output samples have higher bleu than 0.99, this epoch has no need to optimize the RL model.
                 if not net_policies:
                     continue
 
@@ -229,8 +231,9 @@ if __name__ == "__main__":
                 # get Q * logp(T) for all tokens of all decode_chain_sampling samples in size of 1 * N;
                 log_prob_actions_v = adv_v * log_prob_v[range(len(net_actions)), actions_t]
                 log_prob_actions_v = log_prob_actions_v.cuda()
-                # To maximize ▽J (log_prob_actions_v) is to minimize -▽J.
-                # .mean() is to calculate  Monte Carlo sampling.
+                # For the optimizer is Adam (Adaptive Moment Estimation) which is a optimizer used for gradient descent.
+                # Therefore, to maximize ▽J (log_prob_actions_v) is to minimize -▽J.
+                # .mean() is to calculate Monte Carlo sampling.
                 loss_policy_v = -log_prob_actions_v.mean()
                 loss_policy_v = loss_policy_v.cuda()
 
@@ -244,24 +247,24 @@ if __name__ == "__main__":
                 tb_tracker.track("loss_total", loss_v, batch_idx)
 
             # After one epoch, compute the bleus for samples in test dataset.
-            bleu_test = run_test(test_data, net, end_token, device)
+            true_reward_test = run_test(test_data, net, rev_emb_dict, end_token, device)
             # After one epoch, get the average of the decode_chain_argmax bleus for samples in training dataset.
-            bleu = np.mean(bleus_argmax)
-            writer.add_scalar("bleu_test", bleu_test, batch_idx)
-            writer.add_scalar("bleu_argmax", bleu, batch_idx)
+            true_reward_armax = np.mean(true_reward_argmax)
+            writer.add_scalar("true_reward_test", true_reward_test, batch_idx)
+            writer.add_scalar("true_reward_armax", true_reward_armax, batch_idx)
             # After one epoch, get the average of the decode_chain_sampling bleus for samples in training dataset.
-            writer.add_scalar("bleu_sample", np.mean(bleus_sample), batch_idx)
+            writer.add_scalar("true_reward_sample", np.mean(true_reward_sample), batch_idx)
             writer.add_scalar("skipped_samples", skipped_samples/total_samples if total_samples!=0 else 0, batch_idx)
             writer.add_scalar("epoch", batch_idx, epoch)
-            log.info("Epoch %d, test BLEU: %.3f", epoch, bleu_test)
-            if best_bleu is None or best_bleu < bleu_test:
-                best_bleu = bleu_test
-                log.info("Best bleu updated: %.4f", bleu_test)
+            log.info("Epoch %d, test reward: %.3f", epoch, true_reward_test)
+            if best_true_reward is None or best_true_reward < true_reward_test:
+                best_true_reward = true_reward_test
+                log.info("Best true reward updated: %.4f", true_reward_test)
                 # Save the updated seq2seq parameters trained by RL.
-                torch.save(net.state_dict(), os.path.join(saves_path, "bleu_%.3f_%02d.dat" % (bleu_test, epoch)))
-            if epoch % 10 == 0:
-                torch.save(net.state_dict(), os.path.join(saves_path, "epoch_%03d_%.3f_%.3f.dat" % (epoch, float(bleu), bleu_test)))
-
+                torch.save(net.state_dict(), os.path.join(saves_path, "truereward_%.3f_%02d.dat" % (true_reward_test, epoch)))
+            # if epoch % 10 == 0:
+            # # The parameters are stored after each epoch.
+            torch.save(net.state_dict(), os.path.join(saves_path, "epoch_%03d_%.3f_%.3f.dat" % (epoch, float(true_reward_armax), true_reward_test)))
         time_end = time.time()
         log.info("Training time is %.3fs." % (time_end - time_start))
         print("Training time is %.3fs." % (time_end - time_start))

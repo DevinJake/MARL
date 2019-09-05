@@ -110,12 +110,14 @@ class Symbolics():
             json_pack = dict()
             json_pack['op']="is_A"
             json_pack['entity']=e
-            content = requests.post("http://10.201.19.151:5000/post", json=json_pack).json()['content']
+            content = requests.post("http://10.201.34.3:5000/post", json=json_pack).json()['content']
             # content=requests.post("http://127.0.0.1:5000/post",json=json_pack).json()['content']
             return content
 
     def select(self, e, r, t):
         if e == "":
+            return {}
+        if not ('Q' in e and 'Q' in t and 'P' in r):
             return {}
         if self.graph is not None:
             if 'sub' in self.graph[get_id(e)] and r in self.graph[get_id(e)]['sub']:
@@ -131,7 +133,7 @@ class Symbolics():
             json_pack['pre'] = r
             json_pack['obj'] = t
             # content = requests.post("http://127.0.0.1:5000/post", json=json_pack).json()['content']
-            content = requests.post("http://10.201.19.151:5000/post", json=json_pack).json()['content']
+            content = requests.post("http://10.201.34.3:5000/post", json=json_pack).json()['content']
             if content is not None:
                 # Store records in set.
                 content = set(content)
@@ -143,6 +145,10 @@ class Symbolics():
     def select_all(self, et, r, t):
         #print("A2:", et, r, t)
         content = {}
+        if et == "" or r =="" or t =="":
+            return {}
+        elif not ('Q' in et and 'Q' in t and 'P' in r):
+            return {}
         if self.graph is not None and self.par_dict is not None:
             keys = self.par_dict[get_id(et)]
             for key in keys:
@@ -160,7 +166,7 @@ class Symbolics():
             json_pack['pre'] = r
             json_pack['obj'] = t
 
-        content = requests.post("http://10.201.19.151:5000/post", json=json_pack).json()['content']
+        content = requests.post("http://10.201.34.3:5000/post", json=json_pack).json()['content']
         # content = requests.post("http://127.0.0.1:5000/post", json=json_pack).json()['content']
         # for k, v in content.items():
         #   if len(v) == 0: content.pop(k)
@@ -219,10 +225,13 @@ class Symbolics():
     def union(self, e, r, t):
         #print("A9:", e, r, t)
         if e == "": return {}
+        if t!="" and 'Q' not in t: return{}
         answer_dict = self.answer
         if type(answer_dict) == bool: return False
         if e in answer_dict and answer_dict[e]!=None:
-            answer_dict[e] = set(answer_dict[e]) | set(self.select(e, r, t)[e])
+            temp_set = self.select(e, r, t)
+            if e in temp_set:
+                answer_dict[e] = set(answer_dict[e]) | set(temp_set[e])
         else:
             answer_dict.update(self.select(e, r, t))
 
@@ -244,7 +253,9 @@ class Symbolics():
         if not e.startswith("Q"): return {}
         answer_dict = self.answer
         if e in answer_dict and answer_dict[e]!=None:
-            answer_dict[e] = set(answer_dict[e]) & set(self.select(e, r, t)[e])
+            temp_set = self.select(e, r, t)
+            if e in temp_set:
+                answer_dict[e] = set(answer_dict[e]) & set(temp_set[e])
         else:
             s = self.select(e, r, t)
             answer_dict.update(s)
@@ -270,7 +281,9 @@ class Symbolics():
         if e == "": return {}
         answer_dict = self.answer
         if e in answer_dict and answer_dict[e]!=None:
-            answer_dict[e] = set(answer_dict[e]) - set(self.select(e, r, t)[e])
+            temp_set = self.select(e, r, t)
+            if e in temp_set:
+                answer_dict[e] = set(answer_dict[e]) - set(temp_set[e])
         else:
             answer_dict.update(self.select(e, r, t))
         # 进行 diff 操作 类似 union
@@ -293,6 +306,8 @@ class Symbolics():
         #print("A11:Count")
         if type(self.answer) == type([]):
             return len(self.answer)
+        elif type(self.answer) != type({}):
+            return 0
         elif e!='' and e and e in self.answer:
             if e not in self.answer and len(self.answer.keys()) == 1:
                 return len(self.answer.popitem())

@@ -8,8 +8,7 @@
 '''
 
 import json
-from SymbolicExecutor.symbolics import Symbolics
-
+from symbolics import Symbolics
 
 def transMask2Action(state):
     with open("CSQA_ANNOTATIONS_test.json", 'r') as load_f, open("final_predict.actions", 'r') as predict_actions \

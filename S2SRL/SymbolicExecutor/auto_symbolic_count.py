@@ -1,4 +1,9 @@
 # -*- coding: utf-8 -*-
+# @Time    : 2019/4/1 14:12
+# @Author  : Yaoleo
+# @Blog    : yaoleo.github.io
+
+# -*- coding: utf-8 -*-
 # @Time    : 2019/3/11 21:39
 # @Author  : Yaoleo
 # @Blog    : yaoleo.github.io
@@ -11,17 +16,17 @@ import time
 
 sys.path
 from Preprocess.load_qadata import load_qadata, getQA_by_state
-from symbolics import Symbolics
+from .symbolics import Symbolics
 import logging
 logging.basicConfig(level=logging.INFO,#控制台打印的日志级别
-                    filename='/data/zjy/quantative_auto.log',
+                    filename='/data/zjy/count_auto.log',
                     filemode='a',##模式，有w和a，w就是写模式，每次都会重新写日志，覆盖之前的日志
                     #a是追加模式，默认如果不写的话，就是追加模式
                     format=
                     '%(message)s'
                     #日志格式
                     )
-continue_num = 1866
+continue_num = 436
 class Node(object):
     def __init__(self, value=None):
         self.value = value  # 节点值
@@ -48,20 +53,16 @@ def init():
     symbolics[1].add_child(symbolics[10])
     symbolics[1].add_child(symbolics[11])
 
-    symbolics[2].add_child(symbolics[4])
-    symbolics[2].add_child(symbolics[5])
-    symbolics[2].add_child(symbolics[6])
-    symbolics[2].add_child(symbolics[7])
 
+    symbolics[2].add_child(symbolics[11])
     symbolics[2].add_child(symbolics[12])
     symbolics[2].add_child(symbolics[13])
     symbolics[2].add_child(symbolics[14])
     symbolics[2].add_child(symbolics[15])
 
-    symbolics[12].add_child(symbolics[11])
-    symbolics[13].add_child(symbolics[11])
-    symbolics[14].add_child(symbolics[11])
-    symbolics[15].add_child(symbolics[11])
+    symbolics[8].add_child(symbolics[11])
+    symbolics[9].add_child(symbolics[11])
+    symbolics[10].add_child(symbolics[11])
 
     return symbolics[0]
 
@@ -84,8 +85,11 @@ def auto_generate():
     return [path.replace(">", " ").strip().split(" ")[1:] for path in paths]
 
 
-def cal_precesion(orig_answer, orig_answer_entities, cal_answer):
+def cal_precesion(orig_answer, answer_e, orig_answer_entities, cal_answer):
+
     if not cal_answer: return False
+    if(type(cal_answer) == int):
+        return cal_answer == len(orig_answer_entities) and sorted(answer_e) == sorted(orig_answer_entities)
     if (type(cal_answer) == bool):
         return cal_answer == orig_answer
     if (type(cal_answer) == dict):
@@ -111,7 +115,7 @@ def auto_test():
 
     symbolic_seqs = auto_generate()
     a = 0
-    for qa in qa_map['Quantitative Reasoning (All)\n']:
+    for qa in qa_map['Quantitative Reasoning (Count) (All)\n']:
 
         context = qa['context'].replace("\n", "").strip()
         context_utterance = qa['context_utterance'].replace("\n", "")
@@ -123,13 +127,15 @@ def auto_test():
         response_entities = qa['response_entities'].replace("\n", "").split("|")
         orig_response = qa['orig_response'].replace("\n", "")
         logging.info(str(a)+" "+ context_utterance)
-        print context_utterance
-        print a, time.time()
+        if "" in context_entities: context_entities.remove("")
+        print (a,context_utterance)
+        start_time = time.time()
         flag = 0
         a += 1
         if a < continue_num:
             continue
         for seq in symbolic_seqs:
+            print (seq)
             seq_with_param = {i: [] for i in range(len(seq))}
             for i in range(len(seq)):
                 symbolic = seq[i]
@@ -146,18 +152,20 @@ def auto_test():
                                 seq_with_param[i].append({symbolic: (et, r, t)})
                                 # print symbolic,e,r,t
                 if (int(symbolic[1:]) in [12,13,14,15] and context_ints != ""):
-                    for N in context_ints:
-                        seq_with_param[i].append({symbolic: (N, '', '')})
+                    for N in [int(n) for n in context_ints.split()]:
+                        seq_with_param[i].append({symbolic: (str(N), '', '')})
 
                 if (int(symbolic[1:]) in [6,7]):
                     for e in context_entities:
                         seq_with_param[i].append({symbolic: (e, '', '')})
 
-                if (int(symbolic[1:]) in [4,5]):
-                    for e in context_entities:
-                        seq_with_param[i].append({symbolic: ('', '', '')})
-
-            if (len(seq_with_param) == 3):
+                if (int(symbolic[1:]) in [4,5,11]):
+                    seq_with_param[i].append({symbolic: ('', '', '')})
+                    seq_with_param[i].append({symbolic: ('&', '', '')})
+                    seq_with_param[i].append({symbolic: ('-', '', '')})
+                    seq_with_param[i].append({symbolic: ('|', '', '')})
+            print (time.time()-start_time)
+            if (len(seq_with_param) == 3 and  seq_with_param[2]!=[] and "A11" in seq_with_param[2][0] and time.time()-start_time<120):
 
                 for sym1 in seq_with_param[0]:
                     if flag == 4:
@@ -170,27 +178,23 @@ def auto_test():
                             sym_seq = [sym1, sym2, sym3]
                             symbolic_exe = Symbolics(sym_seq)
                             answer = symbolic_exe.executor()
-                            #print sym_seq, answer
-                            if cal_precesion(orig_response, response_entities, answer):
+                            answer_e = Symbolics(sym_seq[0:2]).executor()
+                            answer_entities = []
+                            if('|' in answer_e):
+                                answer_entities = answer_e['|']
+                            elif ('&' in answer_e):
+                                answer_entities = answer_e['&']
+                            elif ('-' in answer_e):
+                                answer_entities = answer_e['-']
+                            else:
+                                answer_entities = answer_e.keys()
+                            print(sym_seq, answer,orig_response)
+                            # print sorted(answer_entities), sorted(response_entities)
+                            if cal_precesion(orig_response,answer_entities, response_entities, answer):
+                                print (sorted(answer_entities), sorted(response_entities))
                                 flag += 1
                                 logging.info(sym_seq)
                                 print(sym_seq,time.time())
-            if (len(seq_with_param) == 2):
 
-                for sym1 in seq_with_param[0]:
-                    if flag == 4:
-                        break
-                    for sym2 in seq_with_param[1]:
-                        if flag == 4:
-                            break
-                        sym_seq = [sym1, sym2]
-
-                        symbolic_exe = Symbolics(sym_seq)
-                        answer = symbolic_exe.executor()
-                        #print sym_seq,answer
-                        if cal_precesion(orig_response, response_entities, answer):
-                            flag += 1
-                            logging.info(sym_seq)
-                            print(sym_seq, time.time())
 
 auto_test()

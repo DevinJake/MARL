@@ -6,7 +6,7 @@ import logging
 import numpy as np
 import sys
 from tensorboardX import SummaryWriter
-
+import time
 from libbots import data, model, utils
 
 import torch
@@ -17,7 +17,7 @@ SAVES_DIR = "../data/saves"
 
 BATCH_SIZE = 32
 LEARNING_RATE = 1e-3
-MAX_EPOCHES = 100
+MAX_EPOCHES = 50
 MAX_TOKENS = 40
 
 log = logging.getLogger("train")
@@ -28,7 +28,7 @@ TRAIN_QUESTION_PATH = '../data/auto_QA_data/mask_even/PT_train.question'
 TRAIN_ACTION_PATH = '../data/auto_QA_data/mask_even/PT_train.action'
 DIC_PATH = '../data/auto_QA_data/share.question'
 
-def run_test(test_data, net, end_token, device="cpu"):
+def run_test(test_data, net, end_token, device="cuda"):
     bleu_sum = 0.0
     bleu_count = 0
     for p1, p2 in test_data:
@@ -47,7 +47,7 @@ if __name__ == "__main__":
     logging.basicConfig(format="%(asctime)-15s %(levelname)s %(message)s", level=logging.INFO)
 
     # command line parameters
-    sys.argv = ['train_crossent.py', '--cuda', '--n=crossent_even']
+    sys.argv = ['train_crossent.py', '--cuda', '--n=crossent_even_1%']
 
     parser = argparse.ArgumentParser()
     # parser.add_argument("--data", required=True, help="Category to use for training. "
@@ -67,8 +67,8 @@ if __name__ == "__main__":
     phrase_pairs, emb_dict = data.load_data_from_existing_data(TRAIN_QUESTION_PATH, TRAIN_ACTION_PATH, DIC_PATH, MAX_TOKENS)
     # Index -> word.
     rev_emb_dict = {idx: word for word, idx in emb_dict.items()}
-    log.info("Obtained %d phrase pairs with %d uniq words",
-             len(phrase_pairs), len(emb_dict))
+    log.info("Obtained %d phrase pairs with %d uniq words from %s and %s.",
+             len(phrase_pairs), len(emb_dict), TRAIN_QUESTION_PATH, TRAIN_ACTION_PATH)
     data.save_emb_dict(saves_path, emb_dict)
     end_token = emb_dict[data.END_TOKEN]
     # 将tokens转换为emb_dict中的indices;
@@ -89,6 +89,9 @@ if __name__ == "__main__":
 
     optimiser = optim.Adam(net.parameters(), lr=LEARNING_RATE)
     best_bleu = None
+
+    time_start = time.time()
+
     for epoch in range(MAX_EPOCHES):
         losses = []
         bleu_sum = 0.0
@@ -170,4 +173,9 @@ if __name__ == "__main__":
                                     (epoch, bleu, bleu_test))
             torch.save(net.state_dict(), out_name)
         print ("------------------Epoch " + str(epoch) + ": training is over.------------------")
+
+    time_end = time.time()
+    log.info("Training time is %.3fs." %(time_end-time_start))
+    print ("Training time is %.3fs." %(time_end - time_start))
+
     writer.close()

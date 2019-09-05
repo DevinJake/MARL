@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# @Time    : 2019/3/27 10:37
+# @Time    : 2019/3/12 16:52
 # @Author  : Yaoleo
 # @Blog    : yaoleo.github.io
 
@@ -9,17 +9,17 @@ import copy
 import time
 
 from Preprocess.load_qadata import load_qadata, getQA_by_state
-from symbolics import Symbolics
+from .symbolics import Symbolics
 import logging
 logging.basicConfig(level=logging.INFO,#控制台打印的日志级别
-                    filename='/data/zjy/count_orig.log',
+                    filename='/data/zjy/quanti_count_auto.log',
                     filemode='a',##模式，有w和a，w就是写模式，每次都会重新写日志，覆盖之前的日志
                     #a是追加模式，默认如果不写的话，就是追加模式
                     format=
                     '%(message)s'
                     #日志格式
                     )
-continue_num = 0
+
 class Node(object):
     def __init__(self, value=None):
         self.value = value  # 节点值
@@ -56,10 +56,6 @@ def init():
     symbolics[2].add_child(symbolics[14])
     symbolics[2].add_child(symbolics[15])
 
-    symbolics[12].add_child(symbolics[11])
-    symbolics[13].add_child(symbolics[11])
-    symbolics[14].add_child(symbolics[11])
-    symbolics[15].add_child(symbolics[11])
 
     return symbolics[0]
 
@@ -109,10 +105,13 @@ def auto_test():
 
     symbolic_seqs = auto_generate()
     a = 0
-    for qa in qa_map['Quantitative Reasoning (Count) (All)\n']:
+    for qa in qa_map['Quantitative Reasoning (All)\n']:
 
         context = qa['context'].replace("\n", "").strip()
         context_utterance = qa['context_utterance'].replace("\n", "")
+        if("atleast" in context_utterance):
+            print (context_utterance)
+        continue
         context_entities = qa['context_entities'].replace("\n", "").split("|")
         context_relations = qa['context_relations'].replace("\n", "").split("|")
         context_types = qa['context_types'].replace("\n", "").split("|")
@@ -120,12 +119,47 @@ def auto_test():
         context_relations.extend(['-' + r for r in context_relations])
         response_entities = qa['response_entities'].replace("\n", "").split("|")
         orig_response = qa['orig_response'].replace("\n", "")
-        logging.info(str(a))
-        logging.info("context_utterance:"+context_utterance)
-        logging.info("context_entities:" + ",".join(context_entities))
-        logging.info("context_relations:" + ",".join(context_relations))
-        logging.info("context_types:" + ",".join(context_types))
-        a+=1
+        logging.info(str(a)+" "+context_utterance)
+        print (context_utterance)
+        print (a, time.time())
+        flag = 0
+        a += 1
+        for seq in symbolic_seqs:
+            seq_with_param = {i: [] for i in range(len(seq))}
+            for i in range(len(seq)):
+                symbolic = seq[i]
+                if (int(symbolic[1:]) in [15]):
+                    for e in context_entities:
+                        for r in context_relations:
+                            for t in context_types:
+                                seq_with_param[i].append({symbolic: (e, r, t)})
+                                # print symbolic,e,r,t
+                if (int(symbolic[1:]) in [2, 16]):
+                    for et in context_types:
+                        for r in context_relations:
+                            for t in context_types:
+                                seq_with_param[i].append({symbolic: (et, r, t)})
+                                # print symbolic,e,r,t
 
+            if (len(seq_with_param) == 3):
+
+                for sym1 in seq_with_param[0]:
+                    if flag == 4:
+                        break
+                    for sym2 in seq_with_param[1]:
+                        if flag == 4:
+                            break
+                        for sym3 in seq_with_param[2]:
+                            if flag == 4: break
+                            sym_seq = [sym1, sym2, sym3]
+                            #print(sym_seq, time.time())
+                            symbolic_exe = Symbolics(sym_seq)
+                            answer = symbolic_exe.executor()
+                            # print sym_seq, answer
+                            if cal_precesion(orig_response, response_entities, answer):
+                                flag += 1
+                                logging.info(sym_seq)
+                                print(sym_seq, time.time())
 
 auto_test()
+

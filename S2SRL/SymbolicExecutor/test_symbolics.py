@@ -1,14 +1,9 @@
 # -*- coding: utf-8 -*-
 # @Time    : 2019/1/19 17:58
-import sys
 import os
-import pickle
 
-
-import json
 import random
 import time
-from unittest import TestCase
 #from urllib import urlencode
 from urllib.parse import urlencode
 
@@ -17,7 +12,7 @@ import requests
 from Model.seq2seq import Seq2Seq
 from Preprocess.load_qadata import load_qadata
 from Preprocess.question_parser import QuestionParser
-from SymbolicExecutor.symbolics import Symbolics
+from . import symbolics
 from params import get_params
 
 
@@ -83,7 +78,7 @@ def test_select(self):
 
             # 符号执行
             time_start = time.time()
-            symbolic_exe = Symbolics(symbolic_seq)
+            symbolic_exe = symbolics.Symbolics(symbolic_seq)
             answer = symbolic_exe.executor()
 
             print("answer is :", answer)
@@ -137,7 +132,7 @@ def test_file(root, f):
 
         if (line.startswith("-----------") and flag == 1):
             time_start = time.time()
-            symbolic_exe = Symbolics(sym_seq)
+            symbolic_exe = symbolics.Symbolics(sym_seq)
             answer = symbolic_exe.executor()
 
             if (type(answer) == dict):
