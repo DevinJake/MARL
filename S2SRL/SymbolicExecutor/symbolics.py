@@ -136,7 +136,6 @@ class Symbolics():
                     content = content_json['content']
             except:
                 print("ERROR for command: is_A(%s)" %e)
-                pass
             finally:
                 return content
 
@@ -165,7 +164,6 @@ class Symbolics():
                     content = content_json['content']
             except:
                 print("ERROR for command: select(%s,%s,%s)" % (e, r, t))
-                pass
             finally:
                 if content is not None:
                     # Store records in set.
@@ -204,7 +202,6 @@ class Symbolics():
                     content = content_json['content']
             except:
                 print("ERROR for command: select_all(%s,%s,%s)" %(et,r,t))
-                pass
             # content = requests.post("http://127.0.0.1:5000/post", json=json_pack).json()['content']
             # for k, v in content.items():
             #   if len(v) == 0: content.pop(k)
@@ -260,78 +257,92 @@ class Symbolics():
             N = 0
         return [k for k in self.answer if len(self.answer[k]) < N]
 
+    # TODO: NOT TESTED
     def union(self, e, r, t):
         #print("A9:", e, r, t)
         if e == "": return {}
+        if not e.startswith("Q"): return {}
         answer_dict = self.answer
         if type(answer_dict) == bool: return False
-        if e in answer_dict and answer_dict[e]!=None:
-            answer_dict[e] = set(answer_dict[e]) | set(self.select(e, r, t)[e])
-        else:
-            answer_dict.update(self.select(e, r, t))
+        try:
+            if e in answer_dict and answer_dict[e]!=None:
+                temp_dict = self.select(e, r, t)
+                if e in temp_dict:
+                    answer_dict[e] = set(answer_dict[e]) | set(temp_dict[e])
+            else:
+                answer_dict.update(self.select(e, r, t))
+        except:
+            print("ERROR for command: union(%s,%s,%s)" % (e, r, t))
+        finally:
+            # 进行 union 操作
+            # todo 这里前面都和select部分一样 所以还是应该拆开？ union单独做 好处是union可以不止合并两个 字典里的都可以合并
+            union_key = "|"
+            union_value = set([])
+            for k, v in answer_dict.items():
+                if v == None: v = []
+                union_value = union_value | set(v)
+            answer_dict.clear()
+            answer_dict[union_key] = list(set(union_value))
+            return answer_dict
 
-        # 进行 union 操作 todo 这里前面都和select部分一样 所以还是应该拆开？ union单独做 好处是union可以不止合并两个 字典里的都可以合并
-        union_key = ""
-        union_value = set([])
-        for k, v in answer_dict.items():
-            if v == None: v = []
-            union_value = union_value | set(v)
-        union_key = "|"
-        answer_dict.clear()
-        answer_dict[union_key] = list(set(union_value))
-
-        return answer_dict
-
+    # TODO: NOT TESTED
     def inter(self, e, r, t):
         #print("A8:", e, r, t)
         if e == "": return {}
         if not e.startswith("Q"): return {}
         answer_dict = self.answer
-        if e in answer_dict and answer_dict[e]!=None:
-            answer_dict[e] = set(answer_dict[e]) & set(self.select(e, r, t)[e])
-        else:
-            s = self.select(e, r, t)
-            answer_dict.update(s)
-
-        # 进行 inter 类似 union
-        inter_key = ""
-        inter_value = set([])
-        for k, v in answer_dict.items():
-            if v == None: v = []
-            if len(inter_value) > 0:
-                inter_value = inter_value & set(v)
+        try:
+            if e in answer_dict and answer_dict[e]!=None:
+                temp_dict = self.select(e, r, t)
+                if e in temp_dict:
+                    answer_dict[e] = set(answer_dict[e]) & set(temp_dict[e])
             else:
-                inter_value = set(v)
+                s = self.select(e, r, t)
+                answer_dict.update(s)
+        except:
+            print("ERROR for command: inter(%s,%s,%s)" % (e, r, t))
+        finally:
+            # 进行 inter 类似 union
+            inter_key = "&"
+            inter_value = set([])
+            for k, v in answer_dict.items():
+                if v == None: v = []
+                if len(inter_value) > 0:
+                    inter_value = inter_value & set(v)
+                else:
+                    inter_value = set(v)
+            answer_dict.clear()
+            answer_dict[inter_key] = list(set(inter_value))
+            return answer_dict
 
-        answer_dict.clear()
-        inter_key = "&"
-        answer_dict[inter_key] = list(set(inter_value))
-
-        return answer_dict
-
+    # TODO: NOT TESTED
     def diff(self, e, r, t):
         #print("A10:", e, r, t)
         if e == "": return {}
+        if not e.startswith("Q"): return {}
         answer_dict = self.answer
-        if e in answer_dict and answer_dict[e]!=None:
-            answer_dict[e] = set(answer_dict[e]) - set(self.select(e, r, t)[e])
-        else:
-            answer_dict.update(self.select(e, r, t))
+        try:
+            if e in answer_dict and answer_dict[e]!=None:
+                temp_dict = self.select(e, r, t)
+                if e in temp_dict:
+                    answer_dict[e] = set(answer_dict[e]) - set(temp_dict[e])
+            else:
+                answer_dict.update(self.select(e, r, t))
+        except:
+            print("ERROR for command: diff(%s,%s,%s)" % (e, r, t))
         # 进行 diff 操作 类似 union
-        diff_key = ""
-        diff_value = set([])
-        for k, v in answer_dict.items():
-            if v == None: v = []
-            if k != e:
-                diff_value.update(set(v))
-        if(answer_dict[e]):
-            diff_value = diff_value - set(answer_dict[e])
-
-        answer_dict.clear()
-        diff_key = "-"
-        answer_dict[diff_key] = list(set(diff_value))
-
-        return answer_dict
+        finally:
+            diff_key = "-"
+            diff_value = set([])
+            for k, v in answer_dict.items():
+                if v == None: v = []
+                if k != e:
+                    diff_value.update(set(v))
+            if(answer_dict[e]):
+                diff_value = diff_value - set(answer_dict[e])
+            answer_dict.clear()
+            answer_dict[diff_key] = list(set(diff_value))
+            return answer_dict
 
     def count(self,e= None):
         #print("A11:Count")
@@ -343,7 +354,6 @@ class Symbolics():
             return len(self.answer[e])
         else:
             return len(self.answer.keys()) if type(self.answer) == type({}) else 0
-        return 0
 
     def at_least(self, N):
         # print("A12: at_least")

@@ -136,3 +136,10 @@ if __name__ == "__main__":
                 temp.extend(list(value))
         predicted_answer = temp
     print(predicted_answer)
+    diff_value = set()
+    temp_set = {1,2,3}
+    diff_value = diff_value - temp_set
+    for temp in diff_value:
+        print(temp)
+
+
