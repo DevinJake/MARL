@@ -210,10 +210,10 @@ class Symbolics():
                         content.setdefault(k, []).extend(v)
                 return content
 
-    # TODO: NOT TESTED
+
     def is_bool(self, e):
         # print("A3: is_bool")
-        if type(self.answer) == bool: return True
+        if type(self.answer) == bool: return self.answer
         if self.temp_bool_dict == None: return False
         for key in self.temp_bool_dict:
             if (self.temp_bool_dict[key] != None and e in self.temp_bool_dict[key]):
@@ -230,7 +230,6 @@ class Symbolics():
         self.temp_set = set(min_set)
         return min_set
 
-    # TODO: NOT TESTED
     def arg_max(self):
         # print("A5: arg_max")
         if not self.answer:
@@ -239,7 +238,6 @@ class Symbolics():
         maxN = len(self.answer[maxK])
         return [k for k in self.answer if len(self.answer[k]) == maxN]
 
-    # TODO: NOT TESTED
     def greater_than(self, e, r, t):
         content = self.answer
         if type(content) != dict: return []
@@ -345,7 +343,6 @@ class Symbolics():
             answer_dict[diff_key] = list(set(diff_value))
             return answer_dict
 
-    # TODO: NOT TESTED
     def count(self,e= None):
         #print("A11:Count")
         try:
@@ -404,41 +401,47 @@ class Symbolics():
         return answer_keys
 
     def around(self,N,r=None,t=None):
-        number = 0
-        if(r!=None) and (t!=None):
-            e = N
-            dict_temp = self.select_all(e,r,t)
-            number = len(dict_temp)
-        elif N.isdigit():
-            number = int(N)
-        else:
-            content = self.answer
-            if type(content) == dict:
-                if N in content and not content[N] == None:
-                    number = len(content[N])
-                else:
-                    number = 0
         answer_keys = []
-        if type(self.answer) == type({}):
-            if number == 0 or 1< number <=5:
-                for k, v in self.answer.items():
-                    if abs(len(v)-int(number)) <= 1:
-                        answer_keys.append(k)
-            if number == 1:
-                for k, v in self.answer.items():
-                    if abs(len(v) - int(number)) < (int(number) * 0.6):
-                        answer_keys.append(k)
-            elif number > 5:
-                for k, v in self.answer.items():
-                    if abs(len(v)-int(number)) <= 5:
-                        answer_keys.append(k)
-            else:
-                for k, v in self.answer.items():
-                    # print k, len(v),abs(len(v)-int(N)),(int(N)/2)
-                    if abs(len(v)-int(number)) < (int(number)*0.6):
-                        answer_keys.append(k)
-            self.temp_set = set(answer_keys)
-        return answer_keys
+        number = 0
+        try:
+            if N.isdigit():
+                number = int(N)
+            elif N.startswith("Q"):
+                if(r!=None) and (t!=None):
+                    e = N
+                    dict_temp = self.select_all(e,r,t)
+                    number = len(dict_temp)
+                else:
+                    content = self.answer
+                    if type(content) == dict:
+                        if N in content and not content[N] == None:
+                            number = len(content[N])
+                        else:
+                            number = 0
+            # If N is noe digit nor started with 'Q', the number is assumed as 0.
+            if type(self.answer) == type({}):
+                if number == 0 or 1< number <=5:
+                    for k, v in self.answer.items():
+                        if abs(len(v)-int(number)) <= 1:
+                            answer_keys.append(k)
+                if number == 1:
+                    for k, v in self.answer.items():
+                        if abs(len(v) - int(number)) < (int(number) * 0.6):
+                            answer_keys.append(k)
+                elif number > 5:
+                    for k, v in self.answer.items():
+                        if abs(len(v)-int(number)) <= 5:
+                            answer_keys.append(k)
+                else:
+                    for k, v in self.answer.items():
+                        # print k, len(v),abs(len(v)-int(N)),(int(N)/2)
+                        if abs(len(v)-int(number)) < (int(number)*0.6):
+                            answer_keys.append(k)
+                self.temp_set = set(answer_keys)
+        except:
+            print('ERROR!The action is around(%s, %s, %s)' %(N,r,t))
+        finally:
+            return answer_keys
 
     def EOQ(self):
         pass

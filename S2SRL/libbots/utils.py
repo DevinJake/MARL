@@ -32,7 +32,7 @@ def calc_True_Reward(action_sequence, qa_info):
     # print (symbolic_seq)
     symbolic_exe = Symbolics(symbolic_seq)
     answer = symbolic_exe.executor()
-    return calc_adaptative_reward(answer, qa_info)
+    return calc_01_reward(answer, qa_info)
 
 def calc_01_reward(answer, qa_info):
     true_reward = 0.0
@@ -106,7 +106,6 @@ def calc_01_reward(answer, qa_info):
                             right_count += 1
                     return float(right_count)/float(len(response_entities))
 
-# TODO: NOT TESTED!
 '''
 Adaptive reward 是一种partial reward。
 首先看问题类型是不是对的，若不对，则整个reward为0；
@@ -176,12 +175,15 @@ def calc_adaptative_reward(answer, qa_info):
                             return (R_type * (W_1 + W_2 * R_answer))
         else:
             predicted_answer = ""
-            if answer == True:
-                predicted_answer = "YES"
-            if answer == False:
-                predicted_answer = "NO"
-            if predicted_answer == orig_response.strip():
-                return 1.0
+            if type(answer) == bool:
+                if answer == True:
+                    predicted_answer = "YES"
+                elif answer == False:
+                    predicted_answer = "NO"
+                if predicted_answer == orig_response.strip():
+                    return 1.0
+                return (1.0 * W_1)
+            return 0.0
 
     elif qid.startswith("Simple Question (Direct)_") or qid.startswith("Logical Reasoning (All)_") or qid.startswith(
             "Quantitative Reasoning (All)_") or qid.startswith("Comparative Reasoning (All)_"):
@@ -201,11 +203,11 @@ def calc_adaptative_reward(answer, qa_info):
         else:
             predicted_answer = [answer]
         # Solve the problem when response entities is [] and original response is 'None'.
-        if orig_response == 'None':
+        if orig_response == 'None' and len(response_entities) == 0:
             if len(predicted_answer) == 0:
                 return 1.0
             else:
-                return 0.0
+                return R_type * W_1
         else:
             if len(response_entities) == 0:
                 return R_type * W_1
@@ -221,7 +223,6 @@ def calc_adaptative_reward(answer, qa_info):
                     precision = float(right_count)/float(len(predicted_answer)) if len(predicted_answer) != 0 else 0
                     recall = float(right_count)/float(len(response_entities)) if len(response_entities) != 0 else 0
                     F1 = 2 * precision * recall / (recall + precision) if (precision!=0 and recall!=0) else 0
-                    # TODO： NOT TESTED!
                     return (R_type * (W_1 + W_2 * F1))
 
 def calc_bleu(cand_seq, ref_seq):

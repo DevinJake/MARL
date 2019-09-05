@@ -146,5 +146,7 @@ if __name__ == "__main__":
         print(len(a))
     print(type({}))
     print(type(set()))
+    answer = 1
+    if type(answer) == bool: print(answer)
 
 
