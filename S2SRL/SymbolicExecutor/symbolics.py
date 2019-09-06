@@ -279,28 +279,34 @@ class Symbolics():
         # print("A3: is_bool")
         if type(self.answer) == bool: return self.answer
         if self.temp_bool_dict == None: return False
-        for key in self.temp_bool_dict:
-            if (self.temp_bool_dict[key] != None and e in self.temp_bool_dict[key]):
-                return True
+        if type(self.temp_bool_dict) == dict:
+            for key in self.temp_bool_dict:
+                if (self.temp_bool_dict[key] != None and e in self.temp_bool_dict[key]):
+                    return True
         return False
+
 
     def arg_min(self):
         # print("A4: arg_min")
         if not self.answer:
-            return None
+            return []
+        if type(self.answer) != dict: return []
         minK = min(self.answer, key=lambda x: len(self.answer[x]))
         minN = len(self.answer[minK])
         min_set = [k for k in self.answer if len(self.answer[k]) == minN]
         self.temp_set = set(min_set)
         return min_set
 
+
     def arg_max(self):
         # print("A5: arg_max")
         if not self.answer:
-            return None
+            return []
+        if type(self.answer) != dict: return []
         maxK = max(self.answer, key=lambda x: len(self.answer[x]))
         maxN = len(self.answer[maxK])
         return [k for k in self.answer if len(self.answer[k]) == maxN]
+
 
     def greater_than(self, e, r, t):
         content = self.answer
@@ -311,6 +317,7 @@ class Symbolics():
             N = 0
         return [k for k in self.answer if len(self.answer[k]) > N]
 
+    # TODO: NOT TESTED!
     def less_than(self, e, r, t):
         content = self.answer
         if type(content) != dict: return []
@@ -320,12 +327,14 @@ class Symbolics():
             N = 0
         return [k for k in self.answer if len(self.answer[k]) < N]
 
+
     def union(self, e, r, t):
         #print("A9:", e, r, t)
         if e == "": return {}
         if not e.startswith("Q"): return {}
         answer_dict = self.answer
         if type(answer_dict) == bool: return False
+        elif type(answer_dict) != dict: return {}
         try:
             if e in answer_dict and answer_dict[e]!=None:
                 temp_dict = self.select(e, r, t)
@@ -347,11 +356,13 @@ class Symbolics():
             answer_dict[union_key] = list(set(union_value))
             return answer_dict
 
+
     def inter(self, e, r, t):
         #print("A8:", e, r, t)
         if e == "": return {}
         if not e.startswith("Q"): return {}
         answer_dict = self.answer
+        if type(answer_dict) != dict: return {}
         try:
             if e in answer_dict and answer_dict[e]!=None:
                 temp_dict = self.select(e, r, t)
@@ -382,6 +393,7 @@ class Symbolics():
         if e == "": return {}
         if not e.startswith("Q"): return {}
         answer_dict = self.answer
+        if type(answer_dict) != dict: return {}
         try:
             if e in answer_dict and answer_dict[e]!=None:
                 temp_dict = self.select(e, r, t)
@@ -437,9 +449,10 @@ class Symbolics():
         #         self.answer.pop(k)
         # return self.answer
         answer_keys = []
-        for k, v in self.answer.items():
-            if len(v) >= int(N):
-                answer_keys.append(k)
+        if type(self.answer) == dict:
+            for k, v in self.answer.items():
+                if len(v) >= int(N):
+                    answer_keys.append(k)
         return answer_keys
 
     # TODO: NOT TESTED
@@ -448,18 +461,20 @@ class Symbolics():
         answer_keys = []
         # for k, v in self.answer.items():
         #   if len(v) == 0: self.answer.pop(k)
-        for k in list(self.answer):
-            if len(self.answer[k]) <= int(N):
-                answer_keys.append(k)
+        if type(self.answer) == dict:
+            for k in list(self.answer):
+                if len(self.answer[k]) <= int(N):
+                    answer_keys.append(k)
         return answer_keys
 
     # TODO: NOT TESTED
     def equal(self, N):
         answer_keys = []
-        for k, v in self.answer.items():
-            #print k,len(v)
-            if len(v) == int(N):
-                answer_keys.append(k)
+        if type(self.answer) == dict:
+            for k, v in self.answer.items():
+                #print k,len(v)
+                if len(v) == int(N):
+                    answer_keys.append(k)
         return answer_keys
 
     def around(self,N,r=None,t=None):

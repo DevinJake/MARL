@@ -155,4 +155,8 @@ if __name__ == "__main__":
     s2 = [11,47,23,5,17]
     print(duplicate(s1,s2))
 
+    d = {'a': 1, 'b': 2, 'c': 3, 'd': 4}
+    for k in list(d):
+        print(k)
+
 
