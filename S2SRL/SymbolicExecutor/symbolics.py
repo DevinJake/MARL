@@ -40,74 +40,139 @@ class Symbolics():
                 # The execution result from A1 is in dict format.
                 # A1: Select(e，r，t)
                 if ("A1" in symbolic):
-                    temp_result = self.select(e, r, t)
-                    self.answer = temp_result
-                    self.temp_bool_dict = temp_result
-                    self.print_answer()
+                    try:
+                        temp_result = self.select(e, r, t)
+                        self.answer = temp_result
+                        self.temp_bool_dict = temp_result
+                    except:
+                        print('ERROR! The action is Select(%s,%s,%s).' %(e,r,t))
+                    finally:
+                        self.print_answer()
                 # A2: SelectAll (et, r, t)
                 elif ("A2" in symbolic or "A16" in symbolic):
-                    self.answer = self.select_all(e, r, t)
-                    self.print_answer()
+                    try:
+                        self.answer = self.select_all(e, r, t)
+                    except:
+                        print('ERROR! The action is SelectAll(%s,%s,%s).' % (e,r,t))
+                    finally:
+                        self.print_answer()
                 # A3: Bool(e)
                 elif ("A3" in symbolic):
-                    bool_temp_result = self.is_bool(e)
-                    if '|BOOL_RESULT|' in self.answer:
-                        self.answer['|BOOL_RESULT|'].append(bool_temp_result)
-                    else:
-                        temp = [bool_temp_result]
-                        self.answer.setdefault('|BOOL_RESULT|', temp)
-                    self.print_answer()
+                    try:
+                        bool_temp_result = self.is_bool(e)
+                        # dict
+                        if type(self.answer) == type({}):
+                            if '|BOOL_RESULT|' in self.answer:
+                                self.answer['|BOOL_RESULT|'].append(bool_temp_result)
+                            else:
+                                temp = [bool_temp_result]
+                                self.answer.setdefault('|BOOL_RESULT|', temp)
+                    except:
+                        print('ERROR! The action is Bool(%s).' %e)
+                    finally:
+                        self.print_answer()
                 # A4: ArgMin
                 elif ("A4" in symbolic):
-                    self.answer = self.arg_min()
-                    self.print_answer()
+                    try:
+                        self.answer = self.arg_min()
+                    except:
+                        print('ERROR! The action is ArgMin.')
+                    finally:
+                        self.print_answer()
                 # A5: ArgMax
                 elif ("A5" in symbolic):
-                    self.answer = self.arg_max()
-                    self.print_answer()
+                    try:
+                        self.answer = self.arg_max()
+                    except:
+                        print('ERROR! The action is ArgMax.')
+                    finally:
+                        self.print_answer()
                 # A6: GreaterThan(e)
                 elif ("A6" in symbolic):
-                    self.answer = self.greater_than(e,r,t)
-                    self.print_answer()
+                    try:
+                        self.answer = self.greater_than(e,r,t)
+                    except:
+                        print('ERROR! The action is GreaterThan(%s,%s,%s).' % (e,r,t))
+                    finally:
+                        self.print_answer()
                 # A7: LessThan(e)
                 elif ("A7" in symbolic):
-                    self.answer = self.less_than(e,r,t)
-                    self.print_answer()
+                    try:
+                        self.answer = self.less_than(e,r,t)
+                    except:
+                        print('ERROR! The action is LessThan(%s,%s,%s).' % (e,r,t))
+                    finally:
+                        self.print_answer()
                 # A9: Union(e，r，t)
                 elif ("A9" in symbolic):
-                    self.answer = self.union(e, r, t)
-                    self.print_answer()
+                    try:
+                        self.answer = self.union(e, r, t)
+                    except:
+                        print('ERROR! The action is Union(%s,%s,%s).' % (e,r,t))
+                    finally:
+                        self.print_answer()
                 # A8: Inter(e，r，t)
                 elif ("A8" in symbolic):
-                    self.answer = self.inter(e, r, t)
-                    self.print_answer()
+                    try:
+                        self.answer = self.inter(e, r, t)
+                    except:
+                        print('ERROR! The action is Inter(%s,%s,%s).' % (e,r,t))
+                    finally:
+                        self.print_answer()
                 # A10: Diff(e，r，t)
                 elif ("A10" in symbolic):
-                    self.answer = self.diff(e, r, t)
-                    self.print_answer()
+                    try:
+                        self.answer = self.diff(e, r, t)
+                    except:
+                        print('ERROR! The action is Diff(%s,%s,%s).' % (e,r,t))
+                    finally:
+                        self.print_answer()
                 # A11: Count(e)
                 elif ("A11" in symbolic):
-                    self.answer = self.count(e)
-                    self.print_answer()
+                    try:
+                        self.answer = self.count(e)
+                    except:
+                        print('ERROR! The action is Count(%s).' %e)
+                    finally:
+                        self.print_answer()
                 # A12: ATLEAST(N)
                 elif ("A12" in symbolic):
-                    self.answer = self.at_least(e)
-                    self.print_answer()
+                    try:
+                        self.answer = self.at_least(e)
+                    except:
+                        print('ERROR! The action is ATLEAST(%s).' %e)
+                    finally:
+                        self.print_answer()
                 # A13: ATMOST(N)
                 elif ("A13" in symbolic):
-                    self.answer = self.at_most(e)
-                    self.print_answer()
+                    try:
+                        self.answer = self.at_most(e)
+                    except:
+                        print('ERROR! The action is ATMOST(%s).' %e)
+                    finally:
+                        self.print_answer()
                 # A14: EQUAL(N)
                 elif ("A14" in symbolic):
-                    self.answer = self.equal(e)
-                    self.print_answer()
+                    try:
+                        self.answer = self.equal(e)
+                    except:
+                        print('ERROR! The action is EQUAL(%s).' %e)
+                    finally:
+                        self.print_answer()
                 # A15: Almost(N)
                 elif ("A15" in symbolic):
-                    if r == "" and t == "":
-                        self.answer = self.around(e)
-                    else:
-                        self.answer = self.around(e,r,t)
-                    self.print_answer()
+                    try:
+                        if r == "" and t == "":
+                            self.answer = self.around(e)
+                        else:
+                            self.answer = self.around(e,r,t)
+                    except:
+                        if r == "" and t == "":
+                            print('ERROR! The action is Almost(%s).' %e)
+                        else:
+                            print('ERROR! The action is Almost(%s,%s,%s).' %(e,r,t))
+                    finally:
+                        self.print_answer()
                 elif ("A17" in symbolic):
                     self.print_answer()
                 else:
@@ -210,7 +275,6 @@ class Symbolics():
                         content.setdefault(k, []).extend(v)
                 return content
 
-
     def is_bool(self, e):
         # print("A3: is_bool")
         if type(self.answer) == bool: return self.answer
@@ -247,7 +311,6 @@ class Symbolics():
             N = 0
         return [k for k in self.answer if len(self.answer[k]) > N]
 
-    # TODO: NOT TESTED
     def less_than(self, e, r, t):
         content = self.answer
         if type(content) != dict: return []
@@ -283,7 +346,6 @@ class Symbolics():
             answer_dict.clear()
             answer_dict[union_key] = list(set(union_value))
             return answer_dict
-
 
     def inter(self, e, r, t):
         #print("A8:", e, r, t)

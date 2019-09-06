@@ -29,7 +29,7 @@ def calc_True_Reward(action_sequence, qa_info):
                 break
         new_action.append(act)
     symbolic_seq = list2dict(new_action)
-    # print (symbolic_seq)
+    print (symbolic_seq)
     symbolic_exe = Symbolics(symbolic_seq)
     answer = symbolic_exe.executor()
     return calc_01_reward(answer, qa_info)
