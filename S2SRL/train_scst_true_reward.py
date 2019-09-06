@@ -17,11 +17,11 @@ import ptan
 
 SAVES_DIR = "../data/saves"
 
-BATCH_SIZE = 8
+BATCH_SIZE = 16
 LEARNING_RATE = 1e-4
 MAX_EPOCHES = 30
 MAX_TOKENS = 40
-TRAIN_RATIO = 0.900
+TRAIN_RATIO = 0.985
 GAMMA = 0.05
 
 DIC_PATH = '../data/auto_QA_data/share.question'
