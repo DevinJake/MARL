@@ -116,6 +116,9 @@ def test():
     print(list(d))
     print (os.path.abspath(os.path.join(os.getcwd(), "../..")))
 
+def duplicate(s1,s2):
+    compare = lambda a,b: len(a)==len(b) and len(a)==sum([1 for i,j in zip(a,b) if i==j])
+    return compare(s1, s2)
 
 if __name__ == "__main__":
     test()
@@ -148,5 +151,8 @@ if __name__ == "__main__":
     print(type(set()))
     answer = 1
     if type(answer) == bool: print(answer)
+    s1 = [17,11,47,23,5]
+    s2 = [11,47,23,5,17]
+    print(duplicate(s1,s2))
 
 

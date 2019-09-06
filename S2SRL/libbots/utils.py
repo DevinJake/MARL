@@ -29,7 +29,7 @@ def calc_True_Reward(action_sequence, qa_info):
                 break
         new_action.append(act)
     symbolic_seq = list2dict(new_action)
-    # print (symbolic_seq)
+    print (symbolic_seq)
     symbolic_exe = Symbolics(symbolic_seq)
     answer = symbolic_exe.executor()
     return calc_01_reward(answer, qa_info)
@@ -233,3 +233,8 @@ def tokenize(s):
 
 def untokenize(words):
     return "".join([" " + i if not i.startswith("'") and i not in string.punctuation else i for i in words]).strip()
+
+# To judge whether s1 and s2 are same lists or not.
+def duplicate(s1,s2):
+    compare = lambda a,b: len(a)==len(b) and len(a)==sum([1 for i,j in zip(a,b) if i==j])
+    return compare(s1, s2)
