@@ -14,7 +14,7 @@ def calc_bleu_many(cand_seq, ref_sequences):
                                     smoothing_function=sf.method1,
                                     weights=(0.5, 0.5))
 
-def calc_True_Reward(action_sequence, qa_info):
+def calc_True_Reward(action_sequence, qa_info, adaptive_flag = False):
     entity_mask = qa_info['entity_mask'] if 'entity_mask' in qa_info.keys() else {}
     relation_mask = qa_info["relation_mask"] if 'relation_mask' in qa_info.keys() else {}
     type_mask = qa_info['type_mask'] if 'type_mask' in qa_info.keys() else {}
@@ -32,7 +32,10 @@ def calc_True_Reward(action_sequence, qa_info):
     # print (symbolic_seq)
     symbolic_exe = Symbolics(symbolic_seq)
     answer = symbolic_exe.executor()
-    return calc_01_reward(answer, qa_info)
+    if adaptive_flag:
+        return calc_adaptative_reward(answer, qa_info)
+    else:
+        return calc_01_reward(answer, qa_info)
 
 def calc_01_reward(answer, qa_info):
     true_reward = 0.0
