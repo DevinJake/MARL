@@ -47,14 +47,15 @@ def run_test(test_data, net, rev_emb_dict, end_token, device="cuda"):
         for temp_idx in tokens:
             if temp_idx in rev_emb_dict and rev_emb_dict.get(temp_idx) != '#END':
                 action_tokens.append(str(rev_emb_dict.get(temp_idx)).upper())
-        argmax_reward_sum += float(utils.calc_True_Reward(action_tokens, p2))
+        # Using 0-1 reward to compute accuracy.
+        argmax_reward_sum += float(utils.calc_True_Reward(action_tokens, p2, False))
         argmax_reward_count += 1
     return float(argmax_reward_sum) / float(argmax_reward_count)
 
 if __name__ == "__main__":
     logging.basicConfig(format="%(asctime)-15s %(levelname)s %(message)s", level=logging.INFO)
     # # command line parameters
-    sys.argv = ['train_scst_true_reward.py', '--cuda', '-l=../data/saves/crossent_even_1%/pre_bleu_0.946_55.dat', '-n=rl_even_true_1%', '-s=5']
+    sys.argv = ['train_scst_true_reward.py', '--cuda', '-l=../data/saves/crossent_even_1%/pre_bleu_0.946_55.dat', '-n=rl_even_true_1%', '-s=5', '-a=True']
 
     # sys.argv = ['train_scst_true_reward.py', '--cuda', '-l=../data/saves/crossent_even_1%/pre_bleu_0.946_55.dat', '-n=rl_even_true_1%', '-s=5']
     parser = argparse.ArgumentParser()
@@ -64,6 +65,8 @@ if __name__ == "__main__":
     parser.add_argument("-l", "--load", required=True, help="Load the pre-trained model whereby continue training the RL mode")
     # # Number of decoding samples.
     parser.add_argument("-s", "--samples", type=int, default=4, help="Count of samples in prob mode")
+    # # Choose the function to compute reward (0-1 or adaptive reward).
+    parser.add_argument("-a", "--adaptive", type=bool, default=False, help="0-1 or adaptive reward")
     parser.add_argument("--disable-skip", default=False, action='store_true', help="Disable skipping of samples with high argmax BLEU")
     args = parser.parse_args()
     device = torch.device("cuda" if args.cuda else "cpu")
@@ -164,7 +167,9 @@ if __name__ == "__main__":
                         if temp_idx in rev_emb_dict and rev_emb_dict.get(temp_idx) != '#END':
                             action_tokens.append(str(rev_emb_dict.get(temp_idx)).upper())
                     # Get the highest BLEU score as baseline used in self-critic.
-                    argmax_reward = utils.calc_True_Reward(action_tokens, qa_info)
+                    # If the last parameter is false, it means that the 0-1 reward is used to calculate the accuracy.
+                    # Otherwise the adaptive reward is used.
+                    argmax_reward = utils.calc_True_Reward(action_tokens, qa_info, args.adaptive)
                     true_reward_argmax.append(argmax_reward)
 
                     # # In this case, the BLEU score is so high that it is not needed to train such case with RL.
@@ -209,7 +214,9 @@ if __name__ == "__main__":
                         for temp_idx in actions:
                             if temp_idx in rev_emb_dict and rev_emb_dict.get(temp_idx) != '#END':
                                 action_tokens.append(str(rev_emb_dict.get(temp_idx)).upper())
-                        sample_reward = utils.calc_True_Reward(action_tokens, qa_info)
+                        # If the last parameter is false, it means that the 0-1 reward is used to calculate the accuracy.
+                        # Otherwise the adaptive reward is used.
+                        sample_reward = utils.calc_True_Reward(action_tokens, qa_info, args.adaptive)
 
                         if not dial_shown:
                             log.info("Sample: %s, reward=%.4f", utils.untokenize(data.decode_words(actions, rev_emb_dict)),
