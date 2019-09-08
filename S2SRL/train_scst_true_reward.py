@@ -29,7 +29,7 @@ TRAIN_QUESTION_ANSWER_PATH = '../data/auto_QA_data/mask_even_1.0%/RL_train_TR.qu
 log = logging.getLogger("train")
 
 
-# Calculate true reward for samples in test dataset.
+# Calculate 0-1 sparse reward for samples in test dataset to judge the performance of the model.
 def run_test(test_data, net, rev_emb_dict, end_token, device="cuda"):
     argmax_reward_sum = 0.0
     argmax_reward_count = 0.0
@@ -55,7 +55,8 @@ def run_test(test_data, net, rev_emb_dict, end_token, device="cuda"):
 if __name__ == "__main__":
     logging.basicConfig(format="%(asctime)-15s %(levelname)s %(message)s", level=logging.INFO)
     # # command line parameters
-    sys.argv = ['train_scst_true_reward.py', '--cuda', '-l=../data/saves/crossent_even_1%/pre_bleu_0.946_55.dat', '-n=rl_even_true_1%', '-s=5', '-a=True']
+    # # -a=True means using adaptive reward to train the model. -a=False is using 0-1 reward.
+    sys.argv = ['train_scst_true_reward.py', '--cuda', '-l=../data/saves/crossent_even_1%/pre_bleu_0.946_55.dat', '-n=rl_even_adaptive_1%', '-s=5', '-a=True']
 
     # sys.argv = ['train_scst_true_reward.py', '--cuda', '-l=../data/saves/crossent_even_1%/pre_bleu_0.946_55.dat', '-n=rl_even_true_1%', '-s=5']
     parser = argparse.ArgumentParser()
@@ -102,6 +103,10 @@ if __name__ == "__main__":
     # Load the pre-trained seq2seq model.
     net.load_state_dict(torch.load(args.load))
     log.info("Model loaded from %s, continue training in RL mode...", args.load)
+    if(args.adaptive):
+        log.info("Using adaptive reward to train the REINFORCE model...")
+    else:
+        log.info("Using 0-1 sparse reward to train the REINFORCE model...")
 
     # BEGIN token
     beg_token = torch.LongTensor([emb_dict[data.BEGIN_TOKEN]]).to(device)
