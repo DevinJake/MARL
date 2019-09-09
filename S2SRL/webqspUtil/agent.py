@@ -6,7 +6,7 @@ from server import Interpreter
 import json
 def get_id(idx):
     return int(idx[1:])
-post_url = "http://127.0.0.1:5001/post"
+post_url = "http://10.201.34.3:5001/post"
 
 class KB(object):
     def __init__(self,mode='online'): 
@@ -33,10 +33,30 @@ class KB(object):
             json_pack['op']="find"
             json_pack['sub']=e
             json_pack['pre']=r
-            content=requests.post(post_url,json=json_pack).json()['content']
+            print("start find", e, r)
+            jsonpost = json.dumps(json_pack)
+            # result_content = requests.post(post_url,json=json_pack)
+            # print(result_content)
+            content=requests.post(post_url,json=jsonpost).json()['content']
+            # content=requests.post(post_url,json=jsonpost)
+            print("end find", e, r, content)
             if content is not None:
                 content=set(content)            
             return content
+
+    def execute_gen_set1(self, e, r):
+        json_pack = dict()
+        json_pack['op'] = "execute_gen_set1"
+        json_pack['sub_pre'] = [e, r]
+        jsonpost = json.dumps(json_pack)
+        # result_content = requests.post(post_url,json=json_pack)
+        # print(result_content)
+        content = requests.post(post_url, json=jsonpost).json()['content'][0]
+        content_result = requests.post(post_url, json=jsonpost).json()['content'][1]
+        if content is not None:
+            content = set(content)
+        return content
+
         
     def find_reverse(self,e,r):
         #return find({e},reverse(relation))
@@ -50,6 +70,8 @@ class KB(object):
             json_pack['op']="find_reverse"
             json_pack['obj']=e
             json_pack['pre']=r
+            result_content = requests.post(post_url,json=json_pack).json()
+            print(result_content)
             content=requests.post(post_url,json=json_pack).json()['content']
             if content is not None:
                 content=set(content)
@@ -137,4 +159,11 @@ class KB(object):
 if __name__ == "__main__":
     print("Building knowledge base....")
     kb = KB()
-    print(kb.test())
+    # print(kb.test())
+
+    # result = kb.find("m.011m3hqc", "music.album.release_date")
+    # print(result)
+
+    result = kb.execute_gen_set1("m.0121zk7p", "tv.tv_series_episode.air_date")
+    result = kb.execute_gen_set1("2015-03-12", "tv.tv_series_episode.air_date")
+    print(result)
