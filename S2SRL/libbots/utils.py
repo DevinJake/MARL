@@ -186,7 +186,7 @@ def calc_adaptative_reward(answer, qa_info):
                 if predicted_answer == orig_response.strip():
                     return 1.0
                 return (1.0 * W_1)
-            return 0.0
+        return 0.0
 
     elif qid.startswith("Simple Question (Direct)_") or qid.startswith("Logical Reasoning (All)_") or qid.startswith(
             "Quantitative Reasoning (All)_") or qid.startswith("Comparative Reasoning (All)_"):
