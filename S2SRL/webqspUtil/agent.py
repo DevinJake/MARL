@@ -2,11 +2,14 @@ import os
 import requests
 from urllib import request
 import pickle
-from server import Interpreter
+# from server import Interpreter
 import json
 def get_id(idx):
     return int(idx[1:])
+# Remote Server
 post_url = "http://10.201.34.3:5001/post"
+# # local server
+# post_url = "http://127.0.0.1:5001/post"
 
 class KB(object):
     def __init__(self,mode='online'): 

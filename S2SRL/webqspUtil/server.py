@@ -3,11 +3,12 @@ import os
 import json
 import pickle
 import numpy as np
-import msgpack
 import datetime
 import json
+import msgpack
 from flask import Flask, request, jsonify
 app = Flask(__name__)
+
 
 class Interpreter():
     def __init__(self, freebase_dir):
@@ -21,13 +22,21 @@ class Interpreter():
         self.map_program_to_func["gen_set2_dateconstrained"] = self.execute_gen_set2_dateconstrained
         self.map_program_to_func["gen_set2_date_dateconstrained"] = self.execute_gen_set2_date_dateconstrained
         self.map_program_to_func["set_oper_ints"] = self.execute_set_oper_ints
+        self.map_program_to_func["joint"] = self.execute_joint
         self.map_program_to_func["none"] = self.execute_none
         self.map_program_to_func["terminate"] = self.execute_terminate
 
     # 包含在图谱中
     def is_kb_consistent(self, e, r):
-        print("find", e ,r)
+        print("find", e, r)
         if e in self.freebase_kb and r in self.freebase_kb[e]:
+            return True
+        else:
+            return False
+
+    # e,r,t 包含在图谱中
+    def exist(self, e, r, t):
+        if e in self.freebase_kb and r in self.freebase_kb[e] and t in self.freebase_kb[e][r]:
             return True
         else:
             return False
@@ -200,15 +209,49 @@ class Interpreter():
     def execute_terminate(self, argument_value, argument_location):
         return None, 0
 
+    def execute_joint(self, e, r, t):
+        temp_set = set([])
+        try:
+            if isinstance(e,list):
+                for entity in e:
+                    if self.exist(entity,r,t):
+                        temp_set.add(entity)
+                return list(temp_set), 0
+            else:
+                return list(temp_set), 1
+        except:
+            print("Some error occurs in execute_joint action!")
+            return list(temp_set), 1
 
-@app.route('/post', methods = ['POST'])
+    # TODO: NOT THROUGHLY TESTED!
+    def get_joint_answer(self, e, r):
+        temp_set = set([])
+        try:
+            if isinstance(e, list) and len(e)>0 and r is not None:
+                for entity in e:
+                    if entity in self.freebase_kb and r in self.freebase_kb[entity]:
+                        temp_set.update(set(self.freebase_kb[entity][r]))
+                return list(temp_set), 0
+            else:
+                return list(temp_set), 1
+        except:
+            print("Some error occurs in get_joint_answer action!")
+            return list(temp_set), 1
+
+@app.route('/post', methods=['POST'])
 def post_res():
-    response={}
+    response = {}
     jsonpack = json.loads(request.json)
     if jsonpack['op'] == "find":
-            response['content']=interpreter.is_kb_consistent(jsonpack['sub'],jsonpack['pre'])
-    elif jsonpack['op']=="execute_gen_set1":
-        response['content']=interpreter.execute_gen_set1(jsonpack['sub_pre'], "")
+        response['content'] = interpreter.is_kb_consistent(jsonpack['sub'], jsonpack['pre'])
+    elif jsonpack['op'] == "execute_gen_set1":
+        response['content'] = interpreter.execute_gen_set1(jsonpack['sub_pre'], "")
+    elif jsonpack['op'] == "joint":
+        response['content'] = interpreter.execute_joint(jsonpack['e'], jsonpack['r'], jsonpack['t'])
+    elif jsonpack['op'] == "get_joint_answer":
+        response['content'] = interpreter.get_joint_answer(jsonpack['e'], jsonpack['r'])
+    elif jsonpack['op'] == "exist":
+        response['content'] = interpreter.exist(jsonpack['sub'], jsonpack['pre'], jsonpack['obj'])
 
     # elif jsonpack['op']=="find_reverse":
     #     response['content']=find_reverse(jsonpack['obj'],jsonpack['pre'])
@@ -221,12 +264,24 @@ def post_res():
     # elif jsonpack['op']=="is_All":
     #     response['content']=is_All(jsonpack['type'])
     return jsonify(response)
-    
 
 if __name__ == '__main__':
+    # print("loading knowledge base...")
+    # interpreter = Interpreter("")
+    # interpreter.freebase_kb = json.load(
+    #     open('/data/wuwei/data/freebase_webqsp/freebase_traintest/webQSP_freebase_subgraph.json'))
+    # print("loading knowledge down, start the server")
+    # app.run(host='10.201.34.3', port=5001, use_debugger=True)
+
+    # local server
     print("loading knowledge base...")
     interpreter = Interpreter("")
-    interpreter.freebase_kb = json.load(open('/data/wuwei/data/freebase_webqsp/freebase_traintest/webQSP_freebase_subgraph.json'))
+    interpreter.freebase_kb = json.load(
+        open('../../data/webquestionssp/webQSP_freebase_subgraph.json'))
     print("loading knowledge down, start the server")
+    app.run(host='127.0.0.1', port=5001, use_debugger=True)
 
-    app.run(host='10.201.34.3', port=5001, use_debugger=True)
+
+
+
+

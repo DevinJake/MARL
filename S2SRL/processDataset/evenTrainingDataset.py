@@ -288,9 +288,9 @@ def getTrainingDatasetForRl(percentage):
 
 # Get the training processDataset and test processDataset for REINFORCE with True Reward (one question with one answer).
 def getTrainingDatasetForRlWithTrueReward(percentage, SIZE):
-    path = '../../data/auto_QA_data/mask_even_' + percentage + '/RL_train_TR.question'
+    path = '../../data/auto_QA_data/mask_even_' + percentage + '/RL_train_TR_sub.question'
     fwTrainQ = open(path, 'w', encoding="UTF-8")
-    path = '../../data/auto_QA_data/mask_even_' + percentage + '/RL_test_TR.question'
+    path = '../../data/auto_QA_data/mask_even_' + percentage + '/RL_test_TR_sub.question'
     fwTestQ = open(path, 'w', encoding="UTF-8")
     with open("../../data/auto_QA_data/CSQA_DENOTATIONS_full.json", 'r', encoding="UTF-8") as load_f:
         dict_list = {}
@@ -349,7 +349,7 @@ if __name__ == "__main__":
     # percentage represents how much samples (0.2% ~ 1.2%) are drawn from the whole training dataset.
     percentage = '1.0%'
     # size = 1479
-    size = 48
+    size = 64
     # getTrainingDatasetForPytorch(percentage)
     # getTrainingDatasetForRl(percentage)
     getTrainingDatasetForRlWithTrueReward(percentage, size)
