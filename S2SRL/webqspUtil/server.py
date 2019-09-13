@@ -266,20 +266,20 @@ def post_res():
     return jsonify(response)
 
 if __name__ == '__main__':
-    # print("loading knowledge base...")
-    # interpreter = Interpreter("")
-    # interpreter.freebase_kb = json.load(
-    #     open('/data/wuwei/data/freebase_webqsp/freebase_traintest/webQSP_freebase_subgraph.json'))
-    # print("loading knowledge down, start the server")
-    # app.run(host='10.201.34.3', port=5001, use_debugger=True)
-
-    # local server
     print("loading knowledge base...")
     interpreter = Interpreter("")
     interpreter.freebase_kb = json.load(
-        open('../../data/webquestionssp/webQSP_freebase_subgraph.json'))
+        open('/data/wuwei/data/freebase_webqsp/freebase_traintest/webQSP_freebase_subgraph.json'))
     print("loading knowledge down, start the server")
-    app.run(host='127.0.0.1', port=5001, use_debugger=True)
+    app.run(host='10.201.34.3', port=5001, use_debugger=True)
+
+    # # local server
+    # print("loading knowledge base...")
+    # interpreter = Interpreter("")
+    # interpreter.freebase_kb = json.load(
+    #     open('../../data/webquestionssp/webQSP_freebase_subgraph.json'))
+    # print("loading knowledge down, start the server")
+    # app.run(host='127.0.0.1', port=5001, use_debugger=True)
 
 
 
