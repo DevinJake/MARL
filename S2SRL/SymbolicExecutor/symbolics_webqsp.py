@@ -11,9 +11,9 @@ def get_id(idx):
 from flask import Flask, request, jsonify
 app = Flask(__name__)
 # Remote Server
-post_url = "http://10.201.34.3:5001/post"
+# post_url = "http://10.201.34.3:5001/post"
 # # local server
-# post_url = "http://127.0.0.1:5001/post"
+post_url = "http://127.0.0.1:5001/post"
 
 class Symbolics_WebQSP():
 
@@ -189,11 +189,19 @@ class Symbolics_WebQSP():
                         print('ERROR! The action is Joint(%s,%s,%s).' %(e,r,t))
                     finally:
                         self.print_answer()
+                elif ("A19" in symbolic):
+                    try:
+                        self.answer = self.filter_answer(e, r, t)
+                    except:
+                        print('ERROR! The action is filter_answer(%s,%s,%s).' %(e,r,t))
+                    finally:
+                        self.print_answer()
                 else:
                     print("wrong symbolic")
         return self.answer
 
     # TODO: NOT TESTED
+    # get type
     def is_A(self,e):
         #return type of entity
         if e == "":
@@ -288,6 +296,46 @@ class Symbolics_WebQSP():
                     intermediate_result = {'ANSWER': content}
             except:
                 print("ERROR for command: joint(%s,%s,%s)" % (e, r, t))
+            finally:
+                return intermediate_result
+
+    def filter_answer(self, e, r, t):
+        intermediate_result = {}
+        if e == "" or r == "" or t == "":
+            return {}
+        elif not isinstance(self.answer, dict):
+            return {}
+        else:
+            try:
+                print ("start filter_answer")
+                if e == 'ANSWER' and t != 'VARIABLE':
+                    json_pack = dict()
+                    json_pack['op'] = "filter_answer"
+                    json_pack['e'] = list(self.answer['ANSWER'])
+                    json_pack['r'] = r
+                    json_pack['t'] = t
+                    jsonpost = json.dumps(json_pack)
+                    content, content_result = requests.post(post_url, json=jsonpost).json()['content']
+                    if content is not None and content_result == 0:
+                        content = set(content)
+                    else:
+                        content = set([])
+                    intermediate_result = {'VARIABLE': content}
+                # if e == 'ANSWER' and t == 'VARIABLE':
+                #     json_pack = dict()
+                #     json_pack['op'] = "filter_answer"
+                #     json_pack['r'] = r
+                #     json_pack['t'] = list(self.answer['VARIABLE'])
+                #
+                #     jsonpost = json.dumps(json_pack)
+                #     content, content_result = requests.post(post_url, json=jsonpost).json()['content']
+                #     if content is not None and content_result == 0:
+                #         content = set(content)
+                #     else:
+                #         content = set([])
+                #     intermediate_result = {'ANSWER': content}
+            except:
+                print("ERROR for command: filter_answer(%s,%s,%s)" % (e, r, t))
             finally:
                 return intermediate_result
 
@@ -601,6 +649,107 @@ class Symbolics_WebQSP():
             print("error input")
             self.answer  = set([])
 
+    def both_a(self, e1, e2, r):
+        intermediate_result = {}
+        if e1 == "" or e2 == "" or r == "":
+            return {}
+        elif not isinstance(self.answer, dict):
+            return {}
+        else:
+            try:
+                if e == 'ANSWER' and t != 'VARIABLE':
+                    json_pack = dict()
+                    json_pack['op'] = "filter_answer"
+                    json_pack['e'] = list(self.answer['ANSWER'])
+                    json_pack['r'] = r
+                    json_pack['t'] = t
+                    jsonpost = json.dumps(json_pack)
+                    content, content_result = requests.post(post_url, json=jsonpost).json()['content']
+                    if content is not None and content_result == 0:
+                        content = set(content)
+                    else:
+                        content = set([])
+                    intermediate_result = {'ANSWER': content}
+            except:
+                print("ERROR for command: joint(%s,%s,%s)" % (e, r, t))
+            finally:
+                return intermediate_result
+
+    def both_a(self, e1, e2, r):
+        intermediate_result = {}
+        if e1 == "" or e2 == "" or r == "":
+            return {}
+        elif not isinstance(self.answer, dict):
+            return {}
+        else:
+            try:
+                if e == 'ANSWER' and t != 'VARIABLE':
+                    json_pack = dict()
+                    json_pack['op'] = "filter_answer"
+                    json_pack['e'] = list(self.answer['ANSWER'])
+                    json_pack['r'] = r
+                    json_pack['t'] = t
+                    jsonpost = json.dumps(json_pack)
+                    content, content_result = requests.post(post_url, json=jsonpost).json()['content']
+                    if content is not None and content_result == 0:
+                        content = set(content)
+                    else:
+                        content = set([])
+                    intermediate_result = {'ANSWER': content}
+            except:
+                print("ERROR for command: joint(%s,%s,%s)" % (e, r, t))
+            finally:
+                return intermediate_result
+
+    def date_less_or_equal(self, e, date):
+        intermediate_result = {}
+        if e1 == "" or e2 == "" or r == "":
+            return {}
+        elif not isinstance(self.answer, dict):
+            return {}
+        else:
+            try:
+                if e == 'VARIABLE':
+                    json_pack = dict()
+                    json_pack['op'] = "execute_select_oper_date_lt"
+                    json_pack['e'] = list(self.answer['VARIABLE'])
+                    json_pack['date'] = date(json_pack)
+                    content, content_result = requests.post(post_url, json=jsonpost).json()['content']
+                    if content is not None and content_result == 0:
+                        content = set(content)
+                    else:
+                        content = set([])
+                    intermediate_result = {'ANSWER': content}
+            except:
+                print("ERROR for command: date_less_or_equal(%s)" % (e, date))
+            finally:
+                return intermediate_result
+
+    def date_greater_or_equal(self, e, date):
+        intermediate_result = {}
+        if e == "" or date == "":
+            return {}
+        elif not isinstance(self.answer, dict):
+            return {}
+        else:
+            try:
+                if e == 'VARIABLE':
+                    json_pack = dict()
+                    json_pack['op'] = "execute_select_oper_date_gt"
+                    json_pack['e'] = list(self.answer['VARIABLE'])
+                    json_pack['date'] = date
+                    jsonpost = json.dumps(json_pack)
+                    content, content_result = requests.post(post_url, json=jsonpost).json()['content']
+                    if content is not None and content_result == 0:
+                        content = set(content)
+                    else:
+                        content = set([])
+                    intermediate_result = {'ANSWER': content}
+            except:
+                print("ERROR for command: date_greater_or_equal(%s)" % (e, date))
+            finally:
+                return intermediate_result
+
     ########################
     def print_answer(self):
         pass
@@ -637,7 +786,21 @@ class Symbolics_WebQSP():
 
 if __name__ == "__main__":
     print("Building knowledge base....")
+
+    # test1
     symbolic_seq = [{'A1': ['m.09l3p', 'film.actor.film', 'VARIABLE']}, {'A18': ['VARIABLE', 'film.performance.film', 'm.0ddt_']}, {'A18': ['VARIABLE', 'film.performance.character', 'ANSWER']}]
+    symbolic_exe = Symbolics_WebQSP(symbolic_seq)
+    answer = symbolic_exe.executor()
+    print(answer)
+
+    # test2
+    symbolic_seq = [{'A1': ['m.06w2sn5', 'people.person.sibling_s', 'VARIABLE']}, {'A18': ['VARIABLE', 'people.sibling_relationship.sibling', 'ANSWER']}, {'A19': ['ANSWER', 'people.person.gender', 'm.05zppz']}]
+    symbolic_exe = Symbolics_WebQSP(symbolic_seq)
+    answer = symbolic_exe.executor()
+    print(answer)
+
+    # test3
+    symbolic_seq = [{'A1': ['m.03f2h01', 'base.activism.activist.area_of_activism', 'ANSWER']}]
     symbolic_exe = Symbolics_WebQSP(symbolic_seq)
     answer = symbolic_exe.executor()
     print(answer)
