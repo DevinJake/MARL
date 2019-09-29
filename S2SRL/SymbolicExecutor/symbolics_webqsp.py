@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-# @Time    : 2019/1/18 14:52
 import json
+import re
 try:
     from urllib import urlencode
 except ImportError:
@@ -49,6 +49,15 @@ class Symbolics_WebQSP():
                 if ("A1" in symbolic):
                     try:
                         temp_result = self.select(e, r, t)
+                        self.answer = temp_result
+                        self.temp_bool_dict = temp_result
+                    except:
+                        print('ERROR! The action is Select(%s,%s,%s).' %(e,r,t))
+                    finally:
+                        self.print_answer()
+                elif ("A1_2" in symbolic):
+                    try:
+                        temp_result = self.select_str(e, r, t)
                         self.answer = temp_result
                         self.temp_bool_dict = temp_result
                     except:
@@ -166,22 +175,7 @@ class Symbolics_WebQSP():
                         print('ERROR! The action is EQUAL(%s).' %e)
                     finally:
                         self.print_answer()
-                # A15: Almost(N)
-                elif ("A15" in symbolic):
-                    try:
-                        if r == "" and t == "":
-                            self.answer = self.around(e)
-                        else:
-                            self.answer = self.around(e,r,t)
-                    except:
-                        if r == "" and t == "":
-                            print('ERROR! The action is Almost(%s).' %e)
-                        else:
-                            print('ERROR! The action is Almost(%s,%s,%s).' %(e,r,t))
-                    finally:
-                        self.print_answer()
-                elif ("A17" in symbolic):
-                    self.print_answer()
+
                 elif ("A18" in symbolic):
                     try:
                         self.answer = self.joint(e, r, t)
@@ -189,11 +183,25 @@ class Symbolics_WebQSP():
                         print('ERROR! The action is Joint(%s,%s,%s).' %(e,r,t))
                     finally:
                         self.print_answer()
+                elif ("A18_2" in symbolic):
+                    try:
+                        self.answer = self.joint_str(e, r, t)
+                    except:
+                        print('ERROR! The action is joint_str(%s,%s,%s).' %(e,r,t))
+                    finally:
+                        self.print_answer()
                 elif ("A19" in symbolic):
                     try:
                         self.answer = self.filter_answer(e, r, t)
                     except:
                         print('ERROR! The action is filter_answer(%s,%s,%s).' %(e,r,t))
+                    finally:
+                        self.print_answer()
+                elif ("A20" in symbolic):
+                    try:
+                        self.answer = self.filter_not_equal(e, r, t)
+                    except:
+                        print('ERROR! The action is filter_not_equal(%s,%s,%s).' % (e, r, t))
                     finally:
                         self.print_answer()
                 else:
@@ -253,6 +261,53 @@ class Symbolics_WebQSP():
                 # A dict is returned whose key is the subject and whose value is set of entities.
                 return {t:content}
 
+    def find(self, e, r):
+        json_pack = dict()
+        json_pack['op'] = "execute_gen_set1"
+        json_pack['sub_pre'] = [e, r]
+        jsonpost = json.dumps(json_pack)
+        content = requests.post(post_url, json=jsonpost).json()['content'][0]
+        content_result = requests.post(post_url, json=jsonpost).json()['content'][1]
+        if content is not None:
+            content = set(content)
+        return content
+
+    def select_str(self, e, r, t):
+        if e == "" or r == "" or t == "":
+            return {}
+        else:
+            content = set([])
+            try:
+                json_pack = dict()
+                json_pack['op'] = "execute_gen_set1"
+                json_pack['sub_pre'] = [e, r]
+                jsonpost = json.dumps(json_pack)
+                # result_content = requests.post(post_url,json=json_pack)
+                # print(result_content)
+                content, content_result = requests.post(post_url, json=jsonpost).json()['content']
+                if content is not None and content_result == 0:
+                    content = set(content)
+            except:
+                print("ERROR for command: select(%s,%s,%s)" % (e, r, t))
+            finally:
+                if content is not None:
+                    # Store records in set.
+                    content = set(content)
+                else:
+                    content = set([])
+                # A dict is returned whose key is the subject and whose value is set of entities.
+                return {t: content}
+
+    def select_max_as(self, e, r, t):
+        if e == "" or t == "" or r != "":
+            return {}
+        max = -1
+        for item in self.answer[e]:
+            item_count = len(self.answer[item])
+            if item_count > max:
+                max = item_count
+        return {t: set(max)}
+
     # TODO: NOT THROUGHLY TESTED
     # TODO: EXCEPTION HANDLE
     def joint(self, e, r, t):
@@ -281,6 +336,7 @@ class Symbolics_WebQSP():
                         content = set([])
                     intermediate_result = {'VARIABLE': content}
                 if e == 'VARIABLE' and t == 'ANSWER':
+                    print('VARIABLE', self.answer['VARIABLE'])
                     json_pack = dict()
                     json_pack['op'] = "get_joint_answer"
                     json_pack['e'] = list(self.answer['VARIABLE'])
@@ -299,6 +355,50 @@ class Symbolics_WebQSP():
             finally:
                 return intermediate_result
 
+    def joint_str(self, e, r, t):
+        print(self.answer)
+        intermediate_result = {}
+        if e == "" or r == "" or t == "":
+            return {}
+        elif not isinstance(self.answer, dict):
+            return {}
+        else:
+            try:
+                if '?' in e and t != '?x':
+                    json_pack = dict()
+                    json_pack['op'] = "joint"
+                    json_pack['e'] = list(self.answer[e])
+                    json_pack['r'] = r
+                    json_pack['t'] = t
+                    jsonpost = json.dumps(json_pack)
+                    # result_content = requests.post(post_url,json=json_pack)
+                    # print(result_content)
+                    content, content_result = requests.post(post_url, json=jsonpost).json()['content']
+                    if content is not None and content_result == 0:
+                        content = set(content)
+                    else:
+                        content = set([])
+                    intermediate_result = {e: content}
+                if '?' in e and t == '?x':
+                    print(e, self.answer[e])
+                    json_pack = dict()
+                    json_pack['op'] = "get_joint_answer"
+                    json_pack['e'] = list(self.answer[e])
+                    json_pack['r'] = r
+                    jsonpost = json.dumps(json_pack)
+                    # result_content = requests.post(post_url,json=json_pack)
+                    # print(result_content)
+                    content, content_result = requests.post(post_url, json=jsonpost).json()['content']
+                    if content is not None and content_result == 0:
+                        content = set(content)
+                    else:
+                        content = set([])
+                    intermediate_result = {e: content}
+            except:
+                print("ERROR for command: joint(%s,%s,%s)" % (e, r, t))
+            finally:
+                return intermediate_result
+
     def filter_answer(self, e, r, t):
         intermediate_result = {}
         if e == "" or r == "" or t == "":
@@ -308,7 +408,7 @@ class Symbolics_WebQSP():
         else:
             try:
                 print ("start filter_answer")
-                if e == 'ANSWER' and t != 'VARIABLE':
+                if e == 'ANSWER':
                     json_pack = dict()
                     json_pack['op'] = "filter_answer"
                     json_pack['e'] = list(self.answer['ANSWER'])
@@ -316,24 +416,33 @@ class Symbolics_WebQSP():
                     json_pack['t'] = t
                     jsonpost = json.dumps(json_pack)
                     content, content_result = requests.post(post_url, json=jsonpost).json()['content']
+                    print(content)
                     if content is not None and content_result == 0:
                         content = set(content)
                     else:
                         content = set([])
-                    intermediate_result = {'VARIABLE': content}
-                # if e == 'ANSWER' and t == 'VARIABLE':
-                #     json_pack = dict()
-                #     json_pack['op'] = "filter_answer"
-                #     json_pack['r'] = r
-                #     json_pack['t'] = list(self.answer['VARIABLE'])
-                #
-                #     jsonpost = json.dumps(json_pack)
-                #     content, content_result = requests.post(post_url, json=jsonpost).json()['content']
-                #     if content is not None and content_result == 0:
-                #         content = set(content)
-                #     else:
-                #         content = set([])
-                #     intermediate_result = {'ANSWER': content}
+                    intermediate_result = {'ANSWER': content}
+            except:
+                print("ERROR for command: filter_answer(%s,%s,%s)" % (e, r, t))
+            finally:
+                return intermediate_result
+
+    def filter_not_equal(self, e, r, t):
+        intermediate_result = {}
+        if e == "" or t == "":
+            return {}
+        elif not isinstance(self.answer, dict):
+            return {}
+        else:
+            try:
+                print("filter_not_equal")
+                if e == 'ANSWER':
+                    answer_list = []
+                    print(t)
+                    for answer_item in self.answer['ANSWER']:
+                        if (answer_item != t):
+                            answer_list.append(answer_item)
+                    intermediate_result = set(answer_list)
             except:
                 print("ERROR for command: filter_answer(%s,%s,%s)" % (e, r, t))
             finally:
@@ -387,7 +496,6 @@ class Symbolics_WebQSP():
                     return True
         return False
 
-
     def arg_min(self):
         # print("A4: arg_min")
         if not self.answer:
@@ -399,7 +507,6 @@ class Symbolics_WebQSP():
         self.temp_set = set(min_set)
         return min_set
 
-
     def arg_max(self):
         # print("A5: arg_max")
         if not self.answer:
@@ -408,7 +515,6 @@ class Symbolics_WebQSP():
         maxK = max(self.answer, key=lambda x: len(self.answer[x]))
         maxN = len(self.answer[maxK])
         return [k for k in self.answer if len(self.answer[k]) == maxN]
-
 
     def greater_than(self, e, r, t):
         content = self.answer
@@ -428,7 +534,6 @@ class Symbolics_WebQSP():
         else:
             N = 0
         return [k for k in self.answer if len(self.answer[k]) < N]
-
 
     def union(self, e, r, t):
         #print("A9:", e, r, t)
@@ -456,67 +561,6 @@ class Symbolics_WebQSP():
                 union_value = union_value | set(v)
             answer_dict.clear()
             answer_dict[union_key] = list(set(union_value))
-            return answer_dict
-
-
-    def inter(self, e, r, t):
-        #print("A8:", e, r, t)
-        if e == "": return {}
-        if not e.startswith("Q"): return {}
-        answer_dict = self.answer
-        if type(answer_dict) != dict: return {}
-        try:
-            if e in answer_dict and answer_dict[e]!=None:
-                temp_dict = self.select(e, r, t)
-                if e in temp_dict:
-                    answer_dict[e] = set(answer_dict[e]) & set(temp_dict[e])
-            else:
-                s = self.select(e, r, t)
-                answer_dict.update(s)
-        except:
-            print("ERROR for command: inter(%s,%s,%s)" % (e, r, t))
-        finally:
-            # 进行 inter 类似 union
-            inter_key = "&"
-            inter_value = set([])
-            for k, v in answer_dict.items():
-                if v == None: v = []
-                if len(inter_value) > 0:
-                    inter_value = inter_value & set(v)
-                else:
-                    inter_value = set(v)
-            answer_dict.clear()
-            answer_dict[inter_key] = list(set(inter_value))
-            return answer_dict
-
-    # TODO: NOT TESTED
-    def diff(self, e, r, t):
-        #print("A10:", e, r, t)
-        if e == "": return {}
-        if not e.startswith("Q"): return {}
-        answer_dict = self.answer
-        if type(answer_dict) != dict: return {}
-        try:
-            if e in answer_dict and answer_dict[e]!=None:
-                temp_dict = self.select(e, r, t)
-                if e in temp_dict:
-                    answer_dict[e] = set(answer_dict[e]) - set(temp_dict[e])
-            else:
-                answer_dict.update(self.select(e, r, t))
-        except:
-            print("ERROR for command: diff(%s,%s,%s)" % (e, r, t))
-        # 进行 diff 操作 类似 union
-        finally:
-            diff_key = "-"
-            diff_value = set([])
-            for k, v in answer_dict.items():
-                if v == None: v = []
-                if k != e:
-                    diff_value.update(set(v))
-            if(answer_dict[e]):
-                diff_value = diff_value - set(answer_dict[e])
-            answer_dict.clear()
-            answer_dict[diff_key] = list(set(diff_value))
             return answer_dict
 
     def count(self,e= None):
@@ -579,76 +623,6 @@ class Symbolics_WebQSP():
                     answer_keys.append(k)
         return answer_keys
 
-    def around(self,N,r=None,t=None):
-        answer_keys = []
-        number = 0
-        try:
-            if N.isdigit():
-                number = int(N)
-            elif N.startswith("Q"):
-                if(r!=None) and (t!=None):
-                    e = N
-                    dict_temp = self.select_all(e,r,t)
-                    number = len(dict_temp)
-                else:
-                    content = self.answer
-                    if type(content) == dict:
-                        if N in content and not content[N] == None:
-                            number = len(content[N])
-                        else:
-                            number = 0
-            # If N is noe digit nor started with 'Q', the number is assumed as 0.
-            if type(self.answer) == type({}):
-                if number == 0 or 1< number <=5:
-                    for k, v in self.answer.items():
-                        if abs(len(v)-int(number)) <= 1:
-                            answer_keys.append(k)
-                if number == 1:
-                    for k, v in self.answer.items():
-                        if abs(len(v) - int(number)) < (int(number) * 0.6):
-                            answer_keys.append(k)
-                elif number > 5:
-                    for k, v in self.answer.items():
-                        if abs(len(v)-int(number)) <= 5:
-                            answer_keys.append(k)
-                else:
-                    for k, v in self.answer.items():
-                        # print k, len(v),abs(len(v)-int(N)),(int(N)/2)
-                        if abs(len(v)-int(number)) < (int(number)*0.6):
-                            answer_keys.append(k)
-                self.temp_set = set(answer_keys)
-        except:
-            print('ERROR!The action is around(%s, %s, %s)' %(N,r,t))
-        finally:
-            return answer_keys
-
-    def EOQ(self):
-        pass
-
-
-    def find(self, e, r):
-        json_pack = dict()
-        json_pack['op'] = "execute_gen_set1"
-        json_pack['sub_pre'] = [e, r]
-        jsonpost = json.dumps(json_pack)
-        content = requests.post(post_url, json=jsonpost).json()['content'][0]
-        content_result = requests.post(post_url, json=jsonpost).json()['content'][1]
-        if content is not None:
-            content = set(content)
-        return content
-
-    # A1 new
-    def newselect(self, e, r, t):
-        if t == 'VARIABLE':
-            content = self.find(e ,r)
-            self.answer[e] = content
-            # self.answer = content
-
-            # temp_variable_list = t_list
-        else:
-            print("error input")
-            self.answer  = set([])
-
     def both_a(self, e1, e2, r):
         intermediate_result = {}
         if e1 == "" or e2 == "" or r == "":
@@ -657,12 +631,12 @@ class Symbolics_WebQSP():
             return {}
         else:
             try:
-                if e == 'ANSWER' and t != 'VARIABLE':
+                if e1 == 'ANSWER' and e2 != 'VARIABLE':
                     json_pack = dict()
-                    json_pack['op'] = "filter_answer"
-                    json_pack['e'] = list(self.answer['ANSWER'])
+                    json_pack['op'] = "both_a"
+                    json_pack['e1'] = list(self.answer[e1])
+                    json_pack['e2'] = list(self.answer[e2])
                     json_pack['r'] = r
-                    json_pack['t'] = t
                     jsonpost = json.dumps(json_pack)
                     content, content_result = requests.post(post_url, json=jsonpost).json()['content']
                     if content is not None and content_result == 0:
@@ -671,57 +645,57 @@ class Symbolics_WebQSP():
                         content = set([])
                     intermediate_result = {'ANSWER': content}
             except:
-                print("ERROR for command: joint(%s,%s,%s)" % (e, r, t))
-            finally:
-                return intermediate_result
-
-    def both_a(self, e1, e2, r):
-        intermediate_result = {}
-        if e1 == "" or e2 == "" or r == "":
-            return {}
-        elif not isinstance(self.answer, dict):
-            return {}
-        else:
-            try:
-                if e == 'ANSWER' and t != 'VARIABLE':
-                    json_pack = dict()
-                    json_pack['op'] = "filter_answer"
-                    json_pack['e'] = list(self.answer['ANSWER'])
-                    json_pack['r'] = r
-                    json_pack['t'] = t
-                    jsonpost = json.dumps(json_pack)
-                    content, content_result = requests.post(post_url, json=jsonpost).json()['content']
-                    if content is not None and content_result == 0:
-                        content = set(content)
-                    else:
-                        content = set([])
-                    intermediate_result = {'ANSWER': content}
-            except:
-                print("ERROR for command: joint(%s,%s,%s)" % (e, r, t))
+                print("ERROR for command: both_a(%s,%s,%s)" % (e1, e2, r))
             finally:
                 return intermediate_result
 
     def date_less_or_equal(self, e, date):
         intermediate_result = {}
-        if e1 == "" or e2 == "" or r == "":
+        if e == "" or date == "":
             return {}
         elif not isinstance(self.answer, dict):
             return {}
         else:
             try:
-                if e == 'VARIABLE':
+                if "?" in e:
                     json_pack = dict()
                     json_pack['op'] = "execute_select_oper_date_lt"
-                    json_pack['e'] = list(self.answer['VARIABLE'])
+                    json_pack['e'] = list(self.answer[e])
                     json_pack['date'] = date(json_pack)
+                    jsonpost = json.dumps(json_pack)
                     content, content_result = requests.post(post_url, json=jsonpost).json()['content']
                     if content is not None and content_result == 0:
                         content = set(content)
                     else:
                         content = set([])
-                    intermediate_result = {'ANSWER': content}
+                    intermediate_result = {e: content}
             except:
-                print("ERROR for command: date_less_or_equal(%s)" % (e, date))
+                print("ERROR for command: date_less_or_equal(%s, %s)" % (e, date))
+            finally:
+                return intermediate_result
+
+    def date_less_or_equal_str(self, e, date):
+        intermediate_result = {}
+        if e == "" or date == "":
+            return {}
+        elif not isinstance(self.answer, dict):
+            return {}
+        else:
+            try:
+                if "?" in e:
+                    json_pack = dict()
+                    json_pack['op'] = "execute_select_oper_date_lt"
+                    json_pack['set_date'] = list(self.answer[e])
+                    json_pack['date'] = date(json_pack)
+                    jsonpost = json.dumps(json_pack)
+                    content, content_result = requests.post(post_url, json=jsonpost).json()['content']
+                    if content is not None and content_result == 0:
+                        content = set(content)
+                    else:
+                        content = set([])
+                    intermediate_result = {e: content}
+            except:
+                print("ERROR for command: date_less_or_equal(%s, %s)" % (e, date))
             finally:
                 return intermediate_result
 
@@ -736,7 +710,7 @@ class Symbolics_WebQSP():
                 if e == 'VARIABLE':
                     json_pack = dict()
                     json_pack['op'] = "execute_select_oper_date_gt"
-                    json_pack['e'] = list(self.answer['VARIABLE'])
+                    json_pack['set_date'] = list(self.answer[e])
                     json_pack['date'] = date
                     jsonpost = json.dumps(json_pack)
                     content, content_result = requests.post(post_url, json=jsonpost).json()['content']
@@ -744,63 +718,235 @@ class Symbolics_WebQSP():
                         content = set(content)
                     else:
                         content = set([])
-                    intermediate_result = {'ANSWER': content}
+                    intermediate_result = {e: content}
             except:
-                print("ERROR for command: date_greater_or_equal(%s)" % (e, date))
+                print("ERROR for command: date_greater_or_equal(%s, %s)" % (e, date))
             finally:
                 return intermediate_result
 
-    ########################
-    def print_answer(self):
-        pass
-        # if(type(self.answer) == dict):
-        #     for k,v in self.answer.items():
-        #         #print self.item_data[k],": ",
-        #         for value in v:
-        #         #    print self.item_data[value], ",",
-        #         print
-        # elif(type(self.answer) == type([])):
-        #     for a in self.answer:
-        #         print self.item_data[a],
-        #     print
-        # else:
-        #     if(self.answer in self.item_data):
-        #         print self.answer,self.item_data[self.answer]
-        #     else:
-        #         print self.answer
-        # print("----------------")
+    def date_greater_or_equal_str(self, e, date):
+        intermediate_result = {}
+        if e == "" or date == "":
+            return {}
+        elif not isinstance(self.answer, dict):
+            return {}
+        else:
+            try:
+                if "?" in e:
+                    json_pack = dict()
+                    json_pack['op'] = "execute_select_oper_date_gt"
+                    json_pack['e'] = list(self.answer[e])
+                    json_pack['date'] = date
+                    jsonpost = json.dumps(json_pack)
+                    content, content_result = requests.post(post_url, json=jsonpost).json()['content']
+                    if content is not None and content_result == 0:
+                        content = set(content)
+                    else:
+                        content = set([])
+                    intermediate_result = {e: content}
+            except:
+                print("ERROR for command: date_greater_or_equal(%s, %s)" % (e, date))
+            finally:
+                return intermediate_result
 
-    def select_sparql(self, e, r, t):  # use sparql
-        answer_dict = {}
-        anser_values = []
-        sparql = {"query": "SELECT ?river WHERE { ?river wdt:" + r + " wd:" + e + ". ?river wdt:P31  wd:" + t + ". }",
-                  "format": "json",}
-        # print sparql
-        sparql = urlencode(sparql)
-        # print sparql
-        url = 'https://query.wikidata.org/sparql?' + sparql
-        r = requests.get(url)
-        # print r.json()["results"]
-        for e in r.json()["results"]["bindings"]:
-            entity = e["river"]["val"]
+# action sequence
+class Action():
+    def __init__(self, action_type, e, r, t):
+        self.action_type = action_type
+        self.e = e
+        self.r = r
+        self.t = t
+
+    def to_str(self):
+        return "{{\'{0}\':[\'{1}\', \'{2}\', \'{3}\']}}".format(self.action_type, self.e, self.r, self.t)
+
+# parse sparql in dataset to action sequence
+def processSparql(sparql_str):
+        sparql_list = []
+        reorder_sparql_list = []
+        untreated_list = sparql_str.split("\n")
+        answer_keys = []
+        for untreated_str in untreated_list:
+            action_type = "A1_2"
+            s = ""
+            r = ""
+            t = ""
+            if untreated_str.startswith("SELECT"):  # find answer key
+                for item in untreated_str.split(" "):
+                    if "?" in item:
+                        answer_keys.append(item.replace(" ", ""))
+            elif untreated_str.startswith("FILTER (?x != ns:"): # filter not equal
+                action_type = "A20"
+                s = "ANSWER"
+                t = untreated_str.replace("FILTER (?x != ns:", "").replace(")", "").replace(" ", "")
+                action_item = Action(action_type, s, r, t)
+                sparql_list.append(action_item)
+            elif untreated_str.startswith("FILTER (!isLiteral(?x) "):
+                pass
+            elif untreated_str.count("?") == 1 and ("FILTER" not in untreated_str or "EXISTS" not in untreated_str):
+                action_type = "A1_2"
+                triple_list = untreated_str.split(" ")
+                if len(triple_list) == 4:
+                    s = triple_list[0].replace("ns:", "")
+                    r = triple_list[1].replace("ns:", "")
+                    t = triple_list[2].replace("ns:", "")
+                action_item = Action(action_type, s, r, t)
+                sparql_list.append(action_item)
+            elif untreated_str.count("?") == 2 and ("FILTER" not in untreated_str or "EXISTS" not in untreated_str):
+                action_type = "A18_2"
+                triple_list = untreated_str.split(" ")
+                if len(triple_list) == 4:
+                    s = triple_list[0].replace("ns:", "")
+                    r = triple_list[1].replace("ns:", "")
+                    t = triple_list[2].replace("ns:", "")
+                action_item = Action(action_type, s, r, t)
+                sparql_list.append(action_item)
+            elif untreated_str.startswith("FILTER(xsd:datetime") and "<=" in untreated_str: # filter datetime less or equal
+                date_re = re.search(r"(\d{4}-\d{1,2}-\d{1,2})", untreated_str)
+                date_str = date_re.group(0)
+
+                date_variable_re = re.search(r"(xsd:datetime\((.*?)\))", untreated_str)
+                # date_variable_str = date_variable_re.group(1)
+                action_type = "A22"
+                t = date_variable_re.group(0)
+                action_item = Action(action_type, s, r, t)
+                sparql_list.append(action_item)
+                print(date_variable_re)
+            elif untreated_str.startswith("FILTER(xsd:datetime") and ">=" in untreated_str: # filter datetime greater or equal
+                date_str = re.search(r"(\d{4}-\d{1,2}-\d{1,2})", untreated_str)
+                action_type = "A23"
+                t = date_variable_re.group(0)
+                action_item = Action(action_type, s, r, t)
+                sparql_list.append(action_item)
+
+        # reorder
+        count = 0
+        while len(reorder_sparql_list) != len(sparql_list):
+            count = count + 1
+            if count > len(sparql_list):
+                break
+            next_variable = ""
+            for action_item in sparql_list:
+                seq = action_item.to_str()
+                if (answer_keys[0]) in seq:
+                    if untreated_str.count("?") == 1:
+                        reorder_sparql_list.append(seq)
+                    elif untreated_str.count("?") == 2:
+                        reorder_sparql_list.append(seq)
+                        # define next variable
+                        next_variable = action_item.e if (action_item.t == answer_keys[0]) else action_item.t
+                if next_variable != "" and next_variable in seq:
+                    if untreated_str.count("?") == 1:
+                        reorder_sparql_list.append(seq)
+                    elif untreated_str.count("?") == 2:
+                        reorder_sparql_list.append(seq)
+                        # define next variable
+                        next_variable = action_item.e if (action_item.t == next_variable) else action_item.t
+
+        reorder_sparql_list.reverse()
+        return "[" + ",".join(reorder_sparql_list) + "]"
 
 if __name__ == "__main__":
-    print("Building knowledge base....")
+    print("start symbolics_webqsp")
+    # # test1
+    # symbolic_seq = [{'A1': ['m.09l3p', 'film.actor.film', 'VARIABLE']}, {'A18': ['VARIABLE', 'film.performance.film', 'm.0ddt_']}, {'A18': ['VARIABLE', 'film.performance.character', 'ANSWER']}]
+    # symbolic_exe = Symbolics_WebQSP(symbolic_seq)
+    # answer = symbolic_exe.executor()
+    # print(answer)
+    #
+    # # test1_2
+    # symbolic_seq = [{'A1_2': ['m.09l3p', 'film.actor.film', '?y']}, {'A18_2': ['?y', 'film.performance.film', 'm.0ddt_']}, {'A18_2': ['?y', 'film.performance.character', '?x']}]
+    # symbolic_exe = Symbolics_WebQSP(symbolic_seq)
+    # answer = symbolic_exe.executor()
+    # print("test1_2", answer) # succeed
 
-    # test1
-    symbolic_seq = [{'A1': ['m.09l3p', 'film.actor.film', 'VARIABLE']}, {'A18': ['VARIABLE', 'film.performance.film', 'm.0ddt_']}, {'A18': ['VARIABLE', 'film.performance.character', 'ANSWER']}]
-    symbolic_exe = Symbolics_WebQSP(symbolic_seq)
-    answer = symbolic_exe.executor()
-    print(answer)
+    # WebQTrn-3               "AnswerArgument": "m.0160w",
+    # ns:m.03st9j ns:location.location.containedby ?x .
+    # ?x ns:base.biblioness.bibs_location.loc_type ?sk0 .
+    # FILTER (str(?sk0) = \"Country\")
 
-    # test2
-    symbolic_seq = [{'A1': ['m.06w2sn5', 'people.person.sibling_s', 'VARIABLE']}, {'A18': ['VARIABLE', 'people.sibling_relationship.sibling', 'ANSWER']}, {'A19': ['ANSWER', 'people.person.gender', 'm.05zppz']}]
-    symbolic_exe = Symbolics_WebQSP(symbolic_seq)
-    answer = symbolic_exe.executor()
-    print(answer)
+    # symbolic_seq = [
+    #     {'A1_2': ['m.03st9j', 'location.location.containedby', '?x']},
+    #     {'A23': ['?x', 'base.biblioness.bibs_location.loc_type', 'Country']},
+    #     # {'A18_2': ['?y', 'film.performance.character', '?x']},
+    # ]
+    # symbolic_exe = Symbolics_WebQSP(symbolic_seq)
+    # answer = symbolic_exe.executor()
+    # print("3", answer) # succeed
 
-    # test3
-    symbolic_seq = [{'A1': ['m.03f2h01', 'base.activism.activist.area_of_activism', 'ANSWER']}]
-    symbolic_exe = Symbolics_WebQSP(symbolic_seq)
-    answer = symbolic_exe.executor()
-    print(answer)
+
+
+    # # test2
+    # symbolic_seq = [{'A1': ['m.06w2sn5', 'people.person.sibling_s', 'VARIABLE']}, {'A18': ['VARIABLE', 'people.sibling_relationship.sibling', 'ANSWER']}, {'A19': ['ANSWER', 'people.person.gender', 'm.05zppz']}]
+    # symbolic_exe = Symbolics_WebQSP(symbolic_seq)
+    # answer = symbolic_exe.executor()
+    # print(answer)
+    #
+    # # test3
+    # symbolic_seq = [{'A1': ['m.03f2h01', 'base.activism.activist.area_of_activism', 'ANSWER']}]
+    # symbolic_exe = Symbolics_WebQSP(symbolic_seq)
+    # answer = symbolic_exe.executor()
+    # print(answer)
+    #
+    # #6
+    # symbolic_seq = [
+    #     {'A1': ['m.0c2yrf', 'sports.pro_athlete.teams', '?y']},
+    # ]
+    # symbolic_exe = Symbolics_WebQSP(symbolic_seq)
+    # answer = symbolic_exe.executor()
+    # print(answer)
+    #
+    # #7
+    # symbolic_seq = [
+    #     {'A1': ['m.084l5', 'sports.sports_team.location', 'ANSWER']},
+    # ]
+    # symbolic_exe = Symbolics_WebQSP(symbolic_seq)
+    # answer = symbolic_exe.executor()
+    # print(7, answer) # y
+    #
+    # #12
+    # symbolic_seq = [
+    #     {'A1': ['m.0c2m4', 'fictional_universe.fictional_character.married_to', 'VARIABLE']},
+    #     {'A18': ['VARIABLE', 'fictional_universe.marriage_of_fictional_characters.spouses', 'ANSWER']},
+    #     {'A20': ['ANSWER', '', 'm.0c2m4']},
+    # ]
+    # symbolic_exe = Symbolics_WebQSP(symbolic_seq)
+    # answer = symbolic_exe.executor()
+    # print(12, answer) # 09k254x dui
+    #
+    # #13
+    # symbolic_seq = [
+    #     {'A1': ['m.09c7w0', 'location.location.adjoin_s', 'VARIABLE']},
+    #     {'A18': ['VARIABLE', 'location.adjoining_relationship.adjoins', 'ANSWER']},
+    #     {'A19': ['ANSWER', 'common.topic.notable_types', 'm.01mp']},
+    # ]
+    # symbolic_exe = Symbolics_WebQSP(symbolic_seq)
+    # answer = symbolic_exe.executor()
+    # print(13, answer) #    0d060g 错
+
+    #1124
+    # "RawQuestion": "who is jennifer lawrence boyfriend 2012?",
+    # 06tjh6
+    # symbolic_seq = [
+    #     {'A1_2': ['m.02x0dzw', 'celebrities.celebrity.sexual_relationships', '?y']},
+    #     # {'A18': ['?y', 'celebrities.romantic_relationship.relationship_type', 'm.02_7k44']},
+    #     {'A18_2': ['?y', 'celebrities.romantic_relationship.celebrity', '?x']},
+    # ]
+    # symbolic_exe = Symbolics_WebQSP(symbolic_seq)
+    # answer = symbolic_exe.executor()
+    # print(1124, answer) #    06tjh6 错 缺失
+
+    #2513
+
+
+    #21 m.0dl1t3
+    variable_set = {}
+
+    # local_sparql = "PREFIX ns: <http://rdf.freebase.com/ns/>\nSELECT DISTINCT ?x\nWHERE {\nFILTER (?x != ns:m.06w2sn5)\nFILTER (!isLiteral(?x) OR lang(?x) = '' OR langMatches(lang(?x), 'en'))\nns:m.06w2sn5 ns:people.person.sibling_s ?y .\n?y ns:people.sibling_relationship.sibling ?x .\n?x ns:people.person.gender ns:m.05zppz .\n}\n"
+    local_sparql = "PREFIX ns: <http://rdf.freebase.com/ns/>\nSELECT DISTINCT ?x\nWHERE {\nFILTER (?x != ns:m.02d9k)\nFILTER (!isLiteral(?x) OR lang(?x) = '' OR langMatches(lang(?x), 'en'))\nns:m.02d9k ns:sports.pro_athlete.teams ?y .\n?y ns:sports.sports_team_roster.team ?x .\nFILTER(NOT EXISTS {?y ns:sports.sports_team_roster.from ?sk0} || \nEXISTS {?y ns:sports.sports_team_roster.from ?sk1 . \nFILTER(xsd:datetime(?sk1) <= \"2013-12-31\"^^xsd:dateTime) })\nFILTER(NOT EXISTS {?y ns:sports.sports_team_roster.to ?sk2} || \nEXISTS {?y ns:sports.sports_team_roster.to ?sk3 . \nFILTER(xsd:datetime(?sk3) >= \"2013-01-01\"^^xsd:dateTime) })\n}\n"
+    seq = processSparql(local_sparql)
+    print(seq)
+
+    # WebQSP_data = json.load(open('WebQSP.train.json'))
+    # mytrainquestions = WebQSP_data["Questions"]
+    # print(len(mytrainquestions))
