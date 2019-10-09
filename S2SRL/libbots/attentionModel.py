@@ -9,7 +9,6 @@ from . import utils
 HIDDEN_STATE_SIZE = 128
 EMBEDDING_DIM = 50
 PADDING_SIZE = 40
-
 class Decoder(nn.Module):
     def __init__(self, emb_size, hid_size, dropout_p=0.1,):
         super(Decoder, self).__init__()
@@ -22,10 +21,9 @@ class Decoder(nn.Module):
 
 
 
-class PhraseModel(nn.Module):
+class attentionModel(nn.Module):
     def __init__(self, emb_size, dict_size, hid_size):
-        super(PhraseModel, self).__init__()
-
+        super(attentionModel, self).__init__()
         self.emb = nn.Embedding(num_embeddings=dict_size, embedding_dim=emb_size)
         # # BiLSTM
         # self.encoder = nn.LSTM(input_size=emb_size, hidden_size=hid_size,

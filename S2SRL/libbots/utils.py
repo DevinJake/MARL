@@ -6,7 +6,7 @@ from SymbolicExecutor.transform_util import list2dict, transformBooleanToString
 
 W_1 = 0.2
 W_2 = 0.8
-epsilon = 0.1
+epsilon = 0.001
 
 def calc_bleu_many(cand_seq, ref_sequences):
     sf = bleu_score.SmoothingFunction()

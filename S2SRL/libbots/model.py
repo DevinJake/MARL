@@ -10,9 +10,11 @@ from . import utils
 HIDDEN_STATE_SIZE = 128
 EMBEDDING_DIM = 50
 
-
+# nn.Module: Base class for all neural network modules.
+# Your models should also subclass this class.
 class PhraseModel(nn.Module):
     def __init__(self, emb_size, dict_size, hid_size):
+        # Call __init__ function of PhraseModel's parent class (nn.Module).
         super(PhraseModel, self).__init__()
 
         self.emb = nn.Embedding(num_embeddings=dict_size, embedding_dim=emb_size)
@@ -33,9 +35,11 @@ class PhraseModel(nn.Module):
 
     # hidden stat;
     def encode(self, x):
+        # return Outputs: output, (h_n, c_n) for LSTM;
         _, hid = self.encoder(x)
         return hid
 
+    # TODO: change to get_encoded_item_RNN and get_encoded_item_LSTM
     def get_encoded_item(self, encoded, index):
         # For RNN
         # return encoded[:, index:index+1]

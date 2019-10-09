@@ -6,7 +6,6 @@ import random
 import os
 import numpy as np
 
-
 def transformBooleanToString(list):
     temp_set = set()
     if len(list) == 0:
@@ -116,6 +115,37 @@ def test():
     print(list(d))
     print (os.path.abspath(os.path.join(os.getcwd(), "../..")))
 
+
+# !/usr/bin/env python
+
+# This is a straightforward implementation of a well-known algorithm, and thus
+# probably shouldn't be covered by copyright to begin with. But in case it is,
+# the author (Magnus Lie Hetland) has, to the extent possible under law,
+# dedicated all copyright and related and neighboring rights to this software
+# to the public domain worldwide, by distributing it under the CC0 license,
+# version 1.0. This software is distributed without any warranty. For more
+# information, see <http://creativecommons.org/publicdomain/zero/1.0>
+
+def levenshtein(a, b):
+    "Calculates the Levenshtein distance between a and b."
+    n, m = len(a), len(b)
+    if n > m:
+        # Make sure n <= m, to use O(min(n,m)) space
+        a, b = b, a
+        n, m = m, n
+
+    current = range(n + 1)
+    for i in range(1, m + 1):
+        previous, current = current, [i] + [0] * n
+        for j in range(1, n + 1):
+            add, delete = previous[j] + 1, current[j - 1] + 1
+            change = previous[j - 1]
+            if a[j - 1] != b[i - 1]:
+                change = change + 1
+            current[j] = min(add, delete, change)
+
+    return current[n]
+
 def duplicate(s1,s2):
     compare = lambda a,b: len(a)==len(b) and len(a)==sum([1 for i,j in zip(a,b) if i==j])
     return compare(s1, s2)
@@ -158,5 +188,15 @@ if __name__ == "__main__":
     d = {'a': 1, 'b': 2, 'c': 3, 'd': 4}
     for k in list(d):
         print(k)
+
+    list2 = [0,1]
+    list1 = [1,1]
+    similarity = 1.0 - float(levenshtein(list1,list2))/float(max(len(list1),len(list2)))
+    print(max(len(list1),len(list2)))
+    print(levenshtein(list1,list2))
+    print(similarity)
+
+
+
 
 
