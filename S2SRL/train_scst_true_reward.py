@@ -91,6 +91,7 @@ if __name__ == "__main__":
     train_data, test_data = data.split_train_test(train_data, TRAIN_RATIO)
     log.info("Training data converted, got %d samples", len(train_data))
     log.info("Train set has %d phrases, test %d", len(train_data), len(test_data))
+    log.info("Batch size is %d", BATCH_SIZE)
 
     # Index -> word.
     rev_emb_dict = {idx: word for word, idx in emb_dict.items()}

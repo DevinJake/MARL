@@ -112,6 +112,8 @@ if __name__ == "__main__":
         [-0.8078,  0.1575,  1.1064,  ...,  0.1365,  0.4121, -0.4211]],
        device='cuda:0')'''
             input_seq, out_seq_list, _, out_idx = model.pack_batch(batch, net.emb, device)
+            # net.encode calls nn.LSTM by which the forward function is called to run the neural network.
+            # enc is the last time step's hidden state of encoder.
             enc = net.encode(input_seq)
 
             net_results = []
