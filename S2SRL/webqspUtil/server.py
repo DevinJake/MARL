@@ -16,11 +16,9 @@ class Interpreter():
         self.map_program_to_func["gen_set1"] = self.execute_gen_set1
         self.map_program_to_func["gen_set2"] = self.execute_gen_set2
         self.map_program_to_func["gen_set1_date"] = self.execute_gen_set1
-        self.map_program_to_func["gen_set2_date"] = self.execute_gen_set2_date
         self.map_program_to_func["select_oper_date_lt"] = self.execute_select_oper_date_lt
         self.map_program_to_func["select_oper_date_gt"] = self.execute_select_oper_date_gt
         self.map_program_to_func["gen_set2_dateconstrained"] = self.execute_gen_set2_dateconstrained
-        self.map_program_to_func["gen_set2_date_dateconstrained"] = self.execute_gen_set2_date_dateconstrained
         self.map_program_to_func["set_oper_ints"] = self.execute_set_oper_ints
         self.map_program_to_func["joint"] = self.execute_joint
         self.map_program_to_func["none"] = self.execute_none

@@ -15,6 +15,32 @@ app = Flask(__name__)
 # # local server
 post_url = "http://127.0.0.1:5001/post"
 
+class WebQSP(object):
+    def __init__(self, question, action_sequence_list, entity, relation, type, entity_mask, relation_mask, type_mask, mask_action_sequence_list):
+        self.question = question
+        self.action_sequence_list = action_sequence_list
+        self.sparql = sparql
+        self.entity = entity
+        self.relation = relation
+        self.type = type
+        self.entity_mask = entity_mask
+        self.relation_mask = relation_mask
+        self.type_mask = type_mask
+        self.mask_action_sequence_list = mask_action_sequence_list
+
+    def obj_2_json(obj):
+        return {
+            "question": obj.question,
+            "action_sequence_list": obj.action_sequence_list,
+            "sparql": obj.sparql,
+            "entity": obj.entity,
+            "relation": obj.relation,
+            "type": obj.type,
+            "entity_mask": obj.entity_mask,
+            "relation_mask": obj.relation_mask,
+            "type_mask": obj.type_mask,
+        }
+
 class Qapair(object):
     def __init__(self, question, answer, sparql):
         self.question = question
@@ -427,8 +453,8 @@ class Symbolics_WebQSP():
                     else:
                         content = set([])
                     intermediate_result = {e: content}
-            except:
-                print("ERROR for command: joint_str(%s,%s,%s)" % (e, r, t))
+            except error:
+                print("ERROR for command: joint_str(%s,%s,%s)" % (e, r, t). error)
             finally:
                 return intermediate_result
 
@@ -1000,6 +1026,10 @@ if __name__ == "__main__":
 
     # Load WebQuestions Semantic Parses
     WebQSPList = []
+    WebQSPList_Correct = []
+    WebQSPList_Incorrect = []
+    true_count = 0
+
     with open("WebQSP.train.json", "r", encoding='UTF-8') as webQaTrain:
         with open("WebQSP.test.json", "r", encoding='UTF-8') as webQaTest:
             load_dictTrain = json.load(webQaTrain)
@@ -1021,29 +1051,54 @@ if __name__ == "__main__":
                 sparql = q["Parses"][0]["Sparql"]
                 # print(sparql)
                 mypair = Qapair(question, Answers, sparql)
+
+                # test seq
+                test_sparql = mypair.sparql
+                seq = processSparql(test_sparql)
+                symbolic_exe = Symbolics_WebQSP(seq)
+                answer = symbolic_exe.executor()
+                # print("answer: ", answer)
+                true_answer = mypair.answer
+                # print("true_answer: ", true_answer)
+                # print(type(answer))
+                try:
+                    if compare(answer, true_answer):
+                        # print("correct!")
+                        true_count += 1
+                        WebQSPList_Correct.append(mypair)
+                    else:
+                        WebQSPList_Incorrect.append(mypair)
+                        print(answer)
+                        print(seq)
+                        print(true_answer)
+                        # print('incorrect!')
+                except:
+                    pass
+                    # print('incorrect!')
+
                 WebQSPList.append(mypair)
 
     # test actions
-    true_count = 0
-    for item in WebQSPList:
-        test_sparql = item.sparql
-        seq = processSparql(test_sparql)
-        symbolic_exe = Symbolics_WebQSP(seq)
-        answer = symbolic_exe.executor()
-        # print("answer: ", answer)
-        true_answer = item.answer
-        # print("true_answer: ", true_answer)
-        # print(type(answer))
-        try:
-            if compare(answer, true_answer):
-                # print("correct!")
-                true_count += 1
-            else:
-                pass
-                # print('incorrect!')
-        except:
-            pass
-            # print('incorrect!')
-    print(true_count)
+    # true_count = 0
+    # for item in WebQSPList:
+    #     test_sparql = item.sparql
+    #     seq = processSparql(test_sparql)
+    #     symbolic_exe = Symbolics_WebQSP(seq)
+    #     answer = symbolic_exe.executor()
+    #     # print("answer: ", answer)
+    #     true_answer = item.answer
+    #     # print("true_answer: ", true_answer)
+    #     # print(type(answer))
+    #     try:
+    #         if compare(answer, true_answer):
+    #             # print("correct!")
+    #             true_count += 1
+    #         else:
+    #             pass
+    #             # print('incorrect!')
+    #     except:
+    #         pass
+    #         # print('incorrect!')
+    # print("%s correct", true_count)
 
 
