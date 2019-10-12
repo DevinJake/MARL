@@ -467,10 +467,10 @@ class Symbolics_WebQSP():
         else:
             try:
                 # print ("start filter_answer")
-                if e == 'ANSWER':
+                if "?" in e:
                     json_pack = dict()
-                    json_pack['op'] = "filter_answer"
-                    json_pack['e'] = list(self.answer['ANSWER'])
+                    json_pack['op'] = "get_filter_answer"
+                    json_pack['e'] = list(self.answer[e])
                     json_pack['r'] = r
                     json_pack['t'] = t
                     jsonpost = json.dumps(json_pack)
@@ -480,9 +480,9 @@ class Symbolics_WebQSP():
                         content = set(content)
                     else:
                         content = set([])
-                    intermediate_result = {'ANSWER': content}
-            except:
-                print("ERROR for command: filter_answer(%s,%s,%s)" % (e, r, t))
+                    intermediate_result = {e: content}
+            except error:
+                print(error, "ERROR for command: filter_answer(%s,%s,%s)" % (e, r, t))
             finally:
                 return intermediate_result
 
@@ -494,11 +494,11 @@ class Symbolics_WebQSP():
             return {}
         else:
             try:
-                print("filter_not_equal")
-                if e == 'ANSWER':
+                # print("filter_not_equal")
+                if e in self.answer:
                     answer_list = []
-                    print(t)
-                    for answer_item in self.answer['ANSWER']:
+                    # print(t)
+                    for answer_item in self.answer[e]:
                         if (answer_item != t):
                             answer_list.append(answer_item)
                     intermediate_result = set(answer_list)
@@ -822,7 +822,6 @@ class Action():
 # parse sparql in dataset to action sequence
 def processSparql(sparql_str):
         sparql_list = []
-        reorder_sparql_list = []
         untreated_list = sparql_str.split("\n")
         answer_keys = []
         for untreated_str in untreated_list:
@@ -830,27 +829,52 @@ def processSparql(sparql_str):
             s = ""
             r = ""
             t = ""
+
+            # remove note
+            note_index = untreated_str.find("#")
+            if note_index != -1:
+                untreated_str = untreated_str[0:note_index]
+
+            # remove /t
+            untreated_str = untreated_str.replace("\t", "")
             if untreated_str.startswith("SELECT"):  # find answer key
                 for item in untreated_str.split(" "):
                     if "?" in item:
                         answer_keys.append(item.replace(" ", ""))
-            # elif untreated_str.startswith("FILTER (?x != ns:"): # filter not equal
-            #     action_type = "A20"
-            #     s = "ANSWER"
-            #     t = untreated_str.replace("FILTER (?x != ns:", "").replace(")", "").replace(" ", "")
-            #     action_item = Action(action_type, s, r, t)
-            #     sparql_list.append(action_item)
-            elif untreated_str.startswith("FILTER (!isLiteral(?x) "):
+            elif untreated_str.startswith("PREFIX") or "langMatches" in untreated_str:
+                # ignore
                 pass
-            elif untreated_str.count("?") == 1 and ("FILTER" not in untreated_str or "EXISTS" not in untreated_str):
+            elif untreated_str.count("?") == 1 and untreated_str.startswith("ns:"):
+                # base action: select
                 action_type = "A1_2"
                 triple_list = untreated_str.split(" ")
                 if len(triple_list) == 4:
                     s = triple_list[0].replace("ns:", "")
                     r = triple_list[1].replace("ns:", "")
                     t = triple_list[2].replace("ns:", "")
+                    if s != "" and r != "" and t != "":
+                        action_item = Action(action_type, s, r, t)
+                        sparql_list.append(action_item)
+            elif untreated_str.startswith("FILTER (?x != ns:"):
+                # filter not equal
+                action_type = "A20"
+                s = "?x"
+                # s = "ANSWER"
+                t = untreated_str.replace("FILTER (?x != ns:", "").replace(")", "").replace(" ", "")
                 action_item = Action(action_type, s, r, t)
                 sparql_list.append(action_item)
+            elif untreated_str.count("?") == 1 and untreated_str.startswith("?"):
+                # filter variable: find sub set fits the bill
+                action_type = "A19"
+                triple_list = untreated_str.split(" ")
+                if len(triple_list) == 4:
+                    s = triple_list[0].replace("ns:", "")
+                    r = triple_list[1].replace("ns:", "")
+                    t = triple_list[2].replace("ns:", "")
+                    if s != "" and r != "" and t != "":
+                        action_item = Action(action_type, s, r, t)
+                        # sparql_list.append(action_item)
+                # print(action_item)
             elif untreated_str.count("?") == 2 and ("FILTER" not in untreated_str or "EXISTS" not in untreated_str):
                 action_type = "A18_2"
                 triple_list = untreated_str.split(" ")
@@ -858,54 +882,34 @@ def processSparql(sparql_str):
                     s = triple_list[0].replace("ns:", "")
                     r = triple_list[1].replace("ns:", "")
                     t = triple_list[2].replace("ns:", "")
-                action_item = Action(action_type, s, r, t)
-                sparql_list.append(action_item)
-            elif untreated_str.startswith("FILTER(xsd:datetime") and "<=" in untreated_str: # filter datetime less or equal
-                date_re = re.search(r"(\d{4}-\d{1,2}-\d{1,2})", untreated_str)
-                date_str = date_re.group(0)
+                    if s != "" and r != "" and t != "":
+                        action_item = Action(action_type, s, r, t)
+                        sparql_list.append(action_item)
+                    # print(untreated_str, action_item.to_str())
+            # elif untreated_str.startswith("FILTER(xsd:datetime") and "<=" in untreated_str: # filter datetime less or equal
+            #     date_re = re.search(r"(\d{4}-\d{1,2}-\d{1,2})", untreated_str)
+            #     date_str = date_re.group(0)
+            #
+            #     date_variable_re = re.search(r"(xsd:datetime\((.*?)\))", untreated_str)
+            #     # date_variable_str = date_variable_re.group(1)
+            #     action_type = "A22"
+            #     t = date_variable_re.group(0)
+            #     action_item = Action(action_type, s, r, t)
+            #     sparql_list.append(action_item)
+            #     print(date_variable_re)
+            # elif untreated_str.startswith("FILTER(xsd:datetime") and ">=" in untreated_str: # filter datetime greater or equal
+            #     date_str = re.search(r"(\d{4}-\d{1,2}-\d{1,2})", untreated_str)
+            #     action_type = "A23"
+            #     t = date_variable_re.group(0)
+            #     action_item = Action(action_type, s, r, t)
+            #     sparql_list.append(action_item)
 
-                date_variable_re = re.search(r"(xsd:datetime\((.*?)\))", untreated_str)
-                # date_variable_str = date_variable_re.group(1)
-                action_type = "A22"
-                t = date_variable_re.group(0)
-                action_item = Action(action_type, s, r, t)
-                sparql_list.append(action_item)
-                print(date_variable_re)
-            elif untreated_str.startswith("FILTER(xsd:datetime") and ">=" in untreated_str: # filter datetime greater or equal
-                date_str = re.search(r"(\d{4}-\d{1,2}-\d{1,2})", untreated_str)
-                action_type = "A23"
-                t = date_variable_re.group(0)
-                action_item = Action(action_type, s, r, t)
-                sparql_list.append(action_item)
-
-        # reorder
-        # count = 0
-        # while len(reorder_sparql_list) != len(sparql_list):
-        #     count = count + 1
-        #     if count > len(sparql_list):
-        #         break
-        #     next_variable = ""
-        #     for action_item in sparql_list:
-        #         seq = action_item.to_str()
-        #         if (answer_keys[0]) in seq:
-        #             if untreated_str.count("?") == 1:
-        #                 reorder_sparql_list.append(seq)
-        #             elif untreated_str.count("?") == 2:
-        #                 reorder_sparql_list.append(seq)
-        #                 # define next variable
-        #                 next_variable = action_item.e if (action_item.t == answer_keys[0]) else action_item.t
-        #         if next_variable != "" and next_variable in seq:
-        #             if untreated_str.count("?") == 1:
-        #                 reorder_sparql_list.append(seq)
-        #             elif untreated_str.count("?") == 2:
-        #                 reorder_sparql_list.append(seq)
-        #                 # define next variable
-        #                 next_variable = action_item.e if (action_item.t == next_variable) else action_item.t
-
-        # reorder_sparql_list.reverse()
+        # reorder list
+        # reorder_sparql_list = reorder(sparql_list)
+        reorder_sparql_list = sparql_list
 
         old_sqarql_list = []
-        for item in sparql_list:
+        for item in reorder_sparql_list:
             set = {}
             list = []
             list.append(item.e)
@@ -916,11 +920,51 @@ def processSparql(sparql_str):
         return old_sqarql_list
         # return "[" + ",".join(reorder_sparql_list) + "]"
 
+# todo still has problem with the order of A1_2 and a19 of one variable
+def reorder(sparql_list):
+    count = 0
+    final_len = len(sparql_list)
+    reorder_sparql_list = []
+
+    next_variable = ""
+    while len(sparql_list) != 0:
+        for action_item in sparql_list:
+            seq = action_item.to_str()
+            print (seq)
+            if len(sparql_list) == 1:
+                reorder_sparql_list.append(action_item)
+                sparql_list.remove(action_item)
+                break
+            if "?x" in seq:
+                if seq.count("?") == 1:
+                    reorder_sparql_list.append(action_item)
+                elif seq.count("?") == 2:
+                    reorder_sparql_list.append(action_item)
+                    # define next variable
+                    next_variable = action_item.e if (action_item.t == "?x") else action_item.t
+                sparql_list.remove(action_item)
+                break
+            elif next_variable != "" and next_variable in seq:
+                if seq.count("?") == 1:
+                    reorder_sparql_list.append(action_item)
+                elif seq.count("?") == 2:
+                    reorder_sparql_list.append(action_item)
+                    # define next variable
+                    next_variable = action_item.e if (action_item.t == next_variable) else action_item.t
+                sparql_list.remove(action_item)
+                break
+    reorder_sparql_list.reverse()
+    return reorder_sparql_list
+
 def compare(answer, true_answer):
     try:
-        return list(answer["?x"]).sort() == true_answer.sort()
+        if "?x" in answer:
+            return list(answer["?x"]).sort() == true_answer.sort()
+        if "?y" in answer:
+            return list(answer["?y"]).sort() == true_answer.sort()
     except:
         return False
+    return False
 
 
 if __name__ == "__main__":
@@ -1020,15 +1064,26 @@ if __name__ == "__main__":
     variable_set = {}
 
     # local_sparql = "PREFIX ns: <http://rdf.freebase.com/ns/>\nSELECT DISTINCT ?x\nWHERE {\nFILTER (?x != ns:m.06w2sn5)\nFILTER (!isLiteral(?x) OR lang(?x) = '' OR langMatches(lang(?x), 'en'))\nns:m.06w2sn5 ns:people.person.sibling_s ?y .\n?y ns:people.sibling_relationship.sibling ?x .\n?x ns:people.person.gender ns:m.05zppz .\n}\n"
-    local_sparql = "PREFIX ns: <http://rdf.freebase.com/ns/>\nSELECT DISTINCT ?x\nWHERE {\nFILTER (?x != ns:m.02d9k)\nFILTER (!isLiteral(?x) OR lang(?x) = '' OR langMatches(lang(?x), 'en'))\nns:m.02d9k ns:sports.pro_athlete.teams ?y .\n?y ns:sports.sports_team_roster.team ?x .\nFILTER(NOT EXISTS {?y ns:sports.sports_team_roster.from ?sk0} || \nEXISTS {?y ns:sports.sports_team_roster.from ?sk1 . \nFILTER(xsd:datetime(?sk1) <= \"2013-12-31\"^^xsd:dateTime) })\nFILTER(NOT EXISTS {?y ns:sports.sports_team_roster.to ?sk2} || \nEXISTS {?y ns:sports.sports_team_roster.to ?sk3 . \nFILTER(xsd:datetime(?sk3) >= \"2013-01-01\"^^xsd:dateTime) })\n}\n"
+    local_sparql = "PREFIX ns: <http://rdf.freebase.com/ns/>\nSELECT DISTINCT ?x\nWHERE {\nFILTER (?x != ns:m.01_2n)\nFILTER (!isLiteral(?x) OR lang(?x) = '' OR langMatches(lang(?x), 'en'))\nns:m.01_2n ns:tv.tv_program.regular_cast ?y .\n?y ns:tv.regular_tv_appearance.actor ?x .\n?y ns:tv.regular_tv_appearance.character ns:m.015lwh .\n}\n"
     seq = processSparql(local_sparql)
     print(seq)
+    symbolic_exe = Symbolics_WebQSP(seq)
+    answer = symbolic_exe.executor()
+    print("answer: ", answer)
+
+    seq = [{'A1_2': ['m.0m__z', 'travel.travel_destination.tourist_attractions', '?x']}, {'A20': ['?x', '', 'm.0m__z']}]
+    symbolic_exe = Symbolics_WebQSP(seq)
+    answer = symbolic_exe.executor()
+    print("answer: ", answer)
 
     # Load WebQuestions Semantic Parses
     WebQSPList = []
     WebQSPList_Correct = []
     WebQSPList_Incorrect = []
+    json_errorlist = []
     true_count = 0
+
+    errorlist = []
 
     with open("WebQSP.train.json", "r", encoding='UTF-8') as webQaTrain:
         with open("WebQSP.test.json", "r", encoding='UTF-8') as webQaTest:
@@ -1044,6 +1099,7 @@ if __name__ == "__main__":
                 question = q["ProcessedQuestion"]
                 # answer = q["Parses"][0]["Answers"][0]["AnswerArgument"]
                 Answers = []
+                id = q["QuestionId"]
                 answerList = q["Parses"][0]["Answers"]
                 for an in answerList:
                     Answers.append(an['AnswerArgument'])
@@ -1068,9 +1124,13 @@ if __name__ == "__main__":
                         WebQSPList_Correct.append(mypair)
                     else:
                         WebQSPList_Incorrect.append(mypair)
-                        print(answer)
-                        print(seq)
-                        print(true_answer)
+                        print("answer", answer)
+                        print("seq", seq)
+                        print("true_answer", true_answer)
+                        print("id", id)
+                        errorlist.append(id)
+                        json_errorlist.append(q)
+                        print(" ")
                         # print('incorrect!')
                 except:
                     pass
@@ -1078,7 +1138,15 @@ if __name__ == "__main__":
 
                 WebQSPList.append(mypair)
 
-    # test actions
+            print("%s correct", true_count)
+            print (errorlist)
+            # 写入转换后的json
+            jsondata = json.dumps(json_errorlist, indent=1)
+            fileObject = open('errorlist.json', 'w')
+            fileObject.write(jsondata)
+            fileObject.close()
+
+    # # test actions
     # true_count = 0
     # for item in WebQSPList:
     #     test_sparql = item.sparql
@@ -1099,6 +1167,6 @@ if __name__ == "__main__":
     #     except:
     #         pass
     #         # print('incorrect!')
-    # print("%s correct", true_count)
+
 
 

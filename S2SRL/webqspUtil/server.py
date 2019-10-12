@@ -242,7 +242,7 @@ def post_res():
     elif jsonpack['op'] == "exist":
         response['content'] = interpreter.exist(jsonpack['sub'], jsonpack['pre'], jsonpack['obj'])
     elif jsonpack['op'] == "get_filter_answer":
-        response['content'] = interpreter.exist(jsonpack['e'], jsonpack['r'], jsonpack['t'])
+        response['content'] = interpreter.get_filter_answer(jsonpack['e'], jsonpack['r'], jsonpack['t'])
     elif jsonpack['op'] == "execute_select_oper_date_lt":
         response['content'] = interpreter.execute_select_oper_date_lt(jsonpack['set_date'], jsonpack['date'])
     elif jsonpack['op'] == "execute_select_oper_date_gt":
