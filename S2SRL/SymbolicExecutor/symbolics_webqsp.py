@@ -941,19 +941,20 @@ def processSparql(sparql_str):
                 sparql_list.append(action_item)
             elif untreated_str.count("?") == 1 and untreated_str.startswith("?"):
                 # ?x ns:a ns:b
-
                 # if have e,  A19 : filter variable: find sub set fits the bill
                 # if don't have e, A1_3 :find e
-                action_type = "A19"
-
+                action_type = "A1_3"
                 triple_list = untreated_str.split(" ")
                 if len(triple_list) == 4:
                     s = triple_list[0].replace("ns:", "")
                     r = triple_list[1].replace("ns:", "")
                     t = triple_list[2].replace("ns:", "")
                     if s != "" and r != "" and t != "":
+                        for action in sparql_list:
+                            if action.e == e or action.t == e:  # already has variable
+                                action_type = "A19"
                         action_item = Action(action_type, s, r, t)
-                        # sparql_list.append(action_item)
+                        sparql_list.append(action_item)
                 # print(action_item)
             elif untreated_str.count("?") == 2 and ("FILTER" not in untreated_str or "EXISTS" not in untreated_str):
                 action_type = "A18_2"
