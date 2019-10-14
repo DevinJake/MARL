@@ -5,6 +5,7 @@ This file is used to test certain functions or methods.
 import random
 import os
 import numpy as np
+import torch
 
 def transformBooleanToString(list):
     temp_set = set()
@@ -196,7 +197,20 @@ if __name__ == "__main__":
     print(levenshtein(list1,list2))
     print(similarity)
 
+    lengths = np.array([50] * 5)
+    eos_batches = np.array([0, 0, 1, 0, 0])
+    print(lengths > 1)
+    print(((lengths > 1) & eos_batches))
+    update_idx = ((lengths > 1) & eos_batches) != 0
+    print(update_idx)
+    lengths[update_idx] = 2
+    print(lengths)
 
+    batch_size = 5
+    inputs = torch.LongTensor([0] * batch_size).view(batch_size, 1)
+    print(inputs)
+    decoder_input = inputs[:, 0].unsqueeze(1)
+    print(decoder_input)
 
 
 

@@ -62,7 +62,7 @@ if __name__ == "__main__":
     # sys.argv = ['train_crossent.py', '--cuda', '-l=../data/saves/crossent/pre_bleu_0.942_18.dat', '-n=rl']
 
     # Read optimized parameters from pre-training SEQ2SEQ.
-    sys.argv = ['train_crossent.py', '--cuda', '-l=../data/saves/crossent_even_1%/pre_bleu_0.943_30.dat', '-n=rl_even_1%']
+    sys.argv = ['train_crossent.py', '--cuda', '-l=../data/saves/crossent_even_1%/pre_bleu_0.786_02.dat', '-n=rl_even_1%']
 
     # # Read optimized parameters from pre-training RL.
     # sys.argv = ['train_crossent.py', '--cuda', '-l=../data/saves/rl_even_1%/bleu_0.995_03.dat', '-n=rl_even_1%']
@@ -80,7 +80,6 @@ if __name__ == "__main__":
 
     saves_path = os.path.join(SAVES_DIR, args.name)
     os.makedirs(saves_path, exist_ok=True)
-
 
     # phrase_pairs, emb_dict = data.load_data('comedy')
     # List of (seq1, [seq*]) pairs, the training pairs are in format of 1:N.
@@ -101,7 +100,7 @@ if __name__ == "__main__":
     rev_emb_dict = {idx: word for word, idx in emb_dict.items()}
     # PhraseModel.__init__() to establish a LSTM model.
     net = model.PhraseModel(emb_size=model.EMBEDDING_DIM, dict_size=len(emb_dict),
-                            hid_size=model.HIDDEN_STATE_SIZE).to(device)
+                            hid_size=model.HIDDEN_STATE_SIZE, LSTM_FLAG=True).to(device)
     # Using cuda.
     net.cuda()
     log.info("Model: %s", net)

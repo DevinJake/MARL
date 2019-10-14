@@ -10,6 +10,7 @@ simple: 2K, logical: 2K, quantitative: 2K, count: 1K, bool: 20, comp:40, compcou
 from itertools import islice
 import sys
 import json
+import os
 #Python codes to read the binary files.
 import numpy as np
 import random
@@ -31,14 +32,20 @@ special_characters = {'(',')','-','|','&'}
 
 # Get the training processDataset and test processDataset for seq2seq (one question to one action ).
 def getTrainingDatasetForPytorch(percentage):
-
-    path = '../../data/auto_QA_data/mask_even_' + percentage + '/PT_train.question'
+    # Create target directory & all intermediate directories if don't exists
+    dirName = '../../data/auto_QA_data/mask_even_' + percentage
+    if not os.path.exists(dirName):
+        os.makedirs(dirName)
+        print("Directory ", dirName, " Created ")
+    else:
+        print("Directory ", dirName, " already exists")
+    path = dirName + '/PT_train.question'
     fwTrainQ = open(path, 'w', encoding="UTF-8")
-    path = '../../data/auto_QA_data/mask_even_' + percentage + '/PT_train.action'
+    path = dirName + '/PT_train.action'
     fwTrainA = open(path, 'w', encoding="UTF-8")
-    path = '../../data/auto_QA_data/mask_even_' + percentage + '/PT_test.question'
+    path = dirName + '/PT_test.question'
     fwTestQ = open(path, 'w', encoding="UTF-8")
-    path = '../../data/auto_QA_data/mask_even_' + percentage + '/PT_test.action'
+    path = dirName + '/PT_test.action'
     fwTestA = open(path, 'w', encoding="UTF-8")
     with open("../../data/auto_QA_data/CSQA_ANNOTATIONS_full.json", 'r', encoding="UTF-8") as load_f:
         train_action_string_list, test_action_string_list, train_question_string_list, test_question_string_list = list(), list(), list(), list()
@@ -143,13 +150,20 @@ def getTrainingDatasetForPytorch(percentage):
 
 # Get the training processDataset and test processDataset for REINFORCE (one question to many actions).
 def getTrainingDatasetForRl(percentage):
-    path = '../../data/auto_QA_data/mask_even_' + percentage + '/RL_train.question'
+    # Create target directory & all intermediate directories if don't exists
+    dirName = '../../data/auto_QA_data/mask_even_' + percentage
+    if not os.path.exists(dirName):
+        os.makedirs(dirName)
+        print("Directory ", dirName, " Created ")
+    else:
+        print("Directory ", dirName, " already exists")
+    path = dirName + '/RL_train.question'
     fwTrainQ = open(path, 'w', encoding="UTF-8")
-    path = '../../data/auto_QA_data/mask_even_' + percentage + '/RL_train.action'
+    path = dirName + '/RL_train.action'
     fwTrainA = open(path, 'w', encoding="UTF-8")
-    path = '../../data/auto_QA_data/mask_even_' + percentage + '/RL_test.question'
+    path = dirName + '/RL_test.question'
     fwTestQ = open(path, 'w', encoding="UTF-8")
-    path = '../../data/auto_QA_data/mask_even_' + percentage + '/RL_test.action'
+    path = dirName + '/RL_test.action'
     fwTestA = open(path, 'w', encoding="UTF-8")
     # fwNoaction = open('../../data/auto_QA_data/mask_even/no_action_question.txt', 'w', encoding="UTF-8")
     no_action_question_list = list()
@@ -288,9 +302,16 @@ def getTrainingDatasetForRl(percentage):
 
 # Get the training processDataset and test processDataset for REINFORCE with True Reward (one question with one answer).
 def getTrainingDatasetForRlWithTrueReward(percentage, SIZE):
-    path = '../../data/auto_QA_data/mask_even_' + percentage + '/RL_train_TR.question'
+    # Create target directory & all intermediate directories if don't exists
+    dirName = '../../data/auto_QA_data/mask_even_' + percentage
+    if not os.path.exists(dirName):
+        os.makedirs(dirName)
+        print("Directory ", dirName, " Created ")
+    else:
+        print("Directory ", dirName, " already exists")
+    path = dirName + '/RL_train_TR.question'
     fwTrainQ = open(path, 'w', encoding="UTF-8")
-    path = '../../data/auto_QA_data/mask_even_' + percentage + '/RL_test_TR.question'
+    path = dirName + '/RL_test_TR.question'
     fwTestQ = open(path, 'w', encoding="UTF-8")
     with open("../../data/auto_QA_data/CSQA_DENOTATIONS_full.json", 'r', encoding="UTF-8") as load_f:
         dict_list = {}
@@ -347,13 +368,9 @@ def getTrainingDatasetForRlWithTrueReward(percentage, SIZE):
 # Vocabulary and FINAL_test files are same as the share.question and FINAL-related files used in mask processDataset.
 if __name__ == "__main__":
     # percentage represents how much samples (0.2% ~ 1.2%) are drawn from the whole training dataset.
-    percentage = '0.8%'
-    size = 1184
+    percentage = '1.6%'
+    size = 2366
     # size = 1479
     # getTrainingDatasetForPytorch(percentage)
     # getTrainingDatasetForRl(percentage)
     getTrainingDatasetForRlWithTrueReward(percentage, size)
-
-
-
-

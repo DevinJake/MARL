@@ -13,7 +13,7 @@ EMBEDDING_DIM = 50
 # nn.Module: Base class for all neural network modules.
 # Your models should also subclass this class.
 class PhraseModel(nn.Module):
-    def __init__(self, emb_size, dict_size, hid_size):
+    def __init__(self, emb_size, dict_size, hid_size, LSTM_FLAG):
         # Call __init__ function of PhraseModel's parent class (nn.Module).
         super(PhraseModel, self).__init__()
 
@@ -25,6 +25,13 @@ class PhraseModel(nn.Module):
         #                                               num_layers=2, batch_first=True)
 
         # LSTM
+        # Inputs of LSTM are: input, (h_0, c_0).
+        # In which input is (seq_len, batch, input_size): tensor containing the features of the input sequence.
+        # (h_0, c_0) is the initial hidden state and cell state for each element in the batch.
+        # Outputs of LSTM are: output, (h_n, c_n).
+        # In which output is (seq_len, batch, num_directions * hidden_size):
+        # tensor containing the output features (h_t) from the last layer of the LSTM, for each t.
+        # (h_n, c_n) is tensor containing the hidden state and cell state for t = seq_len in the batch.
         self.encoder = nn.LSTM(input_size=emb_size, hidden_size=hid_size,
                                num_layers=1, batch_first=True)
         self.decoder = nn.LSTM(input_size=emb_size, hidden_size=hid_size,
@@ -32,20 +39,31 @@ class PhraseModel(nn.Module):
         self.output = nn.Sequential(
             nn.Linear(hid_size, dict_size)
         )
+        self.lstm_flag = LSTM_FLAG
 
-    # hidden stat;
+    # hidden state;
+    # return hid: (h_n, c_n) is tensor containing the hidden state and cell state for t = seq_len.
     def encode(self, x):
-        # return Outputs: output, (h_n, c_n) for LSTM;
         _, hid = self.encoder(x)
         return hid
 
-    # TODO: change to get_encoded_item_RNN and get_encoded_item_LSTM
+    # Get each time step's hidden state for encoder;
+    # return outputs: output, (h_n, c_n) for LSTM;
+    # context is (seq_len, batch, num_directions * hidden_size):
+    # tensor containing the output features (h_t) from the last layer of the LSTM, for each t.
+    # hid is (h_n, c_n), which is tensor containing the hidden state and cell state for t = seq_len.
+    def encode_context(self, x):
+        context, hid = self.encoder(x)
+        return context, hid
+
     def get_encoded_item(self, encoded, index):
         # For RNN
-        # return encoded[:, index:index+1]
+        if not self.lstm_flag:
+           return encoded[:, index:index+1]
         # For LSTM
-        return encoded[0][:, index:index+1].contiguous(), \
-               encoded[1][:, index:index+1].contiguous()
+        if self.lstm_flag:
+            return encoded[0][:, index:index+1].contiguous(), \
+                   encoded[1][:, index:index+1].contiguous()
 
     def decode_teacher(self, hid, input_seq):
         # Method assumes batch of size=1

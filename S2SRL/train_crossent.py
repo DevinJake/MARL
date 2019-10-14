@@ -80,7 +80,7 @@ if __name__ == "__main__":
     log.info("Train set has %d phrases, test %d", len(train_data), len(test_data))
 
     net = model.PhraseModel(emb_size=model.EMBEDDING_DIM, dict_size=len(emb_dict),
-                            hid_size=model.HIDDEN_STATE_SIZE).to(device)
+                            hid_size=model.HIDDEN_STATE_SIZE, LSTM_FLAG=True).to(device)
     # 转到cuda
     net.cuda()
     log.info("Model: %s", net)
@@ -113,15 +113,16 @@ if __name__ == "__main__":
        device='cuda:0')'''
             input_seq, out_seq_list, _, out_idx = model.pack_batch(batch, net.emb, device)
             # net.encode calls nn.LSTM by which the forward function is called to run the neural network.
-            # enc is the last time step's hidden state of encoder.
+            # enc is a batch of last time step's hidden state outputted by encoder.
             enc = net.encode(input_seq)
 
             net_results = []
             net_targets = []
             for idx, out_seq in enumerate(out_seq_list):
                 ref_indices = out_idx[idx][1:]
+                # Get the last step's hidden state and cell state of encoder for the idx-th element in a batch.
                 enc_item = net.get_encoded_item(enc, idx)
-                # teacher forcing做训练；
+                # Using teacher forcing to train the model.
                 if random.random() < TEACHER_PROB:
                     r = net.decode_teacher(enc_item, out_seq)
                     blue_temp = model.seq_bleu(r, ref_indices)
