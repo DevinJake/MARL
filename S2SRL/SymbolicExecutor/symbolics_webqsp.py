@@ -77,6 +77,7 @@ class Symbolics_WebQSP():
     def executor(self):
         if len(self.seq) > 0:
             for symbolic in self.seq:
+                # print("current answer:", self.answer)
                 key = list(symbolic.keys())[0]
                 if len(symbolic[key]) != 3:
                     continue
@@ -97,6 +98,15 @@ class Symbolics_WebQSP():
                 elif ("A1_2" in symbolic):
                     try:
                         temp_result = self.select_str(e, r, t)
+                        self.answer = temp_result
+                        self.temp_bool_dict = temp_result
+                    except:
+                        print('ERROR! The action is Select(%s,%s,%s).' %(e,r,t))
+                    finally:
+                        self.print_answer()
+                elif ("A1_3" in symbolic):
+                    try:
+                        temp_result = self.select_e_str(e, r, t)
                         self.answer = temp_result
                         self.temp_bool_dict = temp_result
                     except:
@@ -224,14 +234,15 @@ class Symbolics_WebQSP():
                         self.print_answer()
                 elif ("A18_2" in symbolic):
                     try:
-                        self.answer = self.joint_str(e, r, t)
+                        self.answer.update(self.joint_str(e, r, t))
                     except:
                         print('ERROR! The action is joint_str(%s,%s,%s).' %(e,r,t))
                     finally:
                         self.print_answer()
                 elif ("A19" in symbolic):
                     try:
-                        self.answer = self.filter_answer(e, r, t)
+                        # ?x ns:a ns:b
+                        self.answer.update(self.filter_answer(e, r, t))
                     except:
                         print('ERROR! The action is filter_answer(%s,%s,%s).' %(e,r,t))
                     finally:
@@ -357,6 +368,33 @@ class Symbolics_WebQSP():
                 # A dict is returned whose key is the subject and whose value is set of entities.
                 return {t: content}
 
+    def select_e_str(self, e, r, t):
+        if e == "" or r == "" or t == "":
+            return {}
+        else:
+            content = set([])
+            try:
+                json_pack = dict()
+                json_pack['op'] = "execute_gen_set1"
+                json_pack['pre_type'] = [r, t]
+                jsonpost = json.dumps(json_pack)
+                # result_content = requests.post(post_url,json=json_pack)
+                # print(result_content)
+                content, content_result = requests.post(post_url, json=jsonpost).json()['content']
+                if content is not None and content_result == 0:
+                    content = set(content)
+            except:
+                print("ERROR for command: select(%s,%s,%s)" % (e, r, t))
+            finally:
+                if content is not None:
+                    # Store records in set.
+                    content = set(content)
+                else:
+                    content = set([])
+                # A dict is returned whose key is the subject and whose value is set of entities.
+                return {e: content}
+
+
     def select_max_as(self, e, r, t):
         if e == "" or t == "" or r != "":
             return {}
@@ -437,7 +475,7 @@ class Symbolics_WebQSP():
                         content = set(content)
                     else:
                         content = set([])
-                    intermediate_result = {e: content}
+                    intermediate_result = {t: content}
                 if '?' in e and t == '?x':
                     # print(e, self.answer[e])
                     json_pack = dict()
@@ -452,7 +490,7 @@ class Symbolics_WebQSP():
                         content = set(content)
                     else:
                         content = set([])
-                    intermediate_result = {e: content}
+                    intermediate_result = {t: content}
             except error:
                 print("ERROR for command: joint_str(%s,%s,%s)" % (e, r, t). error)
             finally:
@@ -621,6 +659,40 @@ class Symbolics_WebQSP():
             answer_dict.clear()
             answer_dict[union_key] = list(set(union_value))
             return answer_dict
+
+    # union set e to set t
+    def union2t(self, e, r, t):
+        #print("A9:", e, r, t)
+        if e == "" or t == "": return {}
+        if not e.startswith("Q"): return {}
+        answer_dict = self.answer
+        if type(answer_dict) == bool: return False
+        elif type(answer_dict) != dict: return {}
+        try:
+            if e in answer_dict and answer_dict[e]!=None:
+                temp_dict = self.select(e, r, t)
+                if e in temp_dict:
+                    answer_dict[e] = set(answer_dict[e]) | set(temp_dict[e])
+            else:
+                answer_dict.update(self.select(e, r, t))
+        except:
+            print("ERROR for command: union(%s,%s,%s)" % (e, r, t))
+        finally:
+            # 进行 union 操作
+            # todo 这里前面都和select部分一样 所以还是应该拆开？ union单独做 好处是union可以不止合并两个 字典里的都可以合并
+            union_key = "|"
+            union_value = set([])
+            for k, v in answer_dict.items():
+                if v == None: v = []
+                union_value = union_value | set(v)
+            answer_dict.clear()
+            answer_dict[union_key] = list(set(union_value))
+            return answer_dict
+
+    # equal, or equal
+    def filter_or_equal(self, e, r, t):
+        self.answer[e].add(t)
+        return self.answer[e]
 
     def count(self,e= None):
         #print("A11:Count")
@@ -834,9 +906,13 @@ def processSparql(sparql_str):
             note_index = untreated_str.find("#")
             if note_index != -1:
                 untreated_str = untreated_str[0:note_index]
-
             # remove /t
             untreated_str = untreated_str.replace("\t", "")
+            untreated_str = untreated_str.strip()
+
+            if "UNION" in untreated_str:
+                print ("has union")
+
             if untreated_str.startswith("SELECT"):  # find answer key
                 for item in untreated_str.split(" "):
                     if "?" in item:
@@ -864,8 +940,12 @@ def processSparql(sparql_str):
                 action_item = Action(action_type, s, r, t)
                 sparql_list.append(action_item)
             elif untreated_str.count("?") == 1 and untreated_str.startswith("?"):
-                # filter variable: find sub set fits the bill
+                # ?x ns:a ns:b
+
+                # if have e,  A19 : filter variable: find sub set fits the bill
+                # if don't have e, A1_3 :find e
                 action_type = "A19"
+
                 triple_list = untreated_str.split(" ")
                 if len(triple_list) == 4:
                     s = triple_list[0].replace("ns:", "")
@@ -1071,10 +1151,15 @@ if __name__ == "__main__":
     answer = symbolic_exe.executor()
     print("answer: ", answer)
 
-    seq = [{'A1_2': ['m.0m__z', 'travel.travel_destination.tourist_attractions', '?x']}, {'A20': ['?x', '', 'm.0m__z']}]
+    seq =[{'A1_2': ['m.04qwhs', 'government.election.campaigns', '?y']},
+          # {'A18_2': ['?y', 'government.election_campaign.candidate', '?x']},
+          # {'A20': ['?x', '', 'm.09b6zr']}
+          ]
+    # true_answer ['m.06q1r', 'm.0j5g9']
     symbolic_exe = Symbolics_WebQSP(seq)
     answer = symbolic_exe.executor()
-    print("answer: ", answer)
+
+    print("answer: 2 ", answer)
 
     # Load WebQuestions Semantic Parses
     WebQSPList = []
@@ -1085,29 +1170,29 @@ if __name__ == "__main__":
 
     errorlist = []
 
-    with open("WebQSP.train.json", "r", encoding='UTF-8') as webQaTrain:
-        with open("WebQSP.test.json", "r", encoding='UTF-8') as webQaTest:
-            load_dictTrain = json.load(webQaTrain)
-            load_dictTest = json.load(webQaTest)
-            mytrainquestions = load_dictTrain["Questions"]
-            print(len(mytrainquestions))
-            mytestquestions = load_dictTest["Questions"]
-            print(len(mytestquestions))
-            myquestions = mytrainquestions + mytestquestions
-            print(len(myquestions))
-            for q in myquestions:
-                question = q["ProcessedQuestion"]
-                # answer = q["Parses"][0]["Answers"][0]["AnswerArgument"]
-                Answers = []
-                id = q["QuestionId"]
-                answerList = q["Parses"][0]["Answers"]
-                for an in answerList:
-                    Answers.append(an['AnswerArgument'])
-                # print(answer)
-                sparql = q["Parses"][0]["Sparql"]
-                # print(sparql)
-                mypair = Qapair(question, Answers, sparql)
+    errorfile = "errorlist_small.json"
+    with open(errorfile, "r", encoding='UTF-8') as webQaTrain:
+        load_dictTrain = json.load(webQaTrain)
+        mytrainquestions = load_dictTrain
+        print(len(mytrainquestions))
+        myquestions = mytrainquestions
+        print(len(myquestions))
+        for q in myquestions:
+            question = q["ProcessedQuestion"]
+            # answer = q["Parses"][0]["Answers"][0]["AnswerArgument"]
+            Answers = []
+            id = q["QuestionId"]
+            answerList = q["Parses"][0]["Answers"]
+            for an in answerList:
+                Answers.append(an['AnswerArgument'])
+            # print(answer)
+            sparql = q["Parses"][0]["Sparql"]
+            # print(sparql)
+            mypair = Qapair(question, Answers, sparql)
 
+
+            if id == "WebQTrn-2408":
+            # if True:
                 # test seq
                 test_sparql = mypair.sparql
                 seq = processSparql(test_sparql)
@@ -1137,14 +1222,74 @@ if __name__ == "__main__":
                     # print('incorrect!')
 
                 WebQSPList.append(mypair)
+        print("%s correct", true_count)
+        print (errorlist)
+        # 写入转换后的json
+        jsondata = json.dumps(json_errorlist, indent=1)
+        fileObject = open('errorlist_small_2.json', 'w')
+        fileObject.write(jsondata)
+        fileObject.close()
 
-            print("%s correct", true_count)
-            print (errorlist)
-            # 写入转换后的json
-            jsondata = json.dumps(json_errorlist, indent=1)
-            fileObject = open('errorlist.json', 'w')
-            fileObject.write(jsondata)
-            fileObject.close()
+    # with open("WebQSP.train.json", "r", encoding='UTF-8') as webQaTrain:
+    #     with open("WebQSP.test.json", "r", encoding='UTF-8') as webQaTest:
+    #         load_dictTrain = json.load(webQaTrain)
+    #         load_dictTest = json.load(webQaTest)
+    #         mytrainquestions = load_dictTrain["Questions"]
+    #         print(len(mytrainquestions))
+    #         mytestquestions = load_dictTest["Questions"]
+    #         print(len(mytestquestions))
+    #         myquestions = mytrainquestions + mytestquestions
+    #         print(len(myquestions))
+    #         for q in myquestions:
+    #             question = q["ProcessedQuestion"]
+    #             # answer = q["Parses"][0]["Answers"][0]["AnswerArgument"]
+    #             Answers = []
+    #             id = q["QuestionId"]
+    #             answerList = q["Parses"][0]["Answers"]
+    #             for an in answerList:
+    #                 Answers.append(an['AnswerArgument'])
+    #             # print(answer)
+    #             sparql = q["Parses"][0]["Sparql"]
+    #             # print(sparql)
+    #             mypair = Qapair(question, Answers, sparql)
+    #
+    #             # test seq
+    #             test_sparql = mypair.sparql
+    #             seq = processSparql(test_sparql)
+    #             symbolic_exe = Symbolics_WebQSP(seq)
+    #             answer = symbolic_exe.executor()
+    #             # print("answer: ", answer)
+    #             true_answer = mypair.answer
+    #             # print("true_answer: ", true_answer)
+    #             # print(type(answer))
+    #             try:
+    #                 if compare(answer, true_answer):
+    #                     # print("correct!")
+    #                     true_count += 1
+    #                     WebQSPList_Correct.append(mypair)
+    #                 else:
+    #                     WebQSPList_Incorrect.append(mypair)
+    #                     print("answer", answer)
+    #                     print("seq", seq)
+    #                     print("true_answer", true_answer)
+    #                     print("id", id)
+    #                     errorlist.append(id)
+    #                     json_errorlist.append(q)
+    #                     print(" ")
+    #                     # print('incorrect!')
+    #             except:
+    #                 pass
+    #                 # print('incorrect!')
+    #
+    #             WebQSPList.append(mypair)
+    #
+    #         print("%s correct", true_count)
+    #         print (errorlist)
+    #         # 写入转换后的json
+    #         jsondata = json.dumps(json_errorlist, indent=1)
+    #         fileObject = open('errorlist.json', 'w')
+    #         fileObject.write(jsondata)
+    #         fileObject.close()
 
     # # test actions
     # true_count = 0
