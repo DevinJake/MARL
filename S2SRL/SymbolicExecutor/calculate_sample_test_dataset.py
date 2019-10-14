@@ -12,7 +12,8 @@ from symbolics import Symbolics
 from transform_util import transformBooleanToString, list2dict
 import logging
 log1 = logging.basicConfig(level=logging.INFO,#控制台打印的日志级别
-                    filename='../../data/auto_QA_data/test_result/1.0%_sample_testdataset_result_s2s.log',
+                    filename='../../data/auto_QA_data/test_result/1.0%_sample_test_result_TR.log',
+                    # filename='../../data/auto_QA_data/test_result/1.0%_full_test_result_TR.log',
                     filemode='w',##模式，有w和a，w就是写模式，每次都会重新写日志，覆盖之前的日志
                     #a是追加模式，默认如果不写的话，就是追加模式
                     format=
@@ -23,6 +24,8 @@ log1 = logging.basicConfig(level=logging.INFO,#控制台打印的日志级别
 def transMask2Action(state):
     with open("../../data/auto_QA_data/CSQA_ANNOTATIONS_test.json", 'r') as load_f, open("../../data/saves/crossent_even_1%/sample_final_predict.actions", 'r') as predict_actions \
             , open("../../data/auto_QA_data/mask_test/SAMPLE_FINAL_test.question", 'r') as RL_test:
+        # with open("../../data/auto_QA_data/CSQA_ANNOTATIONS_test.json", 'r') as load_f, open("../../data/saves/rl_even_TR_batch8_1%/final_predict.actions", 'r') as predict_actions \
+        #         , open("../../data/auto_QA_data/mask_test/FINAL_test.question", 'r') as RL_test:
         linelist = list()
         load_dict = json.load(load_f)
         num = 0
@@ -189,7 +192,8 @@ if __name__ == "__main__":
     # SimpleQuestion(Direct)
     # LogicalReasoning(All)
     linelist = list()
-    fw = open('../../data/auto_QA_data/test_result/1%_sample_testdataset_result_s2s.txt', 'w', encoding="UTF-8")
+    fw = open('../../data/auto_QA_data/test_result/1%_sample_test_result_s2s.txt', 'w', encoding="UTF-8")
+    # fw = open('../../data/auto_QA_data/test_result/1%_full_test_result_TR_batch8.txt', 'w', encoding="UTF-8")
     state_list = ["SimpleQuestion(Direct)","Verification(Boolean)(All)","QuantitativeReasoning(Count)(All)","QuantitativeReasoning(All)","ComparativeReasoning(Count)(All)","ComparativeReasoning(All)","LogicalReasoning(All)"]
     # state_list = ["Verification(Boolean)(All)"]
     for state in state_list:
