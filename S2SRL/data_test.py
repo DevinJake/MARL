@@ -7,7 +7,6 @@ import sys
 from libbots import data, model, utils
 
 import torch
-
 log = logging.getLogger("data_test")
 
 DIC_PATH = '../data/auto_QA_data/share.question'
@@ -18,8 +17,9 @@ if __name__ == "__main__":
     # # command line parameters for final test
     # sys.argv = ['data_test.py', '-m=bleu_0.984_09.dat', '-p=final', '--n=rl_even']
     # command line parameters for final test (subset data)
-    sys.argv = ['data_test.py', '-m=pre_bleu_0.946_55.dat', '-p=sample_final', '--n=crossent_even_1%', '--att=0', '--lstm=1']
-
+    # sys.argv = ['data_test.py', '-m=truereward_0.729_26.dat', '-p=sample_final', '--n=rl_even_TR_1.4%_batch8', '--att=0', '--lstm=1']
+    sys.argv = ['data_test.py', '-m=epoch_005_0.686_0.793.dat', '-p=sample_final', '--n=rl_even_true_1%',
+                '--att=0', '--lstm=1']
     parser = argparse.ArgumentParser()
     # parser.add_argument("--data", required=True,
     #                     help="Category to use for training. Empty string to train on full processDataset")
@@ -75,9 +75,10 @@ if __name__ == "__main__":
     for seq_1, targets in train_data:
         test_dataset_count += 1
         input_seq = model.pack_input(seq_1, net.emb)
-        enc = net.encode(input_seq)
+        # enc = net.encode(input_seq)
+        context, enc = net.encode_context(input_seq)
         _, tokens = net.decode_chain_argmax(enc, input_seq.data[0:1],
-                                            seq_len=data.MAX_TOKENS, stop_at_token=end_token)
+                                            seq_len=data.MAX_TOKENS, context=context[0], stop_at_token=end_token)
         references = [seq[1:] for seq in targets]
         # references = [seq[1:] if seq[1:] != '' else ['NONE'] for seq in targets]
         token_string, reference_string = '', ''
