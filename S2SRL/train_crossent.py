@@ -33,21 +33,22 @@ def run_test(test_data, net, end_token, device="cuda"):
     bleu_count = 0
     for p1, p2 in test_data:
         input_seq = model.pack_input(p1, net.emb, device)
-        enc = net.encode(input_seq)
+        # enc = net.encode(input_seq)
+        context, enc = net.encode_context(input_seq)
         # Return logits (N*outputvocab), res_tokens (1*N)
         _, tokens = net.decode_chain_argmax(enc, input_seq.data[0:1],
                                             seq_len=data.MAX_TOKENS,
+                                            context = context[0],
                                             stop_at_token=end_token)
         bleu_sum += utils.calc_bleu(tokens, p2[1:])
         bleu_count += 1
     return bleu_sum / bleu_count
 
-
 if __name__ == "__main__":
     logging.basicConfig(format="%(asctime)-15s %(levelname)s %(message)s", level=logging.INFO)
 
     # command line parameters
-    sys.argv = ['train_crossent.py', '--cuda', '--n=crossent_even_1%']
+    sys.argv = ['train_crossent.py', '--cuda', '--n=1crossent_even_1%', '--att=0', '--lstm=1']
 
     parser = argparse.ArgumentParser()
     # parser.add_argument("--data", required=True, help="Category to use for training. "
@@ -55,6 +56,12 @@ if __name__ == "__main__":
     parser.add_argument("--cuda", action='store_true', default=False,
                         help="Enable cuda")
     parser.add_argument("-n", "--name", required=True, help="Name of the run")
+    # Choose the function to compute reward (0-1 or adaptive reward).
+    # If a = true, 1 or yes, the adaptive reward is used. Otherwise 0-1 reward is used.
+    parser.add_argument("--att", type=lambda x: (str(x).lower() in ['true', '1', 'yes']),
+                        help="Using attention mechanism in seq2seq")
+    parser.add_argument("--lstm", type=lambda x: (str(x).lower() in ['true', '1', 'yes']),
+                        help="Using LSTM mechanism in seq2seq")
     args = parser.parse_args()
     device = torch.device("cuda" if args.cuda else "cpu")
     log.info("Device info: %s", str(device))
@@ -78,9 +85,16 @@ if __name__ == "__main__":
     log.info("Training data converted, got %d samples", len(train_data))
     train_data, test_data = data.split_train_test(train_data)
     log.info("Train set has %d phrases, test %d", len(train_data), len(test_data))
-
+    if (args.att):
+        log.info("Using attention mechanism to train the SEQ2SEQ model...")
+    else:
+        log.info("Train the SEQ2SEQ model without attention mechanism...")
+    if (args.lstm):
+        log.info("Using LSTM mechanism to train the SEQ2SEQ model...")
+    else:
+        log.info("Using RNN mechanism to train the SEQ2SEQ model...")
     net = model.PhraseModel(emb_size=model.EMBEDDING_DIM, dict_size=len(emb_dict),
-                            hid_size=model.HIDDEN_STATE_SIZE, LSTM_FLAG=True).to(device)
+                            hid_size=model.HIDDEN_STATE_SIZE, LSTM_FLAG=args.lstm, ATT_FLAG=args.att).to(device)
     # 转到cuda
     net.cuda()
     log.info("Model: %s", net)
@@ -114,7 +128,8 @@ if __name__ == "__main__":
             input_seq, out_seq_list, _, out_idx = model.pack_batch(batch, net.emb, device)
             # net.encode calls nn.LSTM by which the forward function is called to run the neural network.
             # enc is a batch of last time step's hidden state outputted by encoder.
-            enc = net.encode(input_seq)
+            # enc = net.encode(input_seq)
+            context, enc = net.encode_context(input_seq)
 
             net_results = []
             net_targets = []
@@ -124,7 +139,8 @@ if __name__ == "__main__":
                 enc_item = net.get_encoded_item(enc, idx)
                 # Using teacher forcing to train the model.
                 if random.random() < TEACHER_PROB:
-                    r = net.decode_teacher(enc_item, out_seq)
+                    context_temp = context[idx]
+                    r = net.decode_teacher(enc_item, out_seq, context[idx])
                     blue_temp = model.seq_bleu(r, ref_indices)
                     bleu_sum += blue_temp
                     # Get predicted tokens.
@@ -133,7 +149,7 @@ if __name__ == "__main__":
                 # argmax做训练；
                 else:
                     r, seq = net.decode_chain_argmax(enc_item, out_seq.data[0:1],
-                                                     len(ref_indices))
+                                                     len(ref_indices), context[idx])
                     blue_temp = utils.calc_bleu(seq, ref_indices)
                     bleu_sum += blue_temp
                 net_results.append(r)

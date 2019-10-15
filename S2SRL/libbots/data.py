@@ -136,7 +136,7 @@ def iterate_batches(data, batch_size):
     ofs = 0
     while True:
         batch = data[ofs*batch_size:(ofs+1)*batch_size]
-        # STAR: Why can not the length of a batch be one?
+        # STAR: Why the length of a batch can not be one?
         # if len(batch) <= 1:
         if len(batch) < 1:
             break

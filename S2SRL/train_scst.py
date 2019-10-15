@@ -38,11 +38,12 @@ def run_test(test_data, net, end_token, device="cuda"):
         # Transform sentence to padded embeddings.
         input_seq = model.pack_input(p1, net.emb, device)
         # Get hidden states from encoder.
-        enc = net.encode(input_seq)
+        # enc = net.encode(input_seq)
+        context, enc = net.encode_context(input_seq)
         # Decode sequence by feeding predicted token to the net again. Act greedily.
         # Return N*outputvocab, N output token indices.
         _, tokens = net.decode_chain_argmax(enc, input_seq.data[0:1], seq_len=data.MAX_TOKENS,
-                                            stop_at_token=end_token)
+                                            context = context[0], stop_at_token=end_token)
         ref_indices = [
             # Remove #BEG from sentence.
             indices[1:]
@@ -62,7 +63,7 @@ if __name__ == "__main__":
     # sys.argv = ['train_crossent.py', '--cuda', '-l=../data/saves/crossent/pre_bleu_0.942_18.dat', '-n=rl']
 
     # Read optimized parameters from pre-training SEQ2SEQ.
-    sys.argv = ['train_crossent.py', '--cuda', '-l=../data/saves/crossent_even_1%/pre_bleu_0.786_02.dat', '-n=rl_even_1%']
+    sys.argv = ['train_crossent.py', '--cuda', '-l=../data/saves/1crossent_even_1%/pre_bleu_0.786_02.dat', '-n=1rl_even_1%', '--att=0', '--lstm=1']
 
     # # Read optimized parameters from pre-training RL.
     # sys.argv = ['train_crossent.py', '--cuda', '-l=../data/saves/rl_even_1%/bleu_0.995_03.dat', '-n=rl_even_1%']
@@ -74,6 +75,12 @@ if __name__ == "__main__":
     # Number of decoding samples.
     parser.add_argument("--samples", type=int, default=4, help="Count of samples in prob mode")
     parser.add_argument("--disable-skip", default=False, action='store_true', help="Disable skipping of samples with high argmax BLEU")
+    # Choose the function to compute reward (0-1 or adaptive reward).
+    # If a = true, 1 or yes, the adaptive reward is used. Otherwise 0-1 reward is used.
+    parser.add_argument("--att", type=lambda x: (str(x).lower() in ['true', '1', 'yes']),
+                        help="Using attention mechanism in seq2seq")
+    parser.add_argument("--lstm", type=lambda x: (str(x).lower() in ['true', '1', 'yes']),
+                        help="Using LSTM mechanism in seq2seq")
     args = parser.parse_args()
     device = torch.device("cuda" if args.cuda else "cpu")
     log.info("Device info: %s", str(device))
@@ -95,12 +102,20 @@ if __name__ == "__main__":
     train_data, test_data = data.split_train_test(train_data, TRAIN_RATIO)
     log.info("Training data converted, got %d samples", len(train_data))
     log.info("Train set has %d phrases, test %d", len(train_data), len(test_data))
+    if (args.att):
+        log.info("Using attention mechanism to train the SEQ2SEQ model...")
+    else:
+        log.info("Train the SEQ2SEQ model without attention mechanism...")
+    if (args.lstm):
+        log.info("Using LSTM mechanism to train the SEQ2SEQ model...")
+    else:
+        log.info("Using RNN mechanism to train the SEQ2SEQ model...")
 
     # Index -> word.
     rev_emb_dict = {idx: word for word, idx in emb_dict.items()}
     # PhraseModel.__init__() to establish a LSTM model.
     net = model.PhraseModel(emb_size=model.EMBEDDING_DIM, dict_size=len(emb_dict),
-                            hid_size=model.HIDDEN_STATE_SIZE, LSTM_FLAG=True).to(device)
+                            hid_size=model.HIDDEN_STATE_SIZE, LSTM_FLAG=args.lstm, ATT_FLAG=args.att).to(device)
     # Using cuda.
     net.cuda()
     log.info("Model: %s", net)
@@ -143,7 +158,8 @@ if __name__ == "__main__":
                 input_seq, input_batch, output_batch = model.pack_batch_no_out(batch, net.emb, device)
                 input_seq = input_seq.cuda()
                 # Get (two-layer) hidden state of encoder of samples in batch.
-                enc = net.encode(input_seq)
+                # enc = net.encode(input_seq)
+                context, enc = net.encode_context(input_seq)
 
                 net_policies = []
                 net_actions = []
@@ -164,7 +180,7 @@ if __name__ == "__main__":
                     # 'r_argmax' is the list of out_logits list and 'actions' is the list of output tokens.
                     # The output tokens are generated greedily by using chain_argmax (using last setp's output token as current input token).
                     r_argmax, actions = net.decode_chain_argmax(item_enc, beg_embedding, data.MAX_TOKENS,
-                                                                stop_at_token=end_token)
+                                                                context[idx], stop_at_token=end_token)
                     # Get the highest BLEU score as baseline used in self-critic.
                     argmax_bleu = utils.calc_bleu_many(actions, ref_indices)
                     bleus_argmax.append(argmax_bleu)
@@ -187,13 +203,11 @@ if __name__ == "__main__":
                     for _ in range(args.samples):
                         # 'r_sample' is the list of out_logits list and 'actions' is the list of output tokens.
                         # The output tokens are sampled following probabilitis by using chain_sampling.
-                        r_sample, actions = net.decode_chain_sampling(item_enc, beg_embedding,
-                                                                      data.MAX_TOKENS, stop_at_token=end_token)
+                        r_sample, actions = net.decode_chain_sampling(item_enc, beg_embedding, data.MAX_TOKENS, context[idx], stop_at_token=end_token)
                         sample_bleu = utils.calc_bleu_many(actions, ref_indices)
 
                         if not dial_shown:
-                            log.info("Sample: %s, bleu=%.4f", utils.untokenize(data.decode_words(actions, rev_emb_dict)),
-                                     sample_bleu)
+                            log.info("Sample: %s, bleu=%.4f", utils.untokenize(data.decode_words(actions, rev_emb_dict)), sample_bleu)
 
                         net_policies.append(r_sample)
                         net_actions.extend(actions)
