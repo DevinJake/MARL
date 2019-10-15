@@ -62,22 +62,22 @@ def load_wikidata_dict(wikidata_dir):
 def load_wikidata(wikidata_dir):
     with codecs.open(wikidata_dir + '/wikidata_short_1.json', 'r', 'utf-8') as data_file:
         wikidata = json.load(data_file)
-    print 'Successfully loaded wikidata_1'
+    print('Successfully loaded wikidata_1')
 
     with codecs.open(wikidata_dir + '/wikidata_short_2.json', 'r', 'utf-8') as data_file:
         wikidata2 = json.load(data_file)
-    print 'Successfully loaded wikidata2'
+    print('Successfully loaded wikidata2')
 
     wikidata.update(wikidata2)
     del wikidata2
 
     with codecs.open(wikidata_dir + '/items_wikidata_n.json', 'r', 'utf-8') as data_file:
         item_data = json.load(data_file)
-    print 'Successfully loaded items json'
+    print('Successfully loaded items json')
 
     with codecs.open(wikidata_dir + '/comp_wikidata_rev.json', 'r', 'utf-8') as data_file:
         reverse_dict = json.load(data_file)
-    print 'Successfully loaded reverse_dict json'
+    print('Successfully loaded reverse_dict json')
     wikidata.update(reverse_dict)
     del reverse_dict
     # with codecs.open(wikidata_dir + '/wikidata_fanout_dict.json', 'r', 'utf-8') as data_file:
@@ -86,7 +86,7 @@ def load_wikidata(wikidata_dir):
 
     with codecs.open(wikidata_dir + '/child_par_dict_save.json', 'r', 'utf-8') as data_file:
         child_par_dict = json.load(data_file)
-    print 'Successfully loaded child_par_dict json'
+    print('Successfully loaded child_par_dict json')
 
     # with codecs.open(wikidata_dir + '/child_all_parents_till_5_levels.json', 'r', 'utf-8') as data_file:
     #     child_all_parents_dict = json.load(data_file)
