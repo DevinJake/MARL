@@ -18,7 +18,7 @@ if __name__ == "__main__":
     # # command line parameters for final test
     # sys.argv = ['data_test.py', '-m=bleu_0.984_09.dat', '-p=final', '--n=rl_even']
     # command line parameters for final test (subset data)
-    sys.argv = ['data_test.py', '-m=pre_bleu_0.946_55.dat', '-p=sample_final', '--n=crossent_even_1%']
+    sys.argv = ['data_test.py', '-m=pre_bleu_0.946_55.dat', '-p=sample_final', '--n=crossent_even_1%', '--att=0', '--lstm=1']
 
     parser = argparse.ArgumentParser()
     # parser.add_argument("--data", required=True,
@@ -27,6 +27,12 @@ if __name__ == "__main__":
     parser.add_argument("-p", "--pred", required=True, help="the test processDataset format, " \
                                                             "py is one-to-one (one sentence with one reference), rl is one-to-many")
     parser.add_argument("-n", "--name", required=True, help="Name of the run")
+    # Choose the function to compute reward (0-1 or adaptive reward).
+    # If a = true, 1 or yes, the adaptive reward is used. Otherwise 0-1 reward is used.
+    parser.add_argument("--att", type=lambda x: (str(x).lower() in ['true', '1', 'yes']),
+                        help="Using attention mechanism in seq2seq")
+    parser.add_argument("--lstm", type=lambda x: (str(x).lower() in ['true', '1', 'yes']),
+                        help="Using LSTM mechanism in seq2seq")
     args = parser.parse_args()
 
     PREDICT_PATH = '../data/saves/' + str(args.name) + '/' + str(args.pred) + '_predict.actions'
@@ -51,7 +57,8 @@ if __name__ == "__main__":
         train_data = data.group_train_data_one_to_one(train_data)
     rev_emb_dict = {idx: word for word, idx in emb_dict.items()}
 
-    net = model.PhraseModel(emb_size=model.EMBEDDING_DIM, dict_size=len(emb_dict), hid_size=model.HIDDEN_STATE_SIZE)
+    net = model.PhraseModel(emb_size=model.EMBEDDING_DIM, dict_size=len(emb_dict), hid_size=model.HIDDEN_STATE_SIZE,
+                            LSTM_FLAG=args.lstm, ATT_FLAG=args.att)
     net = net.cuda()
     model_path = '../data/saves/' + str(args.name) + '/' + str(args.model)
     net.load_state_dict((torch.load(model_path)))
