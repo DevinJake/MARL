@@ -6,6 +6,7 @@ import torch.nn.utils.rnn as rnn_utils
 import torch.nn.functional as F
 
 from . import utils
+from . import attention
 
 HIDDEN_STATE_SIZE = 128
 EMBEDDING_DIM = 50
@@ -13,7 +14,7 @@ EMBEDDING_DIM = 50
 # nn.Module: Base class for all neural network modules.
 # Your models should also subclass this class.
 class PhraseModel(nn.Module):
-    def __init__(self, emb_size, dict_size, hid_size, LSTM_FLAG):
+    def __init__(self, emb_size, dict_size, hid_size, LSTM_FLAG, ATT_FLAG):
         # Call __init__ function of PhraseModel's parent class (nn.Module).
         super(PhraseModel, self).__init__()
 
@@ -40,6 +41,9 @@ class PhraseModel(nn.Module):
             nn.Linear(hid_size, dict_size)
         )
         self.lstm_flag = LSTM_FLAG
+        self.attention_flag = ATT_FLAG
+        if(self.attention_flag):
+            self.attention = attention.Attention(hid_size)
 
     # hidden state;
     # return hid: (h_n, c_n) is tensor containing the hidden state and cell state for t = seq_len.
@@ -53,8 +57,11 @@ class PhraseModel(nn.Module):
     # tensor containing the output features (h_t) from the last layer of the LSTM, for each t.
     # hid is (h_n, c_n), which is tensor containing the hidden state and cell state for t = seq_len.
     def encode_context(self, x):
-        context, hid = self.encoder(x)
-        return context, hid
+        packed_context, hid = self.encoder(x)
+        # It is an inverse operation to :func:`pack_padded_sequence`.
+        # Unpack your output if required.
+        unpack_context, input_sizes = rnn_utils.pad_packed_sequence(packed_context, batch_first=True)
+        return unpack_context, hid
 
     def get_encoded_item(self, encoded, index):
         # For RNN
@@ -65,13 +72,15 @@ class PhraseModel(nn.Module):
             return encoded[0][:, index:index+1].contiguous(), \
                    encoded[1][:, index:index+1].contiguous()
 
-    def decode_teacher(self, hid, input_seq):
+    def decode_teacher(self, hid, input_seq, context):
         # Method assumes batch of size=1
         out, _ = self.decoder(input_seq, hid)
+        if (self.attention_flag):
+            out, attn = self.attention(out, context)
         out = self.output(out.data)
         return out
 
-    def decode_one(self, hid, input_x):
+    def decode_one(self, hid, input_x, context):
         # Example for unsqueeze:
         #             >>> x = torch.tensor([1, 2, 3, 4])
         #             >>> torch.unsqueeze(x, 0)
@@ -82,12 +91,14 @@ class PhraseModel(nn.Module):
         #                     [ 3],
         #                     [ 4]])
         out, new_hid = self.decoder(input_x.unsqueeze(0), hid)
+        if (self.attention_flag):
+            out, attn = self.attention(out, context)
         # Self.output(out) using nn.Linear(hid_size, dict_size) to transform logits to distribution over output vocab.
         out = self.output(out)
         # squeeze: Returns a tensor with all the dimensions of :attr:`input` of size `1` removed.
         return out.squeeze(dim=0), new_hid
 
-    def decode_chain_argmax(self, hid, begin_emb, seq_len, stop_at_token=None):
+    def decode_chain_argmax(self, hid, begin_emb, seq_len, context, stop_at_token=None):
         """
         Decode sequence by feeding predicted token to the net again. Act greedily
         """
@@ -101,7 +112,7 @@ class PhraseModel(nn.Module):
         for _ in range(seq_len):
             # The out_logits is the distribution over whole output vocabulary.
             # The hid is new hidden state generated from current time step.
-            out_logits, hid = self.decode_one(hid, cur_emb)
+            out_logits, hid = self.decode_one(hid, cur_emb, context)
             # After torch.max operation, the result is a list.
             # First element is the largest logit value in dimension-1 (each row), the second value is the index of the largest logit value.
             # >>> a = torch.randn(4, 4)
@@ -147,7 +158,7 @@ class PhraseModel(nn.Module):
         # Concatenate follow rows.
         return torch.cat(res_logits), res_tokens
 
-    def decode_chain_sampling(self, hid, begin_emb, seq_len, stop_at_token=None):
+    def decode_chain_sampling(self, hid, begin_emb, seq_len, context, stop_at_token=None):
         """
         Decode sequence by feeding predicted token to the net again.
         Act according to probabilities
@@ -157,7 +168,7 @@ class PhraseModel(nn.Module):
         cur_emb = begin_emb
 
         for _ in range(seq_len):
-            out_logits, hid = self.decode_one(hid, cur_emb)
+            out_logits, hid = self.decode_one(hid, cur_emb, context)
             # Using softmax to transform logits to probabilities.
             out_probs_v = F.softmax(out_logits, dim=1)
             out_probs = out_probs_v.data.cpu().numpy()[0]

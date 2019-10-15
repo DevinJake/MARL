@@ -17,7 +17,7 @@ import ptan
 
 SAVES_DIR = "../data/saves"
 
-BATCH_SIZE = 16
+BATCH_SIZE = 8
 LEARNING_RATE = 1e-4
 MAX_EPOCHES = 30
 MAX_TOKENS = 40
@@ -25,7 +25,7 @@ TRAIN_RATIO = 0.985
 GAMMA = 0.05
 
 DIC_PATH = '../data/auto_QA_data/share.question'
-TRAIN_QUESTION_ANSWER_PATH = '../data/auto_QA_data/mask_even_1.0%/RL_train_TR_sub.question'
+TRAIN_QUESTION_ANSWER_PATH = '../data/auto_QA_data/mask_even_1.0%/RL_train_TR.question'
 log = logging.getLogger("train")
 
 
@@ -38,10 +38,11 @@ def run_test(test_data, net, rev_emb_dict, end_token, device="cuda"):
         # Transform sentence to padded embeddings.
         input_seq = model.pack_input(p1, net.emb, device)
         # Get hidden states from encoder.
-        enc = net.encode(input_seq)
+        # enc = net.encode(input_seq)
+        context, enc = net.encode_context(input_seq)
         # Decode sequence by feeding predicted token to the net again. Act greedily.
         # Return N*outputvocab, N output token indices.
-        _, tokens = net.decode_chain_argmax(enc, net.emb(beg_token), seq_len=data.MAX_TOKENS, stop_at_token=end_token)
+        _, tokens = net.decode_chain_argmax(enc, net.emb(beg_token), seq_len=data.MAX_TOKENS, context = context[0], stop_at_token=end_token)
         # Show what the output action sequence is.
         action_tokens = []
         for temp_idx in tokens:
@@ -56,20 +57,25 @@ if __name__ == "__main__":
     logging.basicConfig(format="%(asctime)-15s %(levelname)s %(message)s", level=logging.INFO)
     # # command line parameters
     # # -a=True means using adaptive reward to train the model. -a=False is using 0-1 reward.
-    sys.argv = ['train_scst_true_reward.py', '--cuda', '-l=../data/saves/crossent_even_1%/pre_bleu_0.786_02.dat', '-n=rl_even_adaptive_1%', '-s=5', '-a=0']
-
+    sys.argv = ['train_scst_true_reward.py', '--cuda', '-l=../data/saves/1crossent_even_1%/pre_bleu_0.786_02.dat', '-n=1rl_even_TR_1%_batch8', '-s=5', '-a=0', '--att=0', '--lstm=1']
     # sys.argv = ['train_scst_true_reward.py', '--cuda', '-l=../data/saves/crossent_even_1%/pre_bleu_0.946_55.dat', '-n=rl_even_true_1%', '-s=5']
     parser = argparse.ArgumentParser()
     # parser.add_argument("--data", required=True, help="Category to use for training. Empty string to train on full processDataset")
     parser.add_argument("--cuda", action='store_true', default=False, help="Enable cuda")
     parser.add_argument("-n", "--name", required=True, help="Name of the run")
     parser.add_argument("-l", "--load", required=True, help="Load the pre-trained model whereby continue training the RL mode")
-    # # Number of decoding samples.
+    # Number of decoding samples.
     parser.add_argument("-s", "--samples", type=int, default=4, help="Count of samples in prob mode")
-    # # Choose the function to compute reward (0-1 or adaptive reward).
-    # # If a = true, 1 or yes, the adaptive reward is used. Otherwise 0-1 reward is used.
+    # Choose the function to compute reward (0-1 or adaptive reward).
+    # If a = true, 1 or yes, the adaptive reward is used. Otherwise 0-1 reward is used.
     parser.add_argument("-a", "--adaptive", type=lambda x: (str(x).lower() in ['true', '1', 'yes']), help="0-1 or adaptive reward")
     parser.add_argument("--disable-skip", default=False, action='store_true', help="Disable skipping of samples with high argmax BLEU")
+    # Choose the function to compute reward (0-1 or adaptive reward).
+    # If a = true, 1 or yes, the adaptive reward is used. Otherwise 0-1 reward is used.
+    parser.add_argument("--att", type=lambda x: (str(x).lower() in ['true', '1', 'yes']),
+                        help="Using attention mechanism in seq2seq")
+    parser.add_argument("--lstm", type=lambda x: (str(x).lower() in ['true', '1', 'yes']),
+                        help="Using LSTM mechanism in seq2seq")
     args = parser.parse_args()
     device = torch.device("cuda" if args.cuda else "cpu")
     log.info("Device info: %s", str(device))
@@ -92,11 +98,19 @@ if __name__ == "__main__":
     log.info("Training data converted, got %d samples", len(train_data))
     log.info("Train set has %d phrases, test %d", len(train_data), len(test_data))
     log.info("Batch size is %d", BATCH_SIZE)
+    if (args.att):
+        log.info("Using attention mechanism to train the SEQ2SEQ model...")
+    else:
+        log.info("Train the SEQ2SEQ model without attention mechanism...")
+    if (args.lstm):
+        log.info("Using LSTM mechanism to train the SEQ2SEQ model...")
+    else:
+        log.info("Using RNN mechanism to train the SEQ2SEQ model...")
 
     # Index -> word.
     rev_emb_dict = {idx: word for word, idx in emb_dict.items()}
     # PhraseModel.__init__() to establish a LSTM model.
-    net = model.PhraseModel(emb_size=model.EMBEDDING_DIM, dict_size=len(emb_dict), hid_size=model.HIDDEN_STATE_SIZE, LSTM_FLAG=True).to(device)
+    net = model.PhraseModel(emb_size=model.EMBEDDING_DIM, dict_size=len(emb_dict), hid_size=model.HIDDEN_STATE_SIZE, LSTM_FLAG=args.lstm, ATT_FLAG=args.att).to(device)
     # Using cuda.
     net.cuda()
     log.info("Model: %s", net)
@@ -145,7 +159,8 @@ if __name__ == "__main__":
                 input_seq, input_batch, output_batch = model.pack_batch_no_out(batch, net.emb, device)
                 input_seq = input_seq.cuda()
                 # Get (two-layer) hidden state of encoder of samples in batch.
-                enc = net.encode(input_seq)
+                # enc = net.encode(input_seq)
+                context, enc = net.encode_context(input_seq)
 
                 net_policies = []
                 net_actions = []
@@ -166,8 +181,7 @@ if __name__ == "__main__":
                     item_enc = net.get_encoded_item(enc, idx)
                     # # 'r_argmax' is the list of out_logits list and 'actions' is the list of output tokens.
                     # # The output tokens are generated greedily by using chain_argmax (using last setp's output token as current input token).
-                    r_argmax, actions = net.decode_chain_argmax(item_enc, beg_embedding, data.MAX_TOKENS,
-                                                                stop_at_token=end_token)
+                    r_argmax, actions = net.decode_chain_argmax(item_enc, beg_embedding, data.MAX_TOKENS, context[idx], stop_at_token=end_token)
                     # Show what the output action sequence is.
                     action_tokens = []
                     for temp_idx in actions:
@@ -199,8 +213,7 @@ if __name__ == "__main__":
                     for _ in range(args.samples):
                         # 'r_sample' is the list of out_logits list and 'actions' is the list of output tokens.
                         # The output tokens are sampled following probabilitis by using chain_sampling.
-                        r_sample, actions = net.decode_chain_sampling(item_enc, beg_embedding,
-                                                                      data.MAX_TOKENS, stop_at_token=end_token)
+                        r_sample, actions = net.decode_chain_sampling(item_enc, beg_embedding, data.MAX_TOKENS, context[idx], stop_at_token=end_token)
                         total_samples += 1
 
                         # Omit duplicate action sequence to decrease the computing time and to avoid the case that
