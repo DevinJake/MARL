@@ -74,7 +74,6 @@ class PhraseModel(nn.Module):
 
     def decode_teacher(self, hid, input_seq, context):
         # Method assumes batch of size=1
-        packed_out = None
         out, _ = self.decoder(input_seq, hid)
         if (self.attention_flag):
             out, attn = self.attention(out, context)
