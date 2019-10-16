@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import torch.nn.utils.rnn as rnn_utils
+import numpy as np
 
 
 class Attention(nn.Module):
@@ -51,20 +53,25 @@ class Attention(nn.Module):
         self.mask = mask
 
     def forward(self, output, context):
-        batch_size = output.size(0)
-        hidden_size = output.size(2)
-        input_size = context.size(1)
+        unpack_output, _ = rnn_utils.pad_packed_sequence(output, batch_first=True)
+        batch_size = unpack_output.size(0)
+        hidden_size = unpack_output.size(2)
+        context_trans = context.view(1, -1, context.size(1))
+        input_size = context_trans.size(1)
+        # for idx1, temp1 in enumerate(unpack_output[0]):
+        #     for idx, temp in enumerate(context_trans[0]):
+        #         print('o'+str(idx1)+',c'+str(idx)+': '+str(torch.dot(temp1, temp)))
         # (batch, out_len, dim) * (batch, in_len, dim) -> (batch, out_len, in_len)
-        attn = torch.bmm(output, context.transpose(1, 2))
+        attn = torch.bmm(unpack_output, context_trans.transpose(1, 2))
         if self.mask is not None:
             attn.data.masked_fill_(self.mask, -float('inf'))
         attn = F.softmax(attn.view(-1, input_size), dim=1).view(batch_size, -1, input_size)
-
         # (batch, out_len, in_len) * (batch, in_len, dim) -> (batch, out_len, dim)
-        mix = torch.bmm(attn, context)
-
+        mix = torch.bmm(attn, context_trans)
         # concat -> (batch, out_len, 2*dim)
-        combined = torch.cat((mix, output), dim=2)
+        combined = torch.cat((mix, unpack_output), dim=2)
         # output -> (batch, out_len, dim)
-        output = F.tanh(self.linear_out(combined.view(-1, 2 * hidden_size))).view(batch_size, -1, hidden_size)
-        return output, attn
+        output_result = torch.tanh(self.linear_out(combined.view(-1, 2 * hidden_size))).view(-1, hidden_size)
+        # Transform result into PackedSequence format.
+        packed_output_result = rnn_utils.PackedSequence(output_result, output.batch_sizes.detach())
+        return packed_output_result, attn

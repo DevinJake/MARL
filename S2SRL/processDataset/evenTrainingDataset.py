@@ -368,8 +368,8 @@ def getTrainingDatasetForRlWithTrueReward(percentage, SIZE):
 # Vocabulary and FINAL_test files are same as the share.question and FINAL-related files used in mask processDataset.
 if __name__ == "__main__":
     # percentage represents how much samples (0.2% ~ 1.2%) are drawn from the whole training dataset.
-    percentage = '1.6%'
-    size = 2366
+    percentage = '2%'
+    size = 2958
     # size = 1479
     # getTrainingDatasetForPytorch(percentage)
     # getTrainingDatasetForRl(percentage)
