@@ -48,7 +48,7 @@ if __name__ == "__main__":
     logging.basicConfig(format="%(asctime)-15s %(levelname)s %(message)s", level=logging.INFO)
 
     # command line parameters
-    sys.argv = ['train_crossent.py', '--cuda', '--n=crossent_even_att_1%', '--att=1', '--lstm=1']
+    sys.argv = ['train_crossent.py', '--cuda', '--n=crossent_even_1%_att=1', '--att=1', '--lstm=1']
 
     parser = argparse.ArgumentParser()
     # parser.add_argument("--data", required=True, help="Category to use for training. "
