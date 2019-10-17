@@ -51,7 +51,13 @@ class Attention(nn.Module):
         self.mask = mask
 
     def forward(self, output, context):
-        unpack_output, _ = rnn_utils.pad_packed_sequence(output, batch_first=True)
+        # The idiomatic way to perform an explicit typecheck in Python is to use isinstance(x, Y) rather than type(x) == Y, type(x) is Y.
+        # Though there are unusual situations where these give different results.
+        # To check whether the output is type of PackedSequence.
+        if(isinstance(output, rnn_utils.PackedSequence)):
+            unpack_output, _ = rnn_utils.pad_packed_sequence(output, batch_first=True)
+        else:
+            unpack_output = output
         batch_size = unpack_output.size(0)
         hidden_size = unpack_output.size(2)
         context_trans = context.view(1, -1, context.size(1))
@@ -71,5 +77,5 @@ class Attention(nn.Module):
         # output -> (batch, out_len, dim)
         output_result = torch.tanh(self.linear_out(combined.view(-1, 2 * hidden_size))).view(-1, hidden_size)
         # Transform result into PackedSequence format.
-        packed_output_result = rnn_utils.PackedSequence(output_result, output.batch_sizes.detach())
+        packed_output_result = rnn_utils.PackedSequence(output_result, output.batch_sizes.detach()) if isinstance(output, rnn_utils.PackedSequence) else output_result.view(1, -1, hidden_size)
         return packed_output_result, attn

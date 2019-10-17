@@ -75,6 +75,7 @@ if __name__ == "__main__":
         input_seq = model.pack_input(seq_1, net.emb)
         # enc = net.encode(input_seq)
         context, enc = net.encode_context(input_seq)
+        # # Always use the first token in input sequence, which is '#BEG' as the initial input of decoder.
         _, tokens = net.decode_chain_argmax(enc, input_seq.data[0:1],
                                             seq_len=data.MAX_TOKENS, context=context[0], stop_at_token=end_token)
         references = [seq[1:] for seq in targets]

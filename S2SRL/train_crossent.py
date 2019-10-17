@@ -36,6 +36,8 @@ def run_test(test_data, net, end_token, device="cuda"):
         # enc = net.encode(input_seq)
         context, enc = net.encode_context(input_seq)
         # Return logits (N*outputvocab), res_tokens (1*N)
+        # Always use the first token in input sequence, which is '#BEG' as the initial input of decoder.
+        # The maximum length of the output is defined in class libbots.data.
         _, tokens = net.decode_chain_argmax(enc, input_seq.data[0:1],
                                             seq_len=data.MAX_TOKENS,
                                             context = context[0],

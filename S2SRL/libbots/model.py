@@ -44,6 +44,7 @@ class PhraseModel(nn.Module):
         self.attention_flag = ATT_FLAG
         if(self.attention_flag):
             self.attention = attention.Attention(hid_size)
+            print('Build attention layer.')
 
     # hidden state;
     # return hid: (h_n, c_n) is tensor containing the hidden state and cell state for t = seq_len.
