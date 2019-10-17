@@ -57,7 +57,7 @@ if __name__ == "__main__":
     logging.basicConfig(format="%(asctime)-15s %(levelname)s %(message)s", level=logging.INFO)
     # # command line parameters
     # # -a=True means using adaptive reward to train the model. -a=False is using 0-1 reward.
-    sys.argv = ['train_scst_true_reward.py', '--cuda', '-l=../data/saves/1crossent_even_1%/pre_bleu_0.786_02.dat', '-n=1rl_even_TR_1%_batch8', '-s=5', '-a=0', '--att=0', '--lstm=1']
+    sys.argv = ['train_scst_true_reward.py', '--cuda', '-l=../data/saves/crossent_even_1%_att=1/pre_bleu_0.944_94.dat', '-n=rl_even_TR_1%_batch8_att=1', '-s=5', '-a=0', '--att=1', '--lstm=1']
     # sys.argv = ['train_scst_true_reward.py', '--cuda', '-l=../data/saves/crossent_even_1%/pre_bleu_0.946_55.dat', '-n=rl_even_true_1%', '-s=5']
     parser = argparse.ArgumentParser()
     # parser.add_argument("--data", required=True, help="Category to use for training. Empty string to train on full processDataset")
