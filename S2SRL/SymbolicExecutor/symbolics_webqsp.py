@@ -16,10 +16,10 @@ app = Flask(__name__)
 post_url = "http://127.0.0.1:5001/post"
 
 class WebQSP(object):
-    def __init__(self, question, action_sequence_list, entity, relation, type, entity_mask, relation_mask, type_mask, mask_action_sequence_list):
+    def __init__(self, id, question, action_sequence_list, entity, relation, type, entity_mask, relation_mask, type_mask, mask_action_sequence_list):
+        self.id = id
         self.question = question
         self.action_sequence_list = action_sequence_list
-        self.sparql = sparql
         self.entity = entity
         self.relation = relation
         self.type = type
@@ -30,15 +30,35 @@ class WebQSP(object):
 
     def obj_2_json(obj):
         return {
-            "question": obj.question,
-            "action_sequence_list": obj.action_sequence_list,
-            "sparql": obj.sparql,
-            "entity": obj.entity,
-            "relation": obj.relation,
-            "type": obj.type,
-            "entity_mask": obj.entity_mask,
-            "relation_mask": obj.relation_mask,
-            "type_mask": obj.type_mask,
+            obj.id: {
+                "question": obj.question,
+                "action_sequence_list": obj.action_sequence_list,
+                "entity": obj.entity,
+                "relation": obj.relation,
+                "type": obj.type,
+                "entity_mask": obj.entity_mask,
+                "relation_mask": obj.relation_mask,
+                "type_mask": obj.type_mask,
+                "mask_action_sequence_list": obj.mask_action_sequence_list,
+            }
+        }
+
+class QapairSeq(object):
+    def __init__(self, id, question, answer, sparql, seq):
+        self.id = id
+        self.question = question
+        self.answer = answer
+        self.sparql = sparql
+        self.seq = seq
+
+    def obj_2_json_seq(obj):
+        return {
+            obj.id:{
+                "question": obj.question,
+                "answer": obj.answer,
+                "sparql": obj.sparql,
+                "seq": obj.seq,
+            }
         }
 
 class Qapair(object):
@@ -88,23 +108,14 @@ class Symbolics_WebQSP():
                 # A1: Select(e，r，t)
                 if ("A1" in symbolic):
                     try:
-                        temp_result = self.select(e, r, t)
-                        self.answer = temp_result
-                        self.temp_bool_dict = temp_result
-                    except:
-                        print('ERROR! The action is Select(%s,%s,%s).' %(e,r,t))
-                    finally:
-                        self.print_answer()
-                elif ("A1_2" in symbolic):
-                    try:
                         temp_result = self.select_str(e, r, t)
                         self.answer = temp_result
                         self.temp_bool_dict = temp_result
                     except:
-                        print('ERROR! The action is Select(%s,%s,%s).' %(e,r,t))
+                        print('ERROR! The action is Select(%s,%s,%s).' % (e, r, t))
                     finally:
                         self.print_answer()
-                elif ("A1_3" in symbolic):
+                elif ("A2" in symbolic):
                     try:
                         temp_result = self.select_e_str(e, r, t)
                         self.answer = temp_result
@@ -113,147 +124,133 @@ class Symbolics_WebQSP():
                         print('ERROR! The action is Select(%s,%s,%s).' %(e,r,t))
                     finally:
                         self.print_answer()
-                # A2: SelectAll (et, r, t)
-                elif ("A2" in symbolic or "A16" in symbolic):
-                    try:
-                        self.answer = self.select_all(e, r, t)
-                    except:
-                        print('ERROR! The action is SelectAll(%s,%s,%s).' % (e,r,t))
-                    finally:
-                        self.print_answer()
-                # A3: Bool(e)
+                # A3: filter answer
                 elif ("A3" in symbolic):
-                    try:
-                        bool_temp_result = self.is_bool(e)
-                        # dict
-                        if type(self.answer) == type({}):
-                            if '|BOOL_RESULT|' in self.answer:
-                                self.answer['|BOOL_RESULT|'].append(bool_temp_result)
-                            else:
-                                temp = [bool_temp_result]
-                                self.answer.setdefault('|BOOL_RESULT|', temp)
-                    except:
-                        print('ERROR! The action is Bool(%s).' %e)
-                    finally:
-                        self.print_answer()
-                # A4: ArgMin
-                elif ("A4" in symbolic):
-                    try:
-                        self.answer = self.arg_min()
-                    except:
-                        print('ERROR! The action is ArgMin.')
-                    finally:
-                        self.print_answer()
-                # A5: ArgMax
-                elif ("A5" in symbolic):
-                    try:
-                        self.answer = self.arg_max()
-                    except:
-                        print('ERROR! The action is ArgMax.')
-                    finally:
-                        self.print_answer()
-                # A6: GreaterThan(e)
-                elif ("A6" in symbolic):
-                    try:
-                        self.answer = self.greater_than(e,r,t)
-                    except:
-                        print('ERROR! The action is GreaterThan(%s,%s,%s).' % (e,r,t))
-                    finally:
-                        self.print_answer()
-                # A7: LessThan(e)
-                elif ("A7" in symbolic):
-                    try:
-                        self.answer = self.less_than(e,r,t)
-                    except:
-                        print('ERROR! The action is LessThan(%s,%s,%s).' % (e,r,t))
-                    finally:
-                        self.print_answer()
-                # A9: Union(e，r，t)
-                elif ("A9" in symbolic):
-                    try:
-                        self.answer = self.union(e, r, t)
-                    except:
-                        print('ERROR! The action is Union(%s,%s,%s).' % (e,r,t))
-                    finally:
-                        self.print_answer()
-                # A8: Inter(e，r，t)
-                elif ("A8" in symbolic):
-                    try:
-                        self.answer = self.inter(e, r, t)
-                    except:
-                        print('ERROR! The action is Inter(%s,%s,%s).' % (e,r,t))
-                    finally:
-                        self.print_answer()
-                # A10: Diff(e，r，t)
-                elif ("A10" in symbolic):
-                    try:
-                        self.answer = self.diff(e, r, t)
-                    except:
-                        print('ERROR! The action is Diff(%s,%s,%s).' % (e,r,t))
-                    finally:
-                        self.print_answer()
-                # A11: Count(e)
-                elif ("A11" in symbolic):
-                    try:
-                        self.answer = self.count(e)
-                    except:
-                        print('ERROR! The action is Count(%s).' %e)
-                    finally:
-                        self.print_answer()
-                # A12: ATLEAST(N)
-                elif ("A12" in symbolic):
-                    try:
-                        self.answer = self.at_least(e)
-                    except:
-                        print('ERROR! The action is ATLEAST(%s).' %e)
-                    finally:
-                        self.print_answer()
-                # A13: ATMOST(N)
-                elif ("A13" in symbolic):
-                    try:
-                        self.answer = self.at_most(e)
-                    except:
-                        print('ERROR! The action is ATMOST(%s).' %e)
-                    finally:
-                        self.print_answer()
-                # A14: EQUAL(N)
-                elif ("A14" in symbolic):
-                    try:
-                        self.answer = self.equal(e)
-                    except:
-                        print('ERROR! The action is EQUAL(%s).' %e)
-                    finally:
-                        self.print_answer()
-
-                elif ("A18" in symbolic):
-                    try:
-                        self.answer = self.joint(e, r, t)
-                    except:
-                        print('ERROR! The action is Joint(%s,%s,%s).' %(e,r,t))
-                    finally:
-                        self.print_answer()
-                elif ("A18_2" in symbolic):
-                    try:
-                        self.answer.update(self.joint_str(e, r, t))
-                    except:
-                        print('ERROR! The action is joint_str(%s,%s,%s).' %(e,r,t))
-                    finally:
-                        self.print_answer()
-                elif ("A19" in symbolic):
                     try:
                         # ?x ns:a ns:b
                         self.answer.update(self.filter_answer(e, r, t))
                     except:
-                        print('ERROR! The action is filter_answer(%s,%s,%s).' %(e,r,t))
+                        print('ERROR! The action is filter_answer(%s,%s,%s).' % (e, r, t))
                     finally:
                         self.print_answer()
-                elif ("A20" in symbolic):
+                # A4: Joint
+                elif ("A4" in symbolic):
+                    try:
+                        self.answer.update(self.joint_str(e, r, t))
+                    except:
+                        print('ERROR! The action is joint_str(%s,%s,%s).' % (e, r, t))
+                    finally:
+                        self.print_answer()
+                # A5: Filter not equal
+                elif ("A5" in symbolic):
                     try:
                         self.answer = self.filter_not_equal(e, r, t)
                     except:
                         print('ERROR! The action is filter_not_equal(%s,%s,%s).' % (e, r, t))
                     finally:
                         self.print_answer()
+                # # A6: GreaterThan(e)
+                # elif ("A6" in symbolic):
+                #     try:
+                #         self.answer = self.greater_than(e,r,t)
+                #     except:
+                #         print('ERROR! The action is GreaterThan(%s,%s,%s).' % (e,r,t))
+                #     finally:
+                #         self.print_answer()
+                # # A7: LessThan(e)
+                # elif ("A7" in symbolic):
+                #     try:
+                #         self.answer = self.less_than(e,r,t)
+                #     except:
+                #         print('ERROR! The action is LessThan(%s,%s,%s).' % (e,r,t))
+                #     finally:
+                #         self.print_answer()
+                # # A9: Union(e，r，t)
+                # elif ("A9" in symbolic):
+                #     try:
+                #         self.answer = self.union(e, r, t)
+                #     except:
+                #         print('ERROR! The action is Union(%s,%s,%s).' % (e,r,t))
+                #     finally:
+                #         self.print_answer()
+                # # A8: Inter(e，r，t)
+                # elif ("A8" in symbolic):
+                #     try:
+                #         self.answer = self.inter(e, r, t)
+                #     except:
+                #         print('ERROR! The action is Inter(%s,%s,%s).' % (e,r,t))
+                #     finally:
+                #         self.print_answer()
+                # # A10: Diff(e，r，t)
+                # elif ("A10" in symbolic):
+                #     try:
+                #         self.answer = self.diff(e, r, t)
+                #     except:
+                #         print('ERROR! The action is Diff(%s,%s,%s).' % (e,r,t))
+                #     finally:
+                #         self.print_answer()
+                # # A11: Count(e)
+                # elif ("A11" in symbolic):
+                #     try:
+                #         self.answer = self.count(e)
+                #     except:
+                #         print('ERROR! The action is Count(%s).' %e)
+                #     finally:
+                #         self.print_answer()
+                # # A12: ATLEAST(N)
+                # elif ("A12" in symbolic):
+                #     try:
+                #         self.answer = self.at_least(e)
+                #     except:
+                #         print('ERROR! The action is ATLEAST(%s).' %e)
+                #     finally:
+                #         self.print_answer()
+                # # A13: ATMOST(N)
+                # elif ("A13" in symbolic):
+                #     try:
+                #         self.answer = self.at_most(e)
+                #     except:
+                #         print('ERROR! The action is ATMOST(%s).' %e)
+                #     finally:
+                #         self.print_answer()
+                # # A14: EQUAL(N)
+                # elif ("A14" in symbolic):
+                #     try:
+                #         self.answer = self.equal(e)
+                #     except:
+                #         print('ERROR! The action is EQUAL(%s).' %e)
+                #     finally:
+                #         self.print_answer()
+                #
+                # elif ("A18" in symbolic):
+                #     try:
+                #         self.answer = self.joint(e, r, t)
+                #     except:
+                #         print('ERROR! The action is Joint(%s,%s,%s).' %(e,r,t))
+                #     finally:
+                #         self.print_answer()
+                # elif ("A18_2" in symbolic):
+                #     try:
+                #         self.answer.update(self.joint_str(e, r, t))
+                #     except:
+                #         print('ERROR! The action is joint_str(%s,%s,%s).' %(e,r,t))
+                #     finally:
+                #         self.print_answer()
+                # elif ("A19" in symbolic):
+                #     try:
+                #         # ?x ns:a ns:b
+                #         self.answer.update(self.filter_answer(e, r, t))
+                #     except:
+                #         print('ERROR! The action is filter_answer(%s,%s,%s).' %(e,r,t))
+                #     finally:
+                #         self.print_answer()
+                # elif ("A20" in symbolic):
+                #     try:
+                #         self.answer = self.filter_not_equal(e, r, t)
+                #     except:
+                #         print('ERROR! The action is filter_not_equal(%s,%s,%s).' % (e, r, t))
+                #     finally:
+                #         self.print_answer()
                 else:
                     print("wrong symbolic")
         return self.answer
@@ -321,7 +318,7 @@ class Symbolics_WebQSP():
                 if content is not None and content_result==0:
                     content = set(content)
             except:
-                print("ERROR for command: select(%s,%s,%s)" % (e, r, t))
+                print("ERROR for command: select_old(%s,%s,%s)" % (e, r, t))
             finally:
                 if content is not None:
                     # Store records in set.
@@ -358,7 +355,7 @@ class Symbolics_WebQSP():
                 if content is not None and content_result == 0:
                     content = set(content)
             except:
-                print("ERROR for command: select(%s,%s,%s)" % (e, r, t))
+                print("ERROR for command: select_str(%s,%s,%s)" % (e, r, t))
             finally:
                 if content is not None:
                     # Store records in set.
@@ -375,7 +372,7 @@ class Symbolics_WebQSP():
             content = set([])
             try:
                 json_pack = dict()
-                json_pack['op'] = "execute_gen_set1"
+                json_pack['op'] = "execute_gen_e_set1"
                 json_pack['pre_type'] = [r, t]
                 jsonpost = json.dumps(json_pack)
                 # result_content = requests.post(post_url,json=json_pack)
@@ -383,8 +380,8 @@ class Symbolics_WebQSP():
                 content, content_result = requests.post(post_url, json=jsonpost).json()['content']
                 if content is not None and content_result == 0:
                     content = set(content)
-            except:
-                print("ERROR for command: select(%s,%s,%s)" % (e, r, t))
+            except Exception as error:
+                print("ERROR for command: select_e_str(%s,%s,%s)" % (e, r, t), error)
             finally:
                 if content is not None:
                     # Store records in set.
@@ -491,8 +488,8 @@ class Symbolics_WebQSP():
                     else:
                         content = set([])
                     intermediate_result = {t: content}
-            except error:
-                print("ERROR for command: joint_str(%s,%s,%s)" % (e, r, t). error)
+            except :
+                print("ERROR for command: joint_str(%s,%s,%s)" % (e, r, t))
             finally:
                 return intermediate_result
 
@@ -519,8 +516,8 @@ class Symbolics_WebQSP():
                     else:
                         content = set([])
                     intermediate_result = {e: content}
-            except error:
-                print(error, "ERROR for command: filter_answer(%s,%s,%s)" % (e, r, t))
+            except:
+                print("ERROR for command: filter_answer(%s,%s,%s)" % (e, r, t))
             finally:
                 return intermediate_result
 
@@ -539,7 +536,7 @@ class Symbolics_WebQSP():
                     for answer_item in self.answer[e]:
                         if (answer_item != t):
                             answer_list.append(answer_item)
-                    intermediate_result = set(answer_list)
+                    intermediate_result = {e : answer_list}
             except:
                 print("ERROR for command: filter_not_equal(%s,%s,%s)" % (e, r, t))
             finally:
@@ -892,12 +889,12 @@ class Action():
         return "{{\'{0}\':[\'{1}\', \'{2}\', \'{3}\']}}".format(self.action_type, self.e, self.r, self.t)
 
 # parse sparql in dataset to action sequence
-def processSparql(sparql_str):
+def processSparql(sparql_str, id="empty"):
         sparql_list = []
         untreated_list = sparql_str.split("\n")
         answer_keys = []
         for untreated_str in untreated_list:
-            action_type = "A1_2"
+            action_type = "A1"
             s = ""
             r = ""
             t = ""
@@ -909,9 +906,11 @@ def processSparql(sparql_str):
             # remove /t
             untreated_str = untreated_str.replace("\t", "")
             untreated_str = untreated_str.strip()
+            if untreated_str == '':
+                continue
 
-            if "UNION" in untreated_str:
-                print ("has union")
+            if "UNION" == untreated_str:
+                print ("has union", id)
 
             if untreated_str.startswith("SELECT"):  # find answer key
                 for item in untreated_str.split(" "):
@@ -922,7 +921,7 @@ def processSparql(sparql_str):
                 pass
             elif untreated_str.count("?") == 1 and untreated_str.startswith("ns:"):
                 # base action: select
-                action_type = "A1_2"
+                action_type = "A1"
                 triple_list = untreated_str.split(" ")
                 if len(triple_list) == 4:
                     s = triple_list[0].replace("ns:", "")
@@ -930,34 +929,44 @@ def processSparql(sparql_str):
                     t = triple_list[2].replace("ns:", "")
                     if s != "" and r != "" and t != "":
                         action_item = Action(action_type, s, r, t)
-                        sparql_list.append(action_item)
+                        if isValidAction(action_item):
+                            sparql_list.append(action_item)
             elif untreated_str.startswith("FILTER (?x != ns:"):
                 # filter not equal
-                action_type = "A20"
+                action_type = "A5"
                 s = "?x"
                 # s = "ANSWER"
                 t = untreated_str.replace("FILTER (?x != ns:", "").replace(")", "").replace(" ", "")
                 action_item = Action(action_type, s, r, t)
-                sparql_list.append(action_item)
+                if isValidAction(action_item):
+                    sparql_list.append(action_item)
             elif untreated_str.count("?") == 1 and untreated_str.startswith("?"):
                 # ?x ns:a ns:b
-                # if have e,  A19 : filter variable: find sub set fits the bill
+                # if have e,  A3 : filter variable: find sub set fits the bill
                 # if don't have e, A1_3 :find e
-                action_type = "A1_3"
+                action_type = "A3"
                 triple_list = untreated_str.split(" ")
-                if len(triple_list) == 4:
+                if True:
                     s = triple_list[0].replace("ns:", "")
                     r = triple_list[1].replace("ns:", "")
                     t = triple_list[2].replace("ns:", "")
                     if s != "" and r != "" and t != "":
                         for action in sparql_list:
-                            if action.e == e or action.t == e:  # already has variable
-                                action_type = "A19"
+                            if action.e == s or action.t == s:  # already has variable
+                                action_type = "A4"
+                        # special for webqsp: swap s and t ,A3->A1 "6" means single action_seq
+                        print(len(untreated_list), "length of untreated_list")
+                        if len(untreated_list) == 6:
+                            action_type = "A1"
+                            temp = s
+                            s = t
+                            t = temp
                         action_item = Action(action_type, s, r, t)
-                        sparql_list.append(action_item)
+                        if isValidAction(action_item):
+                            sparql_list.append(action_item)
                 # print(action_item)
             elif untreated_str.count("?") == 2 and ("FILTER" not in untreated_str or "EXISTS" not in untreated_str):
-                action_type = "A18_2"
+                action_type = "A4"  # joint
                 triple_list = untreated_str.split(" ")
                 if len(triple_list) == 4:
                     s = triple_list[0].replace("ns:", "")
@@ -965,7 +974,8 @@ def processSparql(sparql_str):
                     t = triple_list[2].replace("ns:", "")
                     if s != "" and r != "" and t != "":
                         action_item = Action(action_type, s, r, t)
-                        sparql_list.append(action_item)
+                        if isValidAction(action_item):
+                            sparql_list.append(action_item)
                     # print(untreated_str, action_item.to_str())
             # elif untreated_str.startswith("FILTER(xsd:datetime") and "<=" in untreated_str: # filter datetime less or equal
             #     date_re = re.search(r"(\d{4}-\d{1,2}-\d{1,2})", untreated_str)
@@ -986,56 +996,137 @@ def processSparql(sparql_str):
             #     sparql_list.append(action_item)
 
         # reorder list
-        # reorder_sparql_list = reorder(sparql_list)
-        reorder_sparql_list = sparql_list
+        reorder_sparql_list = reorder(sparql_list, answer_keys)
+        # reorder_sparql_list = sparql_list
+        # for astr in reorder_sparql_list:
+        #     print(astr.to_str())
 
         old_sqarql_list = []
         for item in reorder_sparql_list:
-            set = {}
-            list = []
-            list.append(item.e)
-            list.append(item.r)
-            list.append(item.t)
-            set[item.action_type] = list
-            old_sqarql_list.append(set)
+            seqset = {}
+            seqlist = []
+            seqlist.append(item.e)
+            seqlist.append(item.r)
+            seqlist.append(item.t)
+            seqset[item.action_type] = seqlist
+            old_sqarql_list.append(seqset)
         return old_sqarql_list
-        # return "[" + ",".join(reorder_sparql_list) + "]"
+
+def isValidAction(action_item):
+    return (action_item.e.startswith("m.") or action_item.e.startswith("?"))\
+           and (action_item.t.startswith("m.") or action_item.t.startswith("?"))
 
 # todo still has problem with the order of A1_2 and a19 of one variable
-def reorder(sparql_list):
+def reorder(sparql_list, answer_keys):
     count = 0
     final_len = len(sparql_list)
     reorder_sparql_list = []
 
-    next_variable = ""
-    while len(sparql_list) != 0:
-        for action_item in sparql_list:
-            seq = action_item.to_str()
-            print (seq)
-            if len(sparql_list) == 1:
-                reorder_sparql_list.append(action_item)
-                sparql_list.remove(action_item)
-                break
-            if "?x" in seq:
-                if seq.count("?") == 1:
-                    reorder_sparql_list.append(action_item)
-                elif seq.count("?") == 2:
-                    reorder_sparql_list.append(action_item)
-                    # define next variable
-                    next_variable = action_item.e if (action_item.t == "?x") else action_item.t
-                sparql_list.remove(action_item)
-                break
-            elif next_variable != "" and next_variable in seq:
-                if seq.count("?") == 1:
-                    reorder_sparql_list.append(action_item)
-                elif seq.count("?") == 2:
-                    reorder_sparql_list.append(action_item)
-                    # define next variable
-                    next_variable = action_item.e if (action_item.t == next_variable) else action_item.t
-                sparql_list.remove(action_item)
-                break
+    last_variable = ""
+    # while len(sparql_list) != 0:
+    for key in answer_keys:
+        # has_last_select = False
+        add_next_variable(sparql_list, key, reorder_sparql_list)
+        # print(reorder_sparql_list)
+            # contains key
+            # 提取包含key并排序
+            # for action_item in sparql_list:
+            #     # last select action of answer key
+            #     if action_item.t == key:
+            #         reorder_sparql_list.append(action_item)
+            #         sparql_list.remove(action_item)
+            #         break
+            #
+            #         if action_item.e.startswith('?'):
+            #             last_variable = action_item.e
+            #         has_last_select = True
+            #     if has_last_select:
+            #         seq = action_item.to_str()
+            #         print (seq)
+            #         if len(sparql_list) == 1:
+            #             reorder_sparql_list.append(action_item)
+            #             sparql_list.remove(action_item)
+            #             break
+            #         if "?x" in seq:
+            #             if seq.count("?") == 1:
+            #                 reorder_sparql_list.append(action_item)
+            #             elif seq.count("?") == 2:
+            #                 reorder_sparql_list.append(action_item)
+            #                 # define next variable
+            #                 next_variable = action_item.e if (action_item.t == "?x") else action_item.t
+            #             sparql_list.remove(action_item)
+            #             break
+            #         elif next_variable != "" and next_variable in seq:
+            #             if seq.count("?") == 1:
+            #                 reorder_sparql_list.append(action_item)
+            #             elif seq.count("?") == 2:
+            #                 reorder_sparql_list.append(action_item)
+            #                 # define next variable
+            #                 next_variable = action_item.e if (action_item.t == next_variable) else action_item.t
+            #             sparql_list.remove(action_item)
+            #             break
     reorder_sparql_list.reverse()
     return reorder_sparql_list
+
+def add_next_variable(sparql_list, variable_key, reorder_sparql_list):
+    for action_item in sparql_list:
+        # filter_not_equal is always the last action
+        if action_item.action_type == "A5":
+            reorder_sparql_list.append(action_item)
+            sparql_list.remove(action_item)
+            break
+
+    if variable_key == "":
+        return
+
+    variable_sql_list = []
+    for sql in sparql_list:
+        if variable_key == sql.e or variable_key == sql.t:
+            variable_sql_list.append(sql)
+
+    if len(variable_sql_list) == 0:
+        return
+    if len(variable_sql_list) == 1:
+        cur_action = variable_sql_list[0]
+        if cur_action == "?x" and "?" not in cur_action.t and cur_action.action_type == "A3":
+            cur_action.action_type = "A1"
+            e = cur_action.e
+            t = cur_action.t
+            cur_action.e = t
+            cur_action.t = e
+            reorder_sparql_list.append(sql)
+            sparql_list.remove(sql)
+            variable_sql_list.remove(sql)
+            return
+
+    next_variable = ""
+    for sql in variable_sql_list:
+        if sql.action_type == "A3":
+            reorder_sparql_list.append(sql)
+            sparql_list.remove(sql)
+            variable_sql_list.remove(sql)
+
+    for sql in variable_sql_list:
+        if sql.action_type == "A4":
+            # next_variable
+            next_variable = sql.e
+            reorder_sparql_list.append(sql)
+            sparql_list.remove(sql)
+            variable_sql_list.remove(sql)
+
+    for sql in variable_sql_list:
+        if sql.action_type == "A2":
+            reorder_sparql_list.append(sql)
+            sparql_list.remove(sql)
+            variable_sql_list.remove(sql)
+
+    for sql in variable_sql_list:
+        if sql.action_type == "A1":
+            reorder_sparql_list.append(sql)
+            sparql_list.remove(sql)
+            variable_sql_list.remove(sql)
+
+    return add_next_variable(sparql_list, next_variable, reorder_sparql_list)
 
 def compare(answer, true_answer):
     try:
@@ -1050,117 +1141,21 @@ def compare(answer, true_answer):
 
 if __name__ == "__main__":
     print("start symbolics_webqsp")
-    # # test1
-    # symbolic_seq = [{'A1': ['m.09l3p', 'film.actor.film', 'VARIABLE']}, {'A18': ['VARIABLE', 'film.performance.film', 'm.0ddt_']}, {'A18': ['VARIABLE', 'film.performance.character', 'ANSWER']}]
-    # symbolic_exe = Symbolics_WebQSP(symbolic_seq)
+    # local_sparql = "PREFIX ns: <http://rdf.freebase.com/ns/>\nSELECT DISTINCT ?x\nWHERE {\nFILTER (?x != ns:m.01_2n)\nFILTER (!isLiteral(?x) OR lang(?x) = '' OR langMatches(lang(?x), 'en'))\nns:m.01_2n ns:tv.tv_program.regular_cast ?y .\n?y ns:tv.regular_tv_appearance.actor ?x .\n?y ns:tv.regular_tv_appearance.character ns:m.015lwh .\n}\n"
+    # seq = processSparql(local_sparql)
+    # print(seq)
+    # symbolic_exe = Symbolics_WebQSP(seq)
     # answer = symbolic_exe.executor()
-    # print(answer)
-    #
-    # # test1_2
-    # symbolic_seq = [{'A1_2': ['m.09l3p', 'film.actor.film', '?y']}, {'A18_2': ['?y', 'film.performance.film', 'm.0ddt_']}, {'A18_2': ['?y', 'film.performance.character', '?x']}]
-    # symbolic_exe = Symbolics_WebQSP(symbolic_seq)
-    # answer = symbolic_exe.executor()
-    # print("test1_2", answer) # succeed
-
-    # WebQTrn-3               "AnswerArgument": "m.0160w",
-    # ns:m.03st9j ns:location.location.containedby ?x .
-    # ?x ns:base.biblioness.bibs_location.loc_type ?sk0 .
-    # FILTER (str(?sk0) = \"Country\")
-
-    # symbolic_seq = [
-    #     {'A1_2': ['m.03st9j', 'location.location.containedby', '?x']},
-    #     {'A23': ['?x', 'base.biblioness.bibs_location.loc_type', 'Country']},
-    #     # {'A18_2': ['?y', 'film.performance.character', '?x']},
-    # ]
-    # symbolic_exe = Symbolics_WebQSP(symbolic_seq)
-    # answer = symbolic_exe.executor()
-    # print("3", answer) # succeed
+    # print("answer test1: ", answer)
 
 
-
-    # # test2
-    # symbolic_seq = [{'A1': ['m.06w2sn5', 'people.person.sibling_s', 'VARIABLE']}, {'A18': ['VARIABLE', 'people.sibling_relationship.sibling', 'ANSWER']}, {'A19': ['ANSWER', 'people.person.gender', 'm.05zppz']}]
-    # symbolic_exe = Symbolics_WebQSP(symbolic_seq)
-    # answer = symbolic_exe.executor()
-    # print(answer)
-    #
-    # # test3
-    # symbolic_seq = [{'A1': ['m.03f2h01', 'base.activism.activist.area_of_activism', 'ANSWER']}]
-    # symbolic_exe = Symbolics_WebQSP(symbolic_seq)
-    # answer = symbolic_exe.executor()
-    # print(answer)
-    #
-    # #6
-    # symbolic_seq = [
-    #     {'A1': ['m.0c2yrf', 'sports.pro_athlete.teams', '?y']},
-    # ]
-    # symbolic_exe = Symbolics_WebQSP(symbolic_seq)
-    # answer = symbolic_exe.executor()
-    # print(answer)
-    #
-    # #7
-    # symbolic_seq = [
-    #     {'A1': ['m.084l5', 'sports.sports_team.location', 'ANSWER']},
-    # ]
-    # symbolic_exe = Symbolics_WebQSP(symbolic_seq)
-    # answer = symbolic_exe.executor()
-    # print(7, answer) # y
-    #
-    # #12
-    # symbolic_seq = [
-    #     {'A1': ['m.0c2m4', 'fictional_universe.fictional_character.married_to', 'VARIABLE']},
-    #     {'A18': ['VARIABLE', 'fictional_universe.marriage_of_fictional_characters.spouses', 'ANSWER']},
-    #     {'A20': ['ANSWER', '', 'm.0c2m4']},
-    # ]
-    # symbolic_exe = Symbolics_WebQSP(symbolic_seq)
-    # answer = symbolic_exe.executor()
-    # print(12, answer) # 09k254x dui
-    #
-    # #13
-    # symbolic_seq = [
-    #     {'A1': ['m.09c7w0', 'location.location.adjoin_s', 'VARIABLE']},
-    #     {'A18': ['VARIABLE', 'location.adjoining_relationship.adjoins', 'ANSWER']},
-    #     {'A19': ['ANSWER', 'common.topic.notable_types', 'm.01mp']},
-    # ]
-    # symbolic_exe = Symbolics_WebQSP(symbolic_seq)
-    # answer = symbolic_exe.executor()
-    # print(13, answer) #    0d060g 错
-
-    #1124
-    # "RawQuestion": "who is jennifer lawrence boyfriend 2012?",
-    # 06tjh6
-    # symbolic_seq = [
-    #     {'A1_2': ['m.02x0dzw', 'celebrities.celebrity.sexual_relationships', '?y']},
-    #     # {'A18': ['?y', 'celebrities.romantic_relationship.relationship_type', 'm.02_7k44']},
-    #     {'A18_2': ['?y', 'celebrities.romantic_relationship.celebrity', '?x']},
-    # ]
-    # symbolic_exe = Symbolics_WebQSP(symbolic_seq)
-    # answer = symbolic_exe.executor()
-    # print(1124, answer) #    06tjh6 错 缺失
-
-    #2513
-
-
-    #21 m.0dl1t3
-    variable_set = {}
-
-    # local_sparql = "PREFIX ns: <http://rdf.freebase.com/ns/>\nSELECT DISTINCT ?x\nWHERE {\nFILTER (?x != ns:m.06w2sn5)\nFILTER (!isLiteral(?x) OR lang(?x) = '' OR langMatches(lang(?x), 'en'))\nns:m.06w2sn5 ns:people.person.sibling_s ?y .\n?y ns:people.sibling_relationship.sibling ?x .\n?x ns:people.person.gender ns:m.05zppz .\n}\n"
-    local_sparql = "PREFIX ns: <http://rdf.freebase.com/ns/>\nSELECT DISTINCT ?x\nWHERE {\nFILTER (?x != ns:m.01_2n)\nFILTER (!isLiteral(?x) OR lang(?x) = '' OR langMatches(lang(?x), 'en'))\nns:m.01_2n ns:tv.tv_program.regular_cast ?y .\n?y ns:tv.regular_tv_appearance.actor ?x .\n?y ns:tv.regular_tv_appearance.character ns:m.015lwh .\n}\n"
-    seq = processSparql(local_sparql)
-    print(seq)
-    symbolic_exe = Symbolics_WebQSP(seq)
-    answer = symbolic_exe.executor()
-    print("answer: ", answer)
-
-    seq =[{'A1_2': ['m.04qwhs', 'government.election.campaigns', '?y']},
-          # {'A18_2': ['?y', 'government.election_campaign.candidate', '?x']},
-          # {'A20': ['?x', '', 'm.09b6zr']}
+    seq1263 =[
+        {'A1': ['m.07pzc', 'people.deceased_person.date_of_death', '?x']},
           ]
     # true_answer ['m.06q1r', 'm.0j5g9']
-    symbolic_exe = Symbolics_WebQSP(seq)
+    symbolic_exe = Symbolics_WebQSP(seq1263)
     answer = symbolic_exe.executor()
-
-    print("answer: 2 ", answer)
+    print("answer test2: ", answer)
 
     # Load WebQuestions Semantic Parses
     WebQSPList = []
@@ -1171,89 +1166,29 @@ if __name__ == "__main__":
 
     errorlist = []
 
-    errorfile = "errorlist_small.json"
-    with open(errorfile, "r", encoding='UTF-8') as webQaTrain:
-        load_dictTrain = json.load(webQaTrain)
-        mytrainquestions = load_dictTrain
-        print(len(mytrainquestions))
-        myquestions = mytrainquestions
-        print(len(myquestions))
-        for q in myquestions:
-            question = q["ProcessedQuestion"]
-            # answer = q["Parses"][0]["Answers"][0]["AnswerArgument"]
-            Answers = []
-            id = q["QuestionId"]
-            answerList = q["Parses"][0]["Answers"]
-            for an in answerList:
-                Answers.append(an['AnswerArgument'])
-            # print(answer)
-            sparql = q["Parses"][0]["Sparql"]
-            # print(sparql)
-            mypair = Qapair(question, Answers, sparql)
-
-
-            if id == "WebQTrn-2408":
-            # if True:
-                # test seq
-                test_sparql = mypair.sparql
-                seq = processSparql(test_sparql)
-                symbolic_exe = Symbolics_WebQSP(seq)
-                answer = symbolic_exe.executor()
-                # print("answer: ", answer)
-                true_answer = mypair.answer
-                # print("true_answer: ", true_answer)
-                # print(type(answer))
-                try:
-                    if compare(answer, true_answer):
-                        # print("correct!")
-                        true_count += 1
-                        WebQSPList_Correct.append(mypair)
-                    else:
-                        WebQSPList_Incorrect.append(mypair)
-                        print("answer", answer)
-                        print("seq", seq)
-                        print("true_answer", true_answer)
-                        print("id", id)
-                        errorlist.append(id)
-                        json_errorlist.append(q)
-                        print(" ")
-                        # print('incorrect!')
-                except:
-                    pass
-                    # print('incorrect!')
-
-                WebQSPList.append(mypair)
-        print("%s correct", true_count)
-        print (errorlist)
-        # 写入转换后的json
-        jsondata = json.dumps(json_errorlist, indent=1)
-        fileObject = open('errorlist_small_2.json', 'w')
-        fileObject.write(jsondata)
-        fileObject.close()
-
-    # with open("WebQSP.train.json", "r", encoding='UTF-8') as webQaTrain:
-    #     with open("WebQSP.test.json", "r", encoding='UTF-8') as webQaTest:
-    #         load_dictTrain = json.load(webQaTrain)
-    #         load_dictTest = json.load(webQaTest)
-    #         mytrainquestions = load_dictTrain["Questions"]
-    #         print(len(mytrainquestions))
-    #         mytestquestions = load_dictTest["Questions"]
-    #         print(len(mytestquestions))
-    #         myquestions = mytrainquestions + mytestquestions
-    #         print(len(myquestions))
-    #         for q in myquestions:
-    #             question = q["ProcessedQuestion"]
-    #             # answer = q["Parses"][0]["Answers"][0]["AnswerArgument"]
-    #             Answers = []
-    #             id = q["QuestionId"]
-    #             answerList = q["Parses"][0]["Answers"]
-    #             for an in answerList:
-    #                 Answers.append(an['AnswerArgument'])
-    #             # print(answer)
-    #             sparql = q["Parses"][0]["Sparql"]
-    #             # print(sparql)
-    #             mypair = Qapair(question, Answers, sparql)
+    # errorfile = "errorlist_small.json"
+    # with open(errorfile, "r", encoding='UTF-8') as webQaTrain:
+    #     load_dictTrain = json.load(webQaTrain)
+    #     mytrainquestions = load_dictTrain
+    #     print(len(mytrainquestions))
+    #     myquestions = mytrainquestions
+    #     print(len(myquestions))
+    #     for q in myquestions:
+    #         question = q["ProcessedQuestion"]
+    #         # answer = q["Parses"][0]["Answers"][0]["AnswerArgument"]
+    #         Answers = []
+    #         id = q["QuestionId"]
+    #         answerList = q["Parses"][0]["Answers"]
+    #         for an in answerList:
+    #             Answers.append(an['AnswerArgument'])
+    #         # print(answer)
+    #         sparql = q["Parses"][0]["Sparql"]
+    #         # print(sparql)
+    #         mypair = Qapair(question, Answers, sparql)
     #
+    #
+    #         if id == "WebQTrn-2408":
+    #         # if True:
     #             # test seq
     #             test_sparql = mypair.sparql
     #             seq = processSparql(test_sparql)
@@ -1283,36 +1218,142 @@ if __name__ == "__main__":
     #                 # print('incorrect!')
     #
     #             WebQSPList.append(mypair)
-    #
-    #         print("%s correct", true_count)
-    #         print (errorlist)
-    #         # 写入转换后的json
-    #         jsondata = json.dumps(json_errorlist, indent=1)
-    #         fileObject = open('errorlist.json', 'w')
-    #         fileObject.write(jsondata)
-    #         fileObject.close()
+    #     print("%s correct", true_count)
+    #     print (errorlist)
+    #     # 写入转换后的json
+    #     jsondata = json.dumps(json_errorlist, indent=1)
+    #     fileObject = open('errorlist_small_2.json', 'w')
+    #     fileObject.write(jsondata)
+    #     fileObject.close()
 
-    # # test actions
-    # true_count = 0
-    # for item in WebQSPList:
-    #     test_sparql = item.sparql
-    #     seq = processSparql(test_sparql)
-    #     symbolic_exe = Symbolics_WebQSP(seq)
-    #     answer = symbolic_exe.executor()
-    #     # print("answer: ", answer)
-    #     true_answer = item.answer
-    #     # print("true_answer: ", true_answer)
-    #     # print(type(answer))
-    #     try:
-    #         if compare(answer, true_answer):
-    #             # print("correct!")
-    #             true_count += 1
-    #         else:
-    #             pass
-    #             # print('incorrect!')
-    #     except:
-    #         pass
-    #         # print('incorrect!')
+    with open("WebQSP.train.json", "r", encoding='UTF-8') as webQaTrain:
+        with open("WebQSP.test.json", "r", encoding='UTF-8') as webQaTest:
+            load_dictTrain = json.load(webQaTrain)
+            load_dictTest = json.load(webQaTest)
+            mytrainquestions = load_dictTrain["Questions"]
+            print(len(mytrainquestions))
+            mytestquestions = load_dictTest["Questions"]
+            print(len(mytestquestions))
+            myquestions = mytrainquestions + mytestquestions
+            # myquestions = mytrainquestions + mytestquestions
+            print(len(myquestions))
+            for q in myquestions:
+                question = q["ProcessedQuestion"]
+                # answer = q["Parses"][0]["Answers"][0]["AnswerArgument"]
+                Answers = []
+                id = q["QuestionId"]
+                answerList = q["Parses"][0]["Answers"]
+                for an in answerList:
+                    Answers.append(an['AnswerArgument'])
+                sparql = q["Parses"][0]["Sparql"]
+                mypair = Qapair(question, Answers, sparql)
+
+                # if id == "WebQTrn-1276": # test one
+                if True: # test all
+                    # test seq
+                    true_answer = mypair.answer
+                    test_sparql = mypair.sparql
+                    seq = processSparql(test_sparql, id)
+                    symbolic_exe = Symbolics_WebQSP(seq)
+                    answer = symbolic_exe.executor()
+                    # print("answer: ", answer)
+                    # print("true_answer: ", true_answer)
+                    try:
+                        if compare(answer, true_answer):
+                            # print("correct!")
+
+                            # if get right answer, generate action sequence
+                            true_count += 1
+                            correct = QapairSeq(id, question, true_answer, sparql, seq)
+                            entity = set()
+                            relation = set()
+                            type = set()
+                            e_index = 1
+                            r_index = 1
+                            t_index = 1
+                            for srt in seq:
+                                for k,v in srt.items():
+                                    if v[0] != "":
+                                        entity.add(v[0])
+                                    if v[1] != "":
+                                        relation.add(v[1])
+                                    if v[2] != "":
+                                        type.add(v[2])
+                            entity = list(entity)
+                            relation = list(relation)
+                            type = list(type)
+                            entity_mask = dict()
+                            relation_mask = dict()
+                            type_mask = dict()
+                            for e in entity:
+                                dict_entity = {e : "ENTITY{0}".format(e_index)}
+                                entity_mask.update(dict_entity)
+                                e_index += 1
+                            for r in relation:
+                                dict_relation = {r : "RELATION{0}".format(r_index)}
+                                relation_mask.update(dict_relation)
+                                r_index += 1
+                            for t in type:
+                                dict_type = {t : "TYPE{0}".format(t_index)}
+                                type_mask.update(dict_type)
+                                t_index += 1
+                            mask_action_sequence_list = []
+
+                            for srt in seq:
+                                mask_set = {}
+                                masklist = []
+                                a_mask = ""
+                                e_mask = ""
+                                r_mask = ""
+                                t_mask = ""
+                                for k,v in srt.items():
+                                    if k != "":
+                                        a_mask = k
+                                    if v[0] != "":
+                                        e_mask = v[0]
+                                    if v[1] != "":
+                                        r_mask = v[1]
+                                    if v[2] != "":
+                                        t_mask = v[2]
+                                if a_mask != "" and e_mask != "" and t_mask != "":
+                                    masklist.append(entity_mask[e_mask])
+                                    masklist.append(relation_mask[r_mask])
+                                    masklist.append(type_mask[t_mask])
+                                    mask_set = {a_mask : masklist}
+                                    mask_action_sequence_list.append(mask_set)
+                            if id != "" and question != "" and seq != "":
+                                correct_item = WebQSP(id, question, seq, entity, relation, type,entity_mask,
+                                                      relation_mask, type_mask, mask_action_sequence_list)
+                            # print(question)
+                            # print(answer)
+                            WebQSPList_Correct.append(correct_item)
+                        else:
+                            # print('incorrect!')
+                            WebQSPList_Incorrect.append(mypair)
+                            print("answer", answer)
+                            print("seq", seq)
+                            print("true_answer", true_answer)
+                            print("id", id)
+                            errorlist.append(id)
+                            json_errorlist.append(q)
+                            print(" ")
+                    except Exception as exception:
+                        print(exception)
+                        pass
 
 
+                WebQSPList.append(mypair)
 
+            print("{0} pairs correct".format(true_count))
+            print(errorlist)
+
+            # 写入转换后的json
+            # jsondata = json.dumps(json_errorlist, indent=1)
+            # fileObject = open('errorlist_full.json', 'w')
+            # fileObject.write(jsondata)
+            # fileObject.close()
+
+            jsondata = json.dumps(WebQSPList_Correct, indent=1, default=WebQSP.obj_2_json)
+            fileObject = open('right_answer_reorder_mask.json', 'w')
+            fileObject.write(jsondata)
+            fileObject.close()
