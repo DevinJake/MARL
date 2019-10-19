@@ -67,11 +67,11 @@ class Interpreter():
         type = argument_value[1]
         if relation is None or type is None:
             return set([]), 1
-        tuple_set = None
-        for e in self.freebase_kb:
-            if r in self.freebase_kb[e] and t in freebase_kb[entity][type]:
-                tuple_set.add(e)
-                print("A1 select", entity, relation, tuple_set)
+        tuple_set = set([])
+        for entity in self.freebase_kb:
+            if relation in self.freebase_kb[entity] and type in self.freebase_kb[entity][relation]:
+                tuple_set.add(entity)
+                print("A1 select_e", entity, relation, tuple_set)
         return tuple_set, 0
 
     # # 通过实体-关系 查找所有时间三元组
@@ -248,7 +248,7 @@ def post_res():
     elif jsonpack['op'] == "execute_gen_set1":
         response['content'] = interpreter.execute_gen_set1(jsonpack['sub_pre'], "")
     elif jsonpack['op'] == "execute_gen_e_set1":
-        response['content'] = interpreter.execute_gen_set1(jsonpack['pre_type'], "")
+        response['content'] = interpreter.execute_gen_e_set1(jsonpack['pre_type'], "")
     elif jsonpack['op'] == "execute_gen_set2":
         response['content'] = interpreter.execute_gen_set2(jsonpack['sub_pre1_pre2'], "")
     elif jsonpack['op'] == "joint":
