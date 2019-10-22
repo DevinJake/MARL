@@ -16,7 +16,7 @@ app = Flask(__name__)
 post_url = "http://127.0.0.1:5001/post"
 
 class WebQSP(object):
-    def __init__(self, id, question, action_sequence_list, entity, relation, type, entity_mask, relation_mask, type_mask, mask_action_sequence_list):
+    def __init__(self, id, question, action_sequence_list, entity, relation, type, entity_mask, relation_mask, type_mask, mask_action_sequence_list, answerlist):
         self.id = id
         self.question = question
         self.action_sequence_list = action_sequence_list
@@ -27,6 +27,7 @@ class WebQSP(object):
         self.relation_mask = relation_mask
         self.type_mask = type_mask
         self.mask_action_sequence_list = mask_action_sequence_list
+        self.answerlist = answerlist
 
     def obj_2_json(obj):
         return {
@@ -40,6 +41,7 @@ class WebQSP(object):
                 "relation_mask": obj.relation_mask,
                 "type_mask": obj.type_mask,
                 "mask_action_sequence_list": obj.mask_action_sequence_list,
+                "answers": obj.answerlist,
             }
         }
 
@@ -1235,7 +1237,7 @@ if __name__ == "__main__":
             mytestquestions = load_dictTest["Questions"]
             print(len(mytestquestions))
             myquestions = mytrainquestions + mytestquestions
-            # myquestions = mytrainquestions + mytestquestions
+            # myquestions = mytrainquestions[0:9] + mytestquestions[0:9]
             print(len(myquestions))
             for q in myquestions:
                 question = q["ProcessedQuestion"]
@@ -1307,23 +1309,22 @@ if __name__ == "__main__":
                                 r_mask = ""
                                 t_mask = ""
                                 for k,v in srt.items():
-                                    if k != "":
-                                        a_mask = k
-                                    if v[0] != "":
-                                        e_mask = v[0]
-                                    if v[1] != "":
-                                        r_mask = v[1]
-                                    if v[2] != "":
-                                        t_mask = v[2]
-                                if a_mask != "" and e_mask != "" and t_mask != "":
-                                    masklist.append(entity_mask[e_mask])
-                                    masklist.append(relation_mask[r_mask])
-                                    masklist.append(type_mask[t_mask])
+                                    a_mask = k
+                                    e_mask_key = v[0]
+                                    r_mask_key = v[1]
+                                    t_mask_key = v[2]
+                                    e_mask = entity_mask[e_mask_key] if e_mask_key != "" else ""
+                                    r_mask = relation_mask[r_mask_key] if r_mask_key != "" else ""
+                                    t_mask = type_mask[t_mask_key] if t_mask_key != "" else ""
+                                if a_mask != "":
+                                    masklist.append(e_mask)
+                                    masklist.append(r_mask)
+                                    masklist.append(t_mask)
                                     mask_set = {a_mask : masklist}
                                     mask_action_sequence_list.append(mask_set)
                             if id != "" and question != "" and seq != "":
                                 correct_item = WebQSP(id, question, seq, entity, relation, type,entity_mask,
-                                                      relation_mask, type_mask, mask_action_sequence_list)
+                                                      relation_mask, type_mask, mask_action_sequence_list, answerList)
                             # print(question)
                             # print(answer)
                             WebQSPList_Correct.append(correct_item)
