@@ -49,12 +49,12 @@ def getTrainingDatasetForPytorch(percentage):
             key = list(dict(item).keys())[0]
             value = list(dict(item).values())[0]
             try:
+                # print(item)
                 # actions = eval(str(value['mask_action_sequence_list']))
-                if ()
                 mask_action_sequence_list = value['mask_action_sequence_list']
                 actions = eval(str(mask_action_sequence_list))
-            except SyntaxError:
-                pass
+            except Exception:
+                continue
             if len(actions) > 0:
                 action_string = ''
                 action = actions[0]
@@ -105,13 +105,17 @@ def getTrainingDatasetForPytorch(percentage):
     random.shuffle(dict_list)
     # train_size = int(len(dict_list) * 0.95)
     train_size = int(len(dict_list))
+    print("train_size", train_size)
     for i, item in enumerate(dict_list):
-        if i < train_size:
-            train_action_string_list.append(item.get('a'))
-            train_question_string_list.append(item.get('q'))
-        elif train_size <= i:
-            test_action_string_list.append(item.get('a'))
-            test_question_string_list.append(item.get('q'))
+        try:
+            if i < train_size:
+                train_action_string_list.append(item['a'])
+                train_question_string_list.append(item['q'])
+            elif train_size <= i:
+                test_action_string_list.append(item['a'])
+                test_question_string_list.append(item['q'])
+        except Exception:
+            continue
     fwTrainQ.writelines(train_question_string_list)
     fwTrainA.writelines(train_action_string_list)
     fwTestQ.writelines(test_question_string_list)
@@ -274,44 +278,26 @@ def getTrainingDatasetForRlWithTrueReward(percentage, SIZE):
     path = '../../data/auto_QA_data/mask_even_' + percentage + '/RL_test_TR_sub.question'
     fwTestQ = open(path, 'w', encoding="UTF-8")
     with open("../../data/auto_QA_data/WebQSP_ANNOTATIONS_test.json", 'r', encoding="UTF-8") as load_f:
-        dict_list = {}
-        load_dict = json.load(load_f)
-        list_of_load_dict = list(load_dict)
-        random.seed(SEED+4)
-        random.shuffle(list_of_load_dict)
-        count_dict = {'simple_': 0, 'logical_': 0, 'quantative_': 0, 'count_': 0, 'bool_': 0, 'comp_': 0, 'compcount_': 0}
-        for item in load_dict:
+        dict_list = json.load(load_f)
+        dict_dict = dict()
+        random.seed(SEED)
+        random.shuffle(dict_list)
+        for item in dict_list:
             key = list(dict(item).keys())[0]
             value = list(dict(item).values())[0]
             orig_response, question = "", ""
             try:
-                orig_response = value['orig_response']
+                orig_response = value['action_sequence_list']
                 question = value['question']
             except SyntaxError:
                 pass
             if len(orig_response) > 0 and len(question) >0:
-                if 'Simple Question (Direct)_' in key and count_dict['simple_'] < SIZE:
-                    count_dict['simple_'] = count_dict['simple_'] + 1
-                elif 'Logical Reasoning (All)_' in key and count_dict['logical_'] < SIZE:
-                    count_dict['logical_'] = count_dict['logical_'] + 1
-                elif 'Quantitative Reasoning (All)_' in key and count_dict['quantative_'] < SIZE:
-                    count_dict['quantative_'] = count_dict['quantative_'] + 1
-                elif 'Quantitative Reasoning (Count) (All)_' in key and count_dict['count_'] < SIZE:
-                    count_dict['count_'] = count_dict['count_'] + 1
-                elif 'Verification (Boolean) (All)_' in key and count_dict['bool_'] < SIZE:
-                    count_dict['bool_'] = count_dict['bool_'] + 1
-                elif 'Comparative Reasoning (All)_' in key and count_dict['comp_'] < SIZE:
-                    count_dict['comp_'] = count_dict['comp_'] + 1
-                elif 'Comparative Reasoning (Count) (All)_' in key and count_dict['compcount_'] < SIZE:
-                    count_dict['compcount_'] = count_dict['compcount_'] + 1
-                else:
-                    continue
-                dict_list[key] = value
+                dict_dict[key] = value
     dict_train_list, dict_test_list = {}, {}
-    train_size = int(len(dict_list))
-    # train_size = int(len(dict_list) * 0.95)
+    # train_size = int(len(dict_list))
+    train_size = int(len(dict_list) * 0.95)
     temp_count = 0
-    for key,value in dict_list.items():
+    for key,value in dict_dict.items():
         if temp_count < train_size:
             dict_train_list[key] = value
             temp_count+=1
@@ -333,7 +319,7 @@ if __name__ == "__main__":
     # size = 1479
     size = 64
     getTrainingDatasetForPytorch(percentage)
-    getTrainingDatasetForRl(percentage)
+    # getTrainingDatasetForRl(percentage)
     getTrainingDatasetForRlWithTrueReward(percentage, size)
 
 
