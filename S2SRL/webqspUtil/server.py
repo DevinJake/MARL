@@ -14,13 +14,12 @@ class Interpreter():
     def __init__(self, freebase_dir):
         self.map_program_to_func = {}
         self.map_program_to_func["gen_set1"] = self.execute_gen_set1
+        self.map_program_to_func["gen_set1_e"] = self.execute_gen_e_set1
         self.map_program_to_func["gen_set2"] = self.execute_gen_set2
         self.map_program_to_func["gen_set1_date"] = self.execute_gen_set1
-        self.map_program_to_func["gen_set2_date"] = self.execute_gen_set2_date
         self.map_program_to_func["select_oper_date_lt"] = self.execute_select_oper_date_lt
         self.map_program_to_func["select_oper_date_gt"] = self.execute_select_oper_date_gt
         self.map_program_to_func["gen_set2_dateconstrained"] = self.execute_gen_set2_dateconstrained
-        self.map_program_to_func["gen_set2_date_dateconstrained"] = self.execute_gen_set2_date_dateconstrained
         self.map_program_to_func["set_oper_ints"] = self.execute_set_oper_ints
         self.map_program_to_func["joint"] = self.execute_joint
         self.map_program_to_func["none"] = self.execute_none
@@ -60,6 +59,19 @@ class Interpreter():
         if entity in self.freebase_kb and relation in self.freebase_kb[entity]:
             tuple_set = self.freebase_kb[entity][relation]
             print("A1 select", entity, relation, tuple_set)
+        return tuple_set, 0
+
+    # 通过谓语宾语找主语
+    def execute_gen_e_set1(self, argument_value, argument_location):
+        relation = argument_value[0]
+        type = argument_value[1]
+        if relation is None or type is None:
+            return set([]), 1
+        tuple_set = set([])
+        for entity in self.freebase_kb:
+            if relation in self.freebase_kb[entity] and type in self.freebase_kb[entity][relation]:
+                tuple_set.add(entity)
+                print("A1 select_e", entity, relation, tuple_set)
         return tuple_set, 0
 
     # # 通过实体-关系 查找所有时间三元组
@@ -235,6 +247,8 @@ def post_res():
         response['content'] = interpreter.is_kb_consistent(jsonpack['sub'], jsonpack['pre'])
     elif jsonpack['op'] == "execute_gen_set1":
         response['content'] = interpreter.execute_gen_set1(jsonpack['sub_pre'], "")
+    elif jsonpack['op'] == "execute_gen_e_set1":
+        response['content'] = interpreter.execute_gen_e_set1(jsonpack['pre_type'], "")
     elif jsonpack['op'] == "execute_gen_set2":
         response['content'] = interpreter.execute_gen_set2(jsonpack['sub_pre1_pre2'], "")
     elif jsonpack['op'] == "joint":
@@ -244,11 +258,13 @@ def post_res():
     elif jsonpack['op'] == "exist":
         response['content'] = interpreter.exist(jsonpack['sub'], jsonpack['pre'], jsonpack['obj'])
     elif jsonpack['op'] == "get_filter_answer":
-        response['content'] = interpreter.exist(jsonpack['e'], jsonpack['r'], jsonpack['t'])
+        response['content'] = interpreter.get_filter_answer(jsonpack['e'], jsonpack['r'], jsonpack['t'])
     elif jsonpack['op'] == "execute_select_oper_date_lt":
         response['content'] = interpreter.execute_select_oper_date_lt(jsonpack['set_date'], jsonpack['date'])
     elif jsonpack['op'] == "execute_select_oper_date_gt":
         response['content'] = interpreter.execute_select_oper_date_gt(jsonpack['set_date'], jsonpack['date'])
+
+    # str2entity
 
     # elif jsonpack['op']=="find_reverse":
     #     response['content']=find_reverse(jsonpack['obj'],jsonpack['pre'])
