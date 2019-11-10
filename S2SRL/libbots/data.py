@@ -92,6 +92,13 @@ def group_train_data_RLTR(training_data):
         groups.append(temp)
     return list(groups)
 
+# Change token list into token tuple.
+def group_train_data_RLTR_for_support(training_data):
+    groups = {}
+    for p1, p2 in training_data:
+        groups.setdefault(p2['qid'], (tuple(p1), p2))
+    return groups
+
 def group_train_data(training_data):
     """
     Group training pairs by first phrase
@@ -287,15 +294,8 @@ def load_RL_data(QUESTION_PATH, ACTION_PATH, DIC_PATH, max_tokens = None):
             next_id += 1
     return result, res
 
-def load_RL_data_TR(QUESTION_PATH, DIC_PATH, max_tokens = None):
+def load_RL_data_TR(QUESTION_PATH, DIC_PATH = None, max_tokens = None):
     result = []
-    vocab_list = get_vocab(DIC_PATH)
-    res = {UNKNOWN_TOKEN: 0, BEGIN_TOKEN: 1, END_TOKEN: 2}
-    next_id = 3
-    for w in vocab_list:
-        if w not in res:
-            res[w] = next_id
-            next_id += 1
     with open(QUESTION_PATH, 'r', encoding="UTF-8") as load_f:
         load_dict = json.load(load_f)
         for key, value in load_dict.items():
@@ -307,7 +307,18 @@ def load_RL_data_TR(QUESTION_PATH, DIC_PATH, max_tokens = None):
                 result.append((str(value['input']).strip().split(' '), question_info))
             else:
                 continue
-    return result, res
+    if(DIC_PATH!=None):
+        res = {UNKNOWN_TOKEN: 0, BEGIN_TOKEN: 1, END_TOKEN: 2}
+        vocab_list = get_vocab(DIC_PATH)
+        next_id = 3
+        for w in vocab_list:
+            if w not in res:
+                res[w] = next_id
+                next_id += 1
+        return result, res
+    else:
+        return result
+
 
 def phrase_pairs_dict(phrase_pairs, freq_set):
     """

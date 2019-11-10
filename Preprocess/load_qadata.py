@@ -138,20 +138,20 @@ def print_qa(qa,root,fname):
             flag += 1
         # if flag == 20:
         #     return
-    print >>f, flag
-    print >>f, 'state:',qa['state'],
-    print >>f, "context_utterance:",qa['context_utterance'],
-    print >>f, 'context_relations:',qa['context_relations'],
-    print >>f, 'context_entities:',qa['context_entities'],
-    print >>f, 'context_types:',qa['context_types'],
-    print >>f, 'context:',qa['context'],
-    print >>f, 'orig_response:',qa['orig_response'],
-    print >>f, 'response_entities:',qa['response_entities'],
-    print >>f, "----------------------------"
-    print >>f, "SYMBOLIC:\n"
-    print >>f, "----------------------------"
-    print >>f, "CODE:\n"
-    print >>f, "----------------------------"
+    print (f, flag)
+    print (f, 'state:',qa['state'],)
+    print (f, "context_utterance:",qa['context_utterance'],)
+    print (f, 'context_relations:',qa['context_relations'],)
+    print (f, 'context_entities:',qa['context_entities'],)
+    print (f, 'context_types:',qa['context_types'],)
+    print (f, 'context:',qa['context'],)
+    print (f, 'orig_response:',qa['orig_response'],)
+    print (f, 'response_entities:',qa['response_entities'],)
+    print (f, "----------------------------")
+    print (f, "SYMBOLIC:\n")
+    print (f, "----------------------------")
+    print (f, "CODE:\n")
+    print (f, "----------------------------")
 
 if __name__=="__main__":
 

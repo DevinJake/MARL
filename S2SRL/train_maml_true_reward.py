@@ -7,7 +7,7 @@ import logging
 import numpy as np
 from tensorboardX import SummaryWriter
 
-from libbots import data, model, utils
+from libbots import data, model, utils, metalearner
 
 import torch
 import torch.optim as optim
@@ -26,6 +26,7 @@ GAMMA = 0.05
 
 DIC_PATH = '../data/auto_QA_data/share.question'
 TRAIN_QUESTION_ANSWER_PATH = '../data/auto_QA_data/mask_even_1.0%/RL_train_TR.question'
+TRAIN_944K_QUESTION_ANSWER_PATH = '../data/auto_QA_data/CSQA_DENOTATIONS_full_944K.json'
 log = logging.getLogger("train")
 
 
@@ -76,6 +77,10 @@ if __name__ == "__main__":
                         help="Using attention mechanism in seq2seq")
     parser.add_argument("--lstm", type=lambda x: (str(x).lower() in ['true', '1', 'yes']),
                         help="Using LSTM mechanism in seq2seq")
+    # The action='store_true' means once the parameter is assigned a value, the action is to mark it as 'True';
+    # If there is no value of the parameter, the value is assigned as 'False'.
+    # Conversely, if action is 'store_false', if the parameter has a value, the parameter is viewed as 'False'.
+    parser.add_argument('--first-order', action='store_true', help='use the first-order approximation of MAML')
     args = parser.parse_args()
     device = torch.device("cuda" if args.cuda else "cpu")
     log.info("Device info: %s", str(device))
@@ -86,12 +91,19 @@ if __name__ == "__main__":
     # # List of (question, {question information and answer}) pairs, the training pairs are in format of 1:1.
     phrase_pairs, emb_dict = data.load_RL_data_TR(TRAIN_QUESTION_ANSWER_PATH, DIC_PATH, MAX_TOKENS)
     log.info("Obtained %d phrase pairs with %d uniq words from %s.", len(phrase_pairs), len(emb_dict), TRAIN_QUESTION_ANSWER_PATH)
+    phrase_pairs_944K = data.load_RL_data_TR(TRAIN_944K_QUESTION_ANSWER_PATH, max_tokens = MAX_TOKENS)
+    log.info("Obtained %d phrase pairs from %s.", len(phrase_pairs), TRAIN_944K_QUESTION_ANSWER_PATH)
     data.save_emb_dict(saves_path, emb_dict)
     end_token = emb_dict[data.END_TOKEN]
+    # Transform token into index in dictionary.
     train_data = data.encode_phrase_pairs_RLTR(phrase_pairs, emb_dict)
     # # list of (seq1, [seq*]) pairs，把训练对做成1：N的形式；
     # train_data = data.group_train_data(train_data)
     train_data = data.group_train_data_RLTR(train_data)
+
+    train_data_944K = data.encode_phrase_pairs_RLTR(phrase_pairs_944K, emb_dict)
+    train_data_944K = data.group_train_data_RLTR_for_support(train_data_944K)
+
     rand = np.random.RandomState(data.SHUFFLE_SEED)
     rand.shuffle(train_data)
     train_data, test_data = data.split_train_test(train_data, TRAIN_RATIO)
@@ -128,6 +140,8 @@ if __name__ == "__main__":
     beg_token = torch.LongTensor([emb_dict[data.BEGIN_TOKEN]]).to(device)
     beg_token = beg_token.cuda()
 
+    metaLearner = metalearner(net, device, beg_token, train_data_944K)
+
     # TBMeanTracker (TensorBoard value tracker):
     # allows to batch fixed amount of historical values and write their mean into TB
     with ptan.common.utils.TBMeanTracker(writer, batch_size=100) as tb_tracker:
@@ -148,10 +162,16 @@ if __name__ == "__main__":
             true_reward_argmax = []
             true_reward_sample = []
 
+
             for batch in data.iterate_batches(train_data, BATCH_SIZE):
                 batch_idx += 1
                 # Each batch conduct one gradient upweight.
                 batch_count += 1
+
+                # Batch is represented for a batch of tasks in MAML.
+                # In each task, a batch of support set is established.
+                episodes = metaLearner.sample(batch, first_order=args.first_order)
+
                 # optimizer.zero_grad() clears x.grad for every parameter x in the optimizer.
                 # It’s important to call this before loss.backward(),
                 # otherwise you’ll accumulate the gradients from multiple passes.
