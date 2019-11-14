@@ -5,6 +5,7 @@ import torch.nn as nn
 import torch.nn.utils.rnn as rnn_utils
 import torch.nn.functional as F
 
+from collections import OrderedDict
 from . import utils
 from . import attention
 
@@ -45,6 +46,28 @@ class PhraseModel(nn.Module):
         if(self.attention_flag):
             self.attention = attention.Attention(hid_size)
             print('Build attention layer.')
+
+
+    def zero_grad(self, params=None):
+        if params is None:
+            for param in self.parameters():
+                if param.requires_grad == True:
+                    if param.grad is not None:
+                        if torch.sum(param.grad) > 0:
+                            print(param.grad)
+                            param.grad.zero_()
+        else:
+            for name, param in params.items():
+                if param.requires_grad == True:
+                    if param.grad is not None:
+                        if torch.sum(param.grad) > 0:
+                            print(param.grad)
+                            param.grad.zero_()
+                            params[name].grad = None
+
+    # Using the parameters to insert into network and compute output.
+    def insert_new_parameter(self, state_dict, strict):
+            self.load_state_dict(state_dict, strict)
 
     # hidden state;
     # return hid: (h_n, c_n) is tensor containing the hidden state and cell state for t = seq_len.
@@ -187,7 +210,6 @@ class PhraseModel(nn.Module):
             if stop_at_token is not None and action == stop_at_token:
                 break
         return torch.cat(res_logits), res_actions
-
 
 def pack_batch_no_out(batch, embeddings, device="cpu"):
     # Asserting statements is a convenient way to insert debugging assertions into a program.
