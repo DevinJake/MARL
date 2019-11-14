@@ -212,5 +212,9 @@ if __name__ == "__main__":
     decoder_input = inputs[:, 0].unsqueeze(1)
     print(decoder_input)
 
+    for i in range(10):
+        print(random.random())
+
+
 
 

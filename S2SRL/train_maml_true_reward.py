@@ -11,13 +11,14 @@ from libbots import data, model, utils, metalearner
 
 import torch
 import torch.optim as optim
-import torch.nn.functional as F
 import time
 import ptan
 
 SAVES_DIR = "../data/saves"
 
-BATCH_SIZE = 8
+# TODO
+# BATCH_SIZE = 8
+BATCH_SIZE = 2
 LEARNING_RATE = 1e-4
 MAX_EPOCHES = 30
 MAX_TOKENS = 40
@@ -26,7 +27,9 @@ GAMMA = 0.05
 
 DIC_PATH = '../data/auto_QA_data/share.question'
 TRAIN_QUESTION_ANSWER_PATH = '../data/auto_QA_data/mask_even_1.0%/RL_train_TR.question'
-TRAIN_944K_QUESTION_ANSWER_PATH = '../data/auto_QA_data/CSQA_DENOTATIONS_full_944K.json'
+# todo change this when training
+# TRAIN_944K_QUESTION_ANSWER_PATH = '../data/auto_QA_data/CSQA_DENOTATIONS_full_944K.json'
+TRAIN_944K_QUESTION_ANSWER_PATH = '../data/auto_QA_data/CSQA_DENOTATIONS_full.json'
 log = logging.getLogger("train")
 
 
@@ -58,7 +61,7 @@ if __name__ == "__main__":
     logging.basicConfig(format="%(asctime)-15s %(levelname)s %(message)s", level=logging.INFO)
     # # command line parameters
     # # -a=True means using adaptive reward to train the model. -a=False is using 0-1 reward.
-    sys.argv = ['train_scst_true_reward.py', '--cuda', '-l=../data/saves/crossent_even_1%_att=1/pre_bleu_0.944_94.dat', '-n=rl_even_TR_1%_batch8_att=1', '-s=5', '-a=0', '--att=1', '--lstm=1']
+    sys.argv = ['train_scst_true_reward.py', '--cuda', '-l=../data/saves/rl_even_TR_1%_batch8/truereward_0.739_29.dat', '-n=maml_1%_batch8_att=0', '-s=5', '-a=0', '--att=0', '--lstm=1', '--fast-lr=100000']
     # sys.argv = ['train_scst_true_reward.py', '--cuda', '-l=../data/saves/crossent_even_1%/pre_bleu_0.946_55.dat', '-n=rl_even_true_1%', '-s=5']
     parser = argparse.ArgumentParser()
     # parser.add_argument("--data", required=True, help="Category to use for training. Empty string to train on full processDataset")
@@ -81,6 +84,8 @@ if __name__ == "__main__":
     # If there is no value of the parameter, the value is assigned as 'False'.
     # Conversely, if action is 'store_false', if the parameter has a value, the parameter is viewed as 'False'.
     parser.add_argument('--first-order', action='store_true', help='use the first-order approximation of MAML')
+    parser.add_argument('--fast-lr', type=float, default=0.0001,
+                        help='learning rate for the 1-step gradient update of MAML')
     args = parser.parse_args()
     device = torch.device("cuda" if args.cuda else "cpu")
     log.info("Device info: %s", str(device))
@@ -130,6 +135,9 @@ if __name__ == "__main__":
     writer = SummaryWriter(comment="-" + args.name)
     # Load the pre-trained seq2seq model.
     net.load_state_dict(torch.load(args.load))
+    print("Pre-trained network params")
+    for name, param in net.named_parameters():
+        print(name, param.shape)
     log.info("Model loaded from %s, continue training in RL mode...", args.load)
     if(args.adaptive):
         log.info("Using adaptive reward to train the REINFORCE model...")
@@ -140,12 +148,11 @@ if __name__ == "__main__":
     beg_token = torch.LongTensor([emb_dict[data.BEGIN_TOKEN]]).to(device)
     beg_token = beg_token.cuda()
 
-    metaLearner = metalearner(net, device, beg_token, train_data_944K)
+    metaLearner = metalearner.MetaLearner(net, device=device, beg_token=beg_token, end_token=end_token, adaptive=args.adaptive, samples=args.samples, train_data_support=train_data_944K, rev_emb_dict=rev_emb_dict, first_order=args.first_order, fast_lr=args.fast_lr, meta_optimizer_lr = LEARNING_RATE, dial_shown = False)
 
     # TBMeanTracker (TensorBoard value tracker):
     # allows to batch fixed amount of historical values and write their mean into TB
     with ptan.common.utils.TBMeanTracker(writer, batch_size=100) as tb_tracker:
-        optimiser = optim.Adam(net.parameters(), lr=LEARNING_RATE, eps=1e-3)
         batch_idx = 0
         batch_count = 0
         best_true_reward = None
@@ -155,13 +162,10 @@ if __name__ == "__main__":
         # Loop in epoches.
         for epoch in range(MAX_EPOCHES):
             random.shuffle(train_data)
-            dial_shown = False
-
             total_samples = 0
             skipped_samples = 0
             true_reward_argmax = []
             true_reward_sample = []
-
 
             for batch in data.iterate_batches(train_data, BATCH_SIZE):
                 batch_idx += 1
@@ -170,163 +174,15 @@ if __name__ == "__main__":
 
                 # Batch is represented for a batch of tasks in MAML.
                 # In each task, a batch of support set is established.
-                episodes = metaLearner.sample(batch, first_order=args.first_order)
-
-                # optimizer.zero_grad() clears x.grad for every parameter x in the optimizer.
-                # It’s important to call this before loss.backward(),
-                # otherwise you’ll accumulate the gradients from multiple passes.
-                optimiser.zero_grad()
-                # input_seq: the padded and embedded batch-sized input sequence.
-                # input_batch: the token ID matrix of batch-sized input sequence. Each row is corresponding to one input sentence.
-                # output_batch: the token ID matrix of batch-sized output sequences. Each row is corresponding to a list of several output sentences.
-                input_seq, input_batch, output_batch = model.pack_batch_no_out(batch, net.emb, device)
-                input_seq = input_seq.cuda()
-                # Get (two-layer) hidden state of encoder of samples in batch.
-                # enc = net.encode(input_seq)
-                context, enc = net.encode_context(input_seq)
-
-                net_policies = []
-                net_actions = []
-                net_advantages = []
-                # Transform ID to embedding.
-                beg_embedding = net.emb(beg_token)
-                beg_embedding = beg_embedding.cuda()
-
-                for idx, inp_idx in enumerate(input_batch):
-                    # # Test whether the input sequence is correctly transformed into indices.
-                    # input_tokens = [rev_emb_dict[temp_idx] for temp_idx in inp_idx]
-                    # print (input_tokens)
-                    # Get IDs of reference sequences' tokens corresponding to idx-th input sequence in batch.
-                    qa_info = output_batch[idx]
-                    print("%s is training..." % (qa_info['qid']))
-                    # print (qa_info['qid'])
-                    # # Get the (two-layer) hidden state of encoder of idx-th input sequence in batch.
-                    item_enc = net.get_encoded_item(enc, idx)
-                    # # 'r_argmax' is the list of out_logits list and 'actions' is the list of output tokens.
-                    # # The output tokens are generated greedily by using chain_argmax (using last setp's output token as current input token).
-                    r_argmax, actions = net.decode_chain_argmax(item_enc, beg_embedding, data.MAX_TOKENS, context[idx], stop_at_token=end_token)
-                    # Show what the output action sequence is.
-                    action_tokens = []
-                    for temp_idx in actions:
-                        if temp_idx in rev_emb_dict and rev_emb_dict.get(temp_idx) != '#END':
-                            action_tokens.append(str(rev_emb_dict.get(temp_idx)).upper())
-                    # Get the highest BLEU score as baseline used in self-critic.
-                    # If the last parameter is false, it means that the 0-1 reward is used to calculate the accuracy.
-                    # Otherwise the adaptive reward is used.
-                    argmax_reward = utils.calc_True_Reward(action_tokens, qa_info, args.adaptive)
-                    true_reward_argmax.append(argmax_reward)
-
-                    # # In this case, the BLEU score is so high that it is not needed to train such case with RL.
-                    # if not args.disable_skip and argmax_reward > 0.99:
-                    #     skipped_samples += 1
-                    #     continue
-
-                    # In one epoch, when model is optimized for the first time, the optimized result is displayed here.
-                    # After that, all samples in this epoch don't display anymore.
-                    if not dial_shown:
-                        # data.decode_words transform IDs to tokens.
-                        log.info("Input: %s", utils.untokenize(data.decode_words(inp_idx, rev_emb_dict)))
-                        orig_response = qa_info['orig_response']
-                        log.info("orig_response: %s", orig_response)
-                        log.info("Argmax: %s, reward=%.4f", utils.untokenize(data.decode_words(actions, rev_emb_dict)),
-                                 argmax_reward)
-
-
-                    action_memory = list()
-                    for _ in range(args.samples):
-                        # 'r_sample' is the list of out_logits list and 'actions' is the list of output tokens.
-                        # The output tokens are sampled following probabilitis by using chain_sampling.
-                        r_sample, actions = net.decode_chain_sampling(item_enc, beg_embedding, data.MAX_TOKENS, context[idx], stop_at_token=end_token)
-                        total_samples += 1
-
-                        # Omit duplicate action sequence to decrease the computing time and to avoid the case that
-                        # the probability of such kind of duplicate action sequences would be increased redundantly and abnormally.
-                        duplicate_flag = False
-                        if len(action_memory) > 0:
-                            for temp_list in action_memory:
-                                if utils.duplicate(temp_list, actions):
-                                    duplicate_flag = True
-                                    break
-                        if not duplicate_flag:
-                            action_memory.append(actions)
-                        else:
-                            skipped_samples += 1
-                            continue
-                        # Show what the output action sequence is.
-                        action_tokens = []
-                        for temp_idx in actions:
-                            if temp_idx in rev_emb_dict and rev_emb_dict.get(temp_idx) != '#END':
-                                action_tokens.append(str(rev_emb_dict.get(temp_idx)).upper())
-                        # If the last parameter is false, it means that the 0-1 reward is used to calculate the accuracy.
-                        # Otherwise the adaptive reward is used.
-                        sample_reward = utils.calc_True_Reward(action_tokens, qa_info, args.adaptive)
-
-                        if not dial_shown:
-                            log.info("Sample: %s, reward=%.4f", utils.untokenize(data.decode_words(actions, rev_emb_dict)),
-                                     sample_reward)
-
-                        net_policies.append(r_sample)
-                        net_actions.extend(actions)
-                        # Regard argmax_bleu calculated from decode_chain_argmax as baseline used in self-critic.
-                        # Each token has same reward as 'sample_bleu - argmax_bleu'.
-                        # [x] * y: stretch 'x' to [1*y] list in which each element is 'x'.
-
-                        # # If the argmax_reward is 1.0, then whatever the sample_reward is,
-                        # # the probability of actions that get reward = 1.0 could not be further updated.
-                        # # The GAMMA is used to adjust this scenario.
-                        # if argmax_reward == 1.0:
-                        #     net_advantages.extend([sample_reward - argmax_reward + GAMMA] * len(actions))
-                        # else:
-                        #     net_advantages.extend([sample_reward - argmax_reward] * len(actions))
-
-                        net_advantages.extend([sample_reward - argmax_reward] * len(actions))
-                        true_reward_sample.append(sample_reward)
-                    dial_shown = True
-                    print("Epoch %d, Batch %d, Sample %d: %s is trained!" %(epoch, batch_count, idx, qa_info['qid']))
-
-                if not net_policies:
-                    continue
-
-                # Data for decode_chain_sampling samples and the number of such samples is the same as args.samples parameter.
-                # Logits of all output tokens whose size is N * output vocab size; N is the number of output tokens of decode_chain_sampling samples.
-                policies_v = torch.cat(net_policies)
-                policies_v = policies_v.cuda()
-                # Indices of all output tokens whose size is 1 * N;
-                actions_t = torch.LongTensor(net_actions).to(device)
-                actions_t = actions_t.cuda()
-                # All output tokens reward whose size is 1 * N;
-                adv_v = torch.FloatTensor(net_advantages).to(device)
-                adv_v = adv_v.cuda()
-                # Compute log(softmax(logits)) of all output tokens in size of N * output vocab size;
-                log_prob_v = F.log_softmax(policies_v, dim=1)
-                log_prob_v = log_prob_v.cuda()
-                # Q_1 = Q_2 =...= Q_n = BLEU(OUT,REF);
-                # ▽J = Σ_n[Q▽logp(T)] = ▽Σ_n[Q*logp(T)] = ▽[Q_1*logp(T_1)+Q_2*logp(T_2)+...+Q_n*logp(T_n)];
-                # log_prob_v[range(len(net_actions)), actions_t]: for each output, get the output token's log(softmax(logits)).
-                # adv_v * log_prob_v[range(len(net_actions)), actions_t]:
-                # get Q * logp(T) for all tokens of all decode_chain_sampling samples in size of 1 * N;
-                log_prob_actions_v = adv_v * log_prob_v[range(len(net_actions)), actions_t]
-                log_prob_actions_v = log_prob_actions_v.cuda()
-                # For the optimizer is Adam (Adaptive Moment Estimation) which is a optimizer used for gradient descent.
-                # Therefore, to maximize ▽J (log_prob_actions_v) is to minimize -▽J.
-                # .mean() is to calculate Monte Carlo sampling.
-                loss_policy_v = -log_prob_actions_v.mean()
-                loss_policy_v = loss_policy_v.cuda()
-
-                loss_v = loss_policy_v
-                # loss.backward() computes dloss/dx for every parameter x which has requires_grad=True.
-                # These are accumulated into x.grad for every parameter x. In pseudo-code:
-                # x.grad += dloss/dx
-                loss_v.backward()
-                # To conduct a gradient ascent to minimize the loss (which is to maximize the reward).
-                # optimizer.step updates the value of x using the gradient x.grad.
-                # For example, the SGD optimizer performs:
-                # x += -lr * x.grad
-                optimiser.step()
-
-                tb_tracker.track("advantage", adv_v, batch_idx)
-                tb_tracker.track("loss_policy", loss_policy_v, batch_idx)
-                tb_tracker.track("loss_total", loss_v, batch_idx)
+                losses, meta_total_samples, meta_skipped_samples = metaLearner.sample(batch, first_order=args.first_order)
+                total_samples += meta_total_samples
+                skipped_samples += meta_skipped_samples
+                metaLearner.meta_update(losses)
+                metaLearner.meta_optimizer.zero_grad()
+                metaLearner.net.zero_grad()
+                # tb_tracker.track("advantage", adv_v, batch_idx)
+                # tb_tracker.track("loss_policy", loss_policy_v, batch_idx)
+                # tb_tracker.track("loss_total", loss_v, batch_idx)
 
             # After one epoch, compute the bleus for samples in test dataset.
             true_reward_test = run_test(test_data, net, rev_emb_dict, end_token, device)
@@ -336,7 +192,8 @@ if __name__ == "__main__":
             writer.add_scalar("true_reward_armax", true_reward_armax, batch_idx)
             # After one epoch, get the average of the decode_chain_sampling bleus for samples in training dataset.
             writer.add_scalar("true_reward_sample", np.mean(true_reward_sample), batch_idx)
-            writer.add_scalar("skipped_samples", skipped_samples/total_samples if total_samples!=0 else 0, batch_idx)
+            writer.add_scalar("skipped_samples", skipped_samples / total_samples if total_samples != 0 else 0,
+                              batch_idx)
             log.info("Batch %d, skipped_samples: %d, total_samples: %d", batch_idx, skipped_samples, total_samples)
             writer.add_scalar("epoch", batch_idx, epoch)
             log.info("Epoch %d, test reward: %.3f", epoch, true_reward_test)
