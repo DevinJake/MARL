@@ -369,3 +369,8 @@ def trim_tokens_seq(tokens, end_token):
 def split_train_test(data, train_ratio=0.90):
     count = int(len(data) * train_ratio)
     return data[:count], data[count:]
+
+def get944k(path):
+    with open(path, "r", encoding='UTF-8') as CSQA_List:
+        dict944k = json.load(CSQA_List)
+    return dict944k
