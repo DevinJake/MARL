@@ -31,7 +31,7 @@ TRAIN_QUESTION_ANSWER_PATH = '../data/auto_QA_data/mask_even_1.0%/RL_train_TR.qu
 # TRAIN_944K_QUESTION_ANSWER_PATH = '../data/auto_QA_data/CSQA_DENOTATIONS_full_944K.json'
 TRAIN_944K_QUESTION_ANSWER_PATH = '../data/auto_QA_data/CSQA_DENOTATIONS_full.json'
 DICT_944K = '../data/auto_QA_data/CSQA_result_question_type_944K.json'
-DICT_944K_WEAK = '../data/auto_QA_data/CSQA_result_question_type_count944k.json'
+DICT_944K_WEAK = '../data/auto_QA_data/CSQA_result_question_type_count944K.json'
 log = logging.getLogger("train")
 
 
@@ -112,9 +112,9 @@ if __name__ == "__main__":
     train_data_944K = data.group_train_data_RLTR_for_support(train_data_944K)
 
     dict944k = data.get944k(DICT_944K)
-    log.info("Reading dict944k from %s is done.", DICT_944K)
+    log.info("Reading dict944k from %s is done. %d pairs in dict944k.", DICT_944K, len(dict944k))
     dict944k_weak = data.get944k(DICT_944K_WEAK)
-    log.info("Reading dict944k_weak from %s is done.", DICT_944K_WEAK)
+    log.info("Reading dict944k_weak from %s is done. %d pairs in dict944k_weak", DICT_944K_WEAK, len(dict944k_weak))
 
     rand = np.random.RandomState(data.SHUFFLE_SEED)
     rand.shuffle(train_data)
