@@ -24,6 +24,7 @@ class Retriever():
         filename = os.path.abspath(rootPath + 'data\\auto_QA_data\\CSQA_result_question_type_944k.json')
         with open(filename, "r", encoding='UTF-8') as CSQA_List:
             self.dict944k = json.load(CSQA_List)
+        print('Reading CSQA_result_question_type_944k.json is done!')
 
     def getDict944kWeak(self):
         curPath = os.path.abspath(os.path.dirname(__file__))
@@ -31,6 +32,7 @@ class Retriever():
         filename = os.path.abspath(rootPath + 'data\\auto_QA_data\\CSQA_result_question_type_count944k.json')
         with open(filename, "r", encoding='UTF-8') as CSQA_List_weak:
             self.dict944k_weak = json.load(CSQA_List_weak)
+            print('CSQA_result_question_type_count944k.json is done!')
 
     def takequestion(self, dict_item):
         takequestionvalues = list(dict_item.values())[0]
