@@ -27,7 +27,7 @@ class MetaLearner(object):
         Pieter Abbeel, "Trust Region Policy Optimization", 2015
         (https://arxiv.org/abs/1502.05477)
     """
-    def __init__(self, net, device='cpu', beg_token=None, end_token = None, adaptive=False, samples=5, train_data_support=None, rev_emb_dict=None, first_order=False, fast_lr=0.001, meta_optimizer_lr=0.0001, dial_shown = False):
+    def __init__(self, net, device='cpu', beg_token=None, end_token = None, adaptive=False, samples=5, train_data_support=None, rev_emb_dict=None, first_order=False, fast_lr=0.001, meta_optimizer_lr=0.0001, dial_shown = False, dict=None, dict_weak=None):
         self.net = net
         self.device = device
         self.beg_token = beg_token
@@ -42,7 +42,7 @@ class MetaLearner(object):
         # self.meta_optimizer = optim.Adam(self.trainable_parameters(), lr=args.meta_learning_rate, amsgrad=False)
         self.meta_optimizer = optim.Adam(net.parameters(), lr=meta_optimizer_lr, eps=1e-3)
         self.dial_shown = dial_shown
-        self.retriever = retriever.Retriever()
+        self.retriever = retriever.Retriever(dict, dict_weak)
 
     def meta_update(self, loss):
         """

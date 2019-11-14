@@ -6,9 +6,9 @@ from functools import cmp_to_key
 import random
 
 class Retriever():
-    def __init__(self):
-        self.getDict944k()
-        self.getDict944kWeak()
+    def __init__(self, dict944k, dict944k_weak):
+        self.dict944k = dict944k
+        self.dict944k_weak = dict944k_weak
         self.typelist = ['Simple Question (Direct)_',
             'Verification (Boolean) (All)_',
             'Quantitative Reasoning (Count) (All)_',
@@ -17,22 +17,6 @@ class Retriever():
             'Quantitative Reasoning (All)_',
             'Comparative Reasoning (All)_'
             ]
-
-    def getDict944k(self):
-        curPath = os.path.abspath(os.path.dirname(__file__))
-        rootPath = curPath[:curPath.find("NS-CQA\\") + len("NS-CQA\\")]
-        filename = os.path.abspath(rootPath + 'data\\auto_QA_data\\CSQA_result_question_type_944k.json')
-        with open(filename, "r", encoding='UTF-8') as CSQA_List:
-            self.dict944k = json.load(CSQA_List)
-        print('Reading CSQA_result_question_type_944k.json is done!')
-
-    def getDict944kWeak(self):
-        curPath = os.path.abspath(os.path.dirname(__file__))
-        rootPath = curPath[:curPath.find("NS-CQA\\") + len("NS-CQA\\")]
-        filename = os.path.abspath(rootPath + 'data\\auto_QA_data\\CSQA_result_question_type_count944k.json')
-        with open(filename, "r", encoding='UTF-8') as CSQA_List_weak:
-            self.dict944k_weak = json.load(CSQA_List_weak)
-            print('CSQA_result_question_type_count944k.json is done!')
 
     def takequestion(self, dict_item):
         takequestionvalues = list(dict_item.values())[0]

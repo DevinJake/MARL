@@ -30,6 +30,8 @@ TRAIN_QUESTION_ANSWER_PATH = '../data/auto_QA_data/mask_even_1.0%/RL_train_TR.qu
 # todo change this when training
 # TRAIN_944K_QUESTION_ANSWER_PATH = '../data/auto_QA_data/CSQA_DENOTATIONS_full_944K.json'
 TRAIN_944K_QUESTION_ANSWER_PATH = '../data/auto_QA_data/CSQA_DENOTATIONS_full.json'
+DICT_944K = '../data/auto_QA_data/CSQA_result_question_type_944K.json'
+DICT_944K_WEAK = '../data/auto_QA_data/CSQA_result_question_type_count944k.json'
 log = logging.getLogger("train")
 
 
@@ -61,7 +63,7 @@ if __name__ == "__main__":
     logging.basicConfig(format="%(asctime)-15s %(levelname)s %(message)s", level=logging.INFO)
     # # command line parameters
     # # -a=True means using adaptive reward to train the model. -a=False is using 0-1 reward.
-    sys.argv = ['train_scst_true_reward.py', '--cuda', '-l=../data/saves/rl_even_TR_1%_batch8/truereward_0.739_29.dat', '-n=maml_1%_batch8_att=0', '-s=5', '-a=0', '--att=0', '--lstm=1', '--fast-lr=100000']
+    sys.argv = ['train_scst_true_reward.py', '--cuda', '-l=../data/saves/rl_even_TR_batch8_1%/truereward_0.739_29.dat', '-n=maml_1%_batch8_att=0', '-s=5', '-a=0', '--att=0', '--lstm=1', '--fast-lr=100000']
     # sys.argv = ['train_scst_true_reward.py', '--cuda', '-l=../data/saves/crossent_even_1%/pre_bleu_0.946_55.dat', '-n=rl_even_true_1%', '-s=5']
     parser = argparse.ArgumentParser()
     # parser.add_argument("--data", required=True, help="Category to use for training. Empty string to train on full processDataset")
@@ -109,6 +111,11 @@ if __name__ == "__main__":
     train_data_944K = data.encode_phrase_pairs_RLTR(phrase_pairs_944K, emb_dict)
     train_data_944K = data.group_train_data_RLTR_for_support(train_data_944K)
 
+    dict944k = data.get944k(DICT_944K)
+    log.info("Reading dict944k from %s is done.", DICT_944K)
+    dict944k_weak = data.get944k(DICT_944K_WEAK)
+    log.info("Reading dict944k_weak from %s is done.", DICT_944K_WEAK)
+
     rand = np.random.RandomState(data.SHUFFLE_SEED)
     rand.shuffle(train_data)
     train_data, test_data = data.split_train_test(train_data, TRAIN_RATIO)
@@ -148,7 +155,7 @@ if __name__ == "__main__":
     beg_token = torch.LongTensor([emb_dict[data.BEGIN_TOKEN]]).to(device)
     beg_token = beg_token.cuda()
 
-    metaLearner = metalearner.MetaLearner(net, device=device, beg_token=beg_token, end_token=end_token, adaptive=args.adaptive, samples=args.samples, train_data_support=train_data_944K, rev_emb_dict=rev_emb_dict, first_order=args.first_order, fast_lr=args.fast_lr, meta_optimizer_lr = LEARNING_RATE, dial_shown = False)
+    metaLearner = metalearner.MetaLearner(net, device=device, beg_token=beg_token, end_token=end_token, adaptive=args.adaptive, samples=args.samples, train_data_support=train_data_944K, rev_emb_dict=rev_emb_dict, first_order=args.first_order, fast_lr=args.fast_lr, meta_optimizer_lr = LEARNING_RATE, dial_shown = False, dict=dict944k, dict_weak=dict944k_weak)
 
     # TBMeanTracker (TensorBoard value tracker):
     # allows to batch fixed amount of historical values and write their mean into TB
