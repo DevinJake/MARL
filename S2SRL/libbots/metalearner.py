@@ -27,13 +27,13 @@ class MetaLearner(object):
         Pieter Abbeel, "Trust Region Policy Optimization", 2015
         (https://arxiv.org/abs/1502.05477)
     """
-    def __init__(self, net, device='cpu', beg_token=None, end_token = None, adaptive=False, samples=5, train_data_support=None, rev_emb_dict=None, first_order=False, fast_lr=0.001, meta_optimizer_lr=0.0001, dial_shown = False, dict=None, dict_weak=None):
+    def __init__(self, net, device='cpu', beg_token=None, end_token = None, adaptive=False, samples=5, train_data_support_944K=None, rev_emb_dict=None, first_order=False, fast_lr=0.001, meta_optimizer_lr=0.0001, dial_shown = False, dict=None, dict_weak=None, steps=5, weak_flag=False):
         self.net = net
         self.device = device
         self.beg_token = beg_token
         self.end_token = end_token
         # The training data from which the top-N samples (support set) are found.
-        self.train_data_support = train_data_support
+        self.train_data_support_944K = train_data_support_944K
         self.rev_emb_dict = rev_emb_dict
         self.adaptive = adaptive
         self.samples = samples
@@ -43,6 +43,8 @@ class MetaLearner(object):
         self.meta_optimizer = optim.Adam(net.parameters(), lr=meta_optimizer_lr, eps=1e-3)
         self.dial_shown = dial_shown
         self.retriever = retriever.Retriever(dict, dict_weak)
+        self.steps = steps
+        self.weak_flag = weak_flag
 
     def meta_update(self, loss):
         """
@@ -76,17 +78,24 @@ class MetaLearner(object):
                 # So in your case, before and after contain the same tensors.
                 # So when the optimizer update the weights in place, it updates both your lists.
                 # You could call .clone() on each parameter so that a deep copy will be used to solve the problem.
-                # param_dict[name] = param.to(device=self.device).clone()
-                param_dict[name] = param.to(device=self.device)
+                # param_dict[name] = param.to(device=self.device)
+                param_dict[name] = param.to(device=self.device).clone()
         return param_dict
 
-    def establish_support_set(self, train_data, N=0):
+    def establish_support_set(self, task, N=5, weak=False, train_data_support_944K=None):
         # Find top-N in train_data_support;
         # get_top_N(train_data, train_data_support, N)
         # Support set is none. Use the training date per se as support set.
         batch = list()
         if N==0:
-            batch.append(train_data)
+            batch.append(task)
+        else:
+            key_name, key_weak, question = self.retriever.AnalyzeQuestion(task[1])
+            topNList = self.retriever.RetrieveWithMaxTokens(N, key_name, key_weak, question, train_data_support_944K, weak)
+            for name in topNList:
+                qid = list(name.keys())[0] if len(name) > 0 else 'NONE'
+                if qid in train_data_support_944K:
+                    batch.append(train_data_support_944K[qid])
         return batch
 
     def update_params(self, inner_loss, names_weights_copy, step_size=0.1, first_order=False):
@@ -99,8 +108,8 @@ class MetaLearner(object):
         # nn.Module.zero_grad() Sets gradients of all model parameters to zero.
         # It’s important to call this before loss.backward(),
         # otherwise you’ll accumulate the gradients from multiple passes.
-        self.net.zero_grad(names_weights_copy)
-        # self.net.zero_grad()
+        # self.net.zero_grad(names_weights_copy)
+        self.net.zero_grad()
 
         # create_graph (bool, optional) – If True, graph of the derivative will be constructed,
         # allowing to compute higher order derivative products. Defaults to False.
@@ -114,10 +123,10 @@ class MetaLearner(object):
         # The autograd.grad function returns an object that match the inputs argument,
         # so we could get the the gradient of self.parameters() as returned value.
         # Here if we do not use the first_order configuration, we set it as true.
-        grads = torch.autograd.grad(inner_loss, names_weights_copy.values(),
-            create_graph=not first_order)
-        # grads = torch.autograd.grad(inner_loss, self.net.parameters(),
-        #                             create_graph=not first_order)
+        # grads = torch.autograd.grad(inner_loss, names_weights_copy.values(),
+        #     create_graph=not first_order)
+        grads = torch.autograd.grad(inner_loss, self.net.parameters(),
+                                    create_graph=not first_order)
         # self.named_parameters() is consisted of an iterator over module parameters,
         # yielding both the name of the parameter as well as the parameter itself.
         # grads is the gradient of self.parameters().
@@ -132,38 +141,40 @@ class MetaLearner(object):
         #         [1., 1.]], requires_grad=True)), ('1.bias', Parameter containing:
         # tensor([0., 0.], requires_grad=True))])
         updated_names_weights_dict = dict()
-        names_grads_wrt_params = dict(zip(names_weights_copy.keys(), grads))
-        for key in names_grads_wrt_params.keys():
-            print(str(key)+': ')
-            print('names_weights_copy:')
-            print(names_weights_copy[key])
-            print('names_grads_wrt_params:')
-            print(names_grads_wrt_params[key])
-            updated_names_weights_dict[key] = names_weights_copy[key] - step_size * names_grads_wrt_params[key]
-            print('updated_names_weights_dict:')
-            print(updated_names_weights_dict[key])
-
-        # for (name, param), grad in zip(self.net.named_parameters(), grads):
-        #     updated_names_weights_dict[name] = param - step_size * grad
-        #     print(str(name) + ': ')
-        #     print('self.net.named_parameters:')
-        #     print(param)
-        #     print('grad:')
-        #     print(grad)
+        # names_grads_wrt_params = dict(zip(names_weights_copy.keys(), grads))
+        # for key in names_grads_wrt_params.keys():
+        #     print(str(key)+': ')
+        #     print('names_weights_copy:')
+        #     print(names_weights_copy[key])
+        #     print('names_grads_wrt_params:')
+        #     print(names_grads_wrt_params[key])
+        #     updated_names_weights_dict[key] = names_weights_copy[key] - step_size * names_grads_wrt_params[key]
         #     print('updated_names_weights_dict:')
-        #     print(updated_names_weights_dict[name])
+        #     print(updated_names_weights_dict[key])
+
+        for (name, param), grad in zip(self.net.named_parameters(), grads):
+            updated_names_weights_dict[name] = param - step_size * grad
+            # print(str(name) + ': ')
+            # print('self.net.named_parameters:')
+            # print(param)
+            # print('grad:')
+            # print(grad)
+            # print('updated_names_weights_dict:')
+            # print(updated_names_weights_dict[name])
 
         return updated_names_weights_dict
 
     # The loss used to calculate theta' for each pseudo-task.
     # Compute the inner loss for the one-step gradient update.
     # The inner loss is REINFORCE with baseline [2].
-    def inner_loss(self, task, weights=None):
-
+    def inner_loss(self, task, weights=None, dial_shown=True):
         total_samples = 0
         skipped_samples = 0
-        # todo: remember to change into real top-N.
-        batch = self.establish_support_set(task)
+
+        batch = list()
+        batch.append(task)
+        true_reward_argmax_step = []
+        true_reward_sample_step = []
 
         if weights is not None:
             self.net.insert_new_parameter(weights, True)
@@ -189,7 +200,7 @@ class MetaLearner(object):
             # print (input_tokens)
             # Get IDs of reference sequences' tokens corresponding to idx-th input sequence in batch.
             qa_info = output_batch[idx]
-            print("%s is training..." % (qa_info['qid']))
+            # print("            Support sample %s is training..." % (qa_info['qid']))
             # print (qa_info['qid'])
             # # Get the (two-layer) hidden state of encoder of idx-th input sequence in batch.
             item_enc = self.net.get_encoded_item(enc, idx)
@@ -205,25 +216,22 @@ class MetaLearner(object):
             # Get the highest BLEU score as baseline used in self-critic.
             # If the last parameter is false, it means that the 0-1 reward is used to calculate the accuracy.
             # Otherwise the adaptive reward is used.
-            # todo: remember to change into utils.calc_True_Reward;
-            # argmax_reward = utils.calc_True_Reward(action_tokens, qa_info, self.adaptive)
-            argmax_reward = random.random()
-            # true_reward_argmax.append(argmax_reward)
+            argmax_reward = utils.calc_True_Reward(action_tokens, qa_info, self.adaptive)
+            # argmax_reward = random.random()
+            true_reward_argmax_step.append(argmax_reward)
 
             # # In this case, the BLEU score is so high that it is not needed to train such case with RL.
             # if not args.disable_skip and argmax_reward > 0.99:
             #     skipped_samples += 1
             #     continue
 
-            # # In one epoch, when model is optimized for the first time, the optimized result is displayed here.
-            # # After that, all samples in this epoch don't display anymore.
-            # if not self.dial_shown:
-            #     # data.decode_words transform IDs to tokens.
-            #     log.info("Input: %s", utils.untokenize(data.decode_words(inp_idx, self.rev_emb_dict)))
-            #     orig_response = qa_info['orig_response']
-            #     log.info("orig_response: %s", orig_response)
-            #     log.info("Argmax: %s, reward=%.4f", utils.untokenize(data.decode_words(actions, self.rev_emb_dict)),
-            #              argmax_reward)
+            # In one epoch, when model is optimized for the first time, the optimized result is displayed here.
+            # After that, all samples in this epoch don't display anymore.
+            if not dial_shown:
+                # data.decode_words transform IDs to tokens.
+                log.info("Input: %s", utils.untokenize(data.decode_words(inp_idx, self.rev_emb_dict)))
+                log.info("Argmax: %s, reward=%.4f", utils.untokenize(data.decode_words(actions, self.rev_emb_dict)),
+                         argmax_reward)
 
             action_memory = list()
             for _ in range(self.samples):
@@ -254,15 +262,13 @@ class MetaLearner(object):
 
                 # If the last parameter is false, it means that the 0-1 reward is used to calculate the accuracy.
                 # Otherwise the adaptive reward is used.
-                # todo: remember to change into utils.calc_True_Reward;
-                sample_reward = random.random()
-                # sample_reward = utils.calc_True_Reward(action_tokens, qa_info, self.adaptive)
-                # true_reward_sample.append(sample_reward)
+                sample_reward = utils.calc_True_Reward(action_tokens, qa_info, self.adaptive)
+                # sample_reward = random.random()
+                true_reward_sample_step.append(sample_reward)
 
-
-                # if not self.dial_shown:
-                #     log.info("Sample: %s, reward=%.4f", utils.untokenize(data.decode_words(actions, self.rev_emb_dict)),
-                #              sample_reward)
+                if not dial_shown:
+                    log.info("Sample: %s, reward=%.4f", utils.untokenize(data.decode_words(actions, self.rev_emb_dict)),
+                             sample_reward)
 
                 net_policies.append(r_sample)
                 net_actions.extend(actions)
@@ -279,9 +285,6 @@ class MetaLearner(object):
                 #     net_advantages.extend([sample_reward - argmax_reward] * len(actions))
 
                 net_advantages.extend([sample_reward - argmax_reward] * len(actions))
-
-            # self.dial_shown = True
-            # print("Epoch %d, Batch %d, Sample %d: %s is trained!" % (epoch, batch_count, idx, qa_info['qid']))
 
         if not net_policies:
             log.info("The net_policies is empty!")
@@ -315,216 +318,59 @@ class MetaLearner(object):
         loss_policy_v = loss_policy_v.cuda()
 
         loss_v = loss_policy_v
-        return loss_v, total_samples, skipped_samples
+        return loss_v, total_samples, skipped_samples, true_reward_argmax_step, true_reward_sample_step
 
-    def sample(self, tasks, first_order=False):
+    def sample(self, tasks, first_order=False, dial_shown=True, epoch_count=0, batch_count=0):
         """Sample trajectories (before and after the update of the parameters)
         for all the tasks `tasks`.
         Here number of tasks is 8.
         """
         task_losses = []
+        true_reward_argmax_batch = []
+        true_reward_sample_batch = []
         total_samples = 0
         skipped_samples = 0
         self.net.zero_grad()
         # To get copied weights of the model for inner training.
-        # initial_names_weights_copy = self.get_inner_loop_parameter_dict(self.net.named_parameters())
+        initial_names_weights_copy = self.get_inner_loop_parameter_dict(self.net.named_parameters())
         for task in tasks:
+            # names_weights_copy = self.get_inner_loop_parameter_dict(self.net.named_parameters())
+            names_weights_copy = initial_names_weights_copy
 
-            names_weights_copy = self.get_inner_loop_parameter_dict(self.net.named_parameters())
-            # names_weights_copy = initial_names_weights_copy
-            inner_loss, inner_total_samples, inner_skipped_samples = self.inner_loss(task, weights=names_weights_copy)
+            log.info("Task %s is training..." % (str(task[1]['qid'])))
 
-            total_samples += inner_total_samples
-            skipped_samples += inner_skipped_samples
+            # Establish support set.
+            support_set = self.establish_support_set(task, self.steps, self.weak_flag, self.train_data_support_944K)
 
-            # Get the new parameters after a one-step gradient update
-            # Each module parameter is computed as parameter = parameter - step_size * grad.
-            # When being saved in the OrderedDict of self.named_parameters(), it likes:
-            # OrderedDict([('sigma', Parameter containing:
-            # tensor([0.6931, 0.6931], requires_grad=True)), ('0.weight', Parameter containing:
-            # tensor([[1., 1.],
-            #         [1., 1.]], requires_grad=True)), ('0.bias', Parameter containing:
-            # tensor([0., 0.], requires_grad=True)), ('1.weight', Parameter containing:
-            # tensor([[1., 1.],
-            #         [1., 1.]], requires_grad=True)), ('1.bias', Parameter containing:
-            # tensor([0., 0.], requires_grad=True))])
-            names_weights_copy = self.update_params(inner_loss, names_weights_copy=names_weights_copy, step_size=self.fast_lr,
-                                                    first_order=self.first_order)
+            for step_sample in support_set:
+                # todo: use the similarity between the sample in support set and the task to scale the reward or loss
+                #  when meta optimization.
+                inner_loss, inner_total_samples, inner_skipped_samples, true_reward_argmax_step, true_reward_sample_step = self.inner_loss(step_sample, weights=names_weights_copy, dial_shown=True)
+                total_samples += inner_total_samples
+                skipped_samples += inner_skipped_samples
+                true_reward_argmax_batch.extend(true_reward_argmax_step)
+                true_reward_sample_batch.extend(true_reward_sample_step)
+                log.info("        Epoch %d, Batch %d, support sample %s is trained!" % (epoch_count, batch_count, str(step_sample[1]['qid'])))
 
-            inner_loss, inner_total_samples, inner_skipped_samples = self.inner_loss(task, weights=names_weights_copy)
-            total_samples += inner_total_samples
-            skipped_samples += inner_skipped_samples
-            names_weights_copy = self.update_params(inner_loss, names_weights_copy=names_weights_copy, step_size=self.fast_lr,
-                                                        first_order=self.first_order)
+                # Get the new parameters after a one-step gradient update
+                # Each module parameter is computed as parameter = parameter - step_size * grad.
+                # When being saved in the OrderedDict of self.named_parameters(), it likes:
+                # OrderedDict([('sigma', Parameter containing:
+                # tensor([0.6931, 0.6931], requires_grad=True)), ('0.weight', Parameter containing:
+                # tensor([[1., 1.],
+                #         [1., 1.]], requires_grad=True)), ('0.bias', Parameter containing:
+                # tensor([0., 0.], requires_grad=True)), ('1.weight', Parameter containing:
+                # tensor([[1., 1.],
+                #         [1., 1.]], requires_grad=True)), ('1.bias', Parameter containing:
+                # tensor([0., 0.], requires_grad=True))])
+                names_weights_copy = self.update_params(inner_loss, names_weights_copy=names_weights_copy, step_size=self.fast_lr, first_order=first_order)
 
-            meta_loss, outer_total_samples, outer_skipped_samples = self.inner_loss(task, weights=names_weights_copy)
+            meta_loss, outer_total_samples, outer_skipped_samples, true_reward_argmax_step, true_reward_sample_step = self.inner_loss(task, weights=names_weights_copy, dial_shown=dial_shown)
             task_losses.append(meta_loss)
+            total_samples += outer_total_samples
+            skipped_samples += outer_skipped_samples
+            true_reward_argmax_batch.extend(true_reward_argmax_step)
+            true_reward_sample_batch.extend(true_reward_sample_step)
+            log.info("Epoch %d, Batch %d, task %s is trained!" % (epoch_count, batch_count, str(task[1]['qid'])))
         meta_losses = torch.mean(torch.stack(task_losses))
-        return meta_losses, total_samples, skipped_samples
-
-    def kl_divergence(self, episodes, old_pis=None):
-        kls = []
-        if old_pis is None:
-            old_pis = [None] * len(episodes)
-
-        for (train_episodes, valid_episodes), old_pi in zip(episodes, old_pis):
-            params = self.adapt(train_episodes)
-            pi = self.policy(valid_episodes.observations, params=params)
-
-            if old_pi is None:
-                old_pi = detach_distribution(pi)
-
-            mask = valid_episodes.mask
-            if valid_episodes.actions.dim() > 2:
-                mask = mask.unsqueeze(2)
-            kl = weighted_mean(kl_divergence(pi, old_pi), dim=0, weights=mask)
-            kls.append(kl)
-
-        return torch.mean(torch.stack(kls, dim=0))
-
-    def hessian_vector_product(self, episodes, damping=1e-2):
-        """Hessian-vector product, based on the Perlmutter method."""
-        def _product(vector):
-            kl = self.kl_divergence(episodes)
-            grads = torch.autograd.grad(kl, self.policy.parameters(),
-                create_graph=True)
-            flat_grad_kl = parameters_to_vector(grads)
-
-            grad_kl_v = torch.dot(flat_grad_kl, vector)
-            grad2s = torch.autograd.grad(grad_kl_v, self.policy.parameters())
-            flat_grad2_kl = parameters_to_vector(grad2s)
-
-            return flat_grad2_kl + damping * vector
-        return _product
-
-    def surrogate_loss(self, episodes, old_pis=None):
-        losses, kls, pis = [], [], []
-        if old_pis is None:
-            # It is: [None, None, None,..., None, None, None, None, None], a list of 40 'None'.
-            old_pis = [None] * len(episodes)
-
-        for (train_episodes, valid_episodes), old_pi in zip(episodes, old_pis):
-            # Self.policy.named_parameters() are initialized when the model is established.
-            # The updated parameters are saved in params but the value of named_parameters() is not changed.
-            # By using saved train_episodes in one task, the adapted parameters which are used in this task is generated.
-            params = self.adapt(train_episodes)
-            # with torch.set_grad_enabled (true or false): to set the operations in the block be able to compute gradient.
-            # The torch.set_grad_enabled line of code makes sure to clear the intermediate values for evaluation,
-            # which are needed to backpropagate during training, thus saving memory.
-            # It’s comparable to the with torch.no_grad() statement but takes a bool value.
-            # All new operations in the torch.set_grad_enabled(False) block won’t require gradients.
-            # However, the model parameters will still require gradients.
-            with torch.set_grad_enabled(old_pi is None):
-                # episodes.observations: [2,4,3] -> pi: [2,4,5] (2:steps, 4:samples, 5:action_size)
-                # Using policy's mlp to compute actions, i.e., pi, from observations.
-                pi = self.policy(valid_episodes.observations, params=params)
-                # detach_distribution(pi) = Normal(loc=pi.loc.detach(), scale=pi.scale.detach())
-                # NOTE: Why detach_distribution(pi)?
-                pis.append(detach_distribution(pi))
-
-                if old_pi is None:
-                    old_pi = detach_distribution(pi)
-                # Using learned weight to calculate returns (cumulative rewards) in baseline.
-                values = self.baseline(valid_episodes)
-                # Get advantages of valid_episodes.
-                advantages = valid_episodes.gae(values, tau=self.tau)
-                advantages = weighted_normalize(advantages,
-                    weights=valid_episodes.mask)
-                # NOTE: WHY?
-                # log_prob here is used to measure the variance of actions computed by `Normal` distribution output of NormalMLPPolicy。
-                # Suppose an output action is a vector of elements,
-                # then pi.log_prob(actions) is to compute the probability of each element in the action vector.
-                # The probability of the action is computed as the product of probabilities of all elements in the action vector.
-                # So the sum of elements in pi.log_prob(actions) is the log_prob of the whole action.
-                log_ratio = (pi.log_prob(valid_episodes.actions)
-                    - old_pi.log_prob(valid_episodes.actions))
-                # [2, 4, 5] -> [2, 4]
-                if log_ratio.dim() > 2:
-                    log_ratio = torch.sum(log_ratio, dim=2)
-                ratio = torch.exp(log_ratio)
-
-                # For example: tensor(-0.3125, grad_fn=<NegBackward>);
-                loss = -weighted_mean(ratio * advantages, dim=0,
-                    weights=valid_episodes.mask)
-                losses.append(loss)
-
-                mask = valid_episodes.mask
-                if valid_episodes.actions.dim() > 2:
-                    # From:
-                    # mask: torch.Size([2, 4])
-                    # tensor([[1., 1., 1., 1.],
-                    #         [0., 0., 0., 0.]])
-                    # To:
-                    # unsqueeze(2) mask: torch.Size([2, 4, 1])
-                    # tensor([[[1.],
-                    #          [1.],
-                    #          [1.],
-                    #          [1.]],
-                    #
-                    #         [[0.],
-                    #          [0.],
-                    #          [0.],
-                    #          [0.]]])
-                    mask = mask.unsqueeze(2)
-                # For instance: kl: tensor(0., grad_fn=<MeanBackward1>)
-                kl = weighted_mean(kl_divergence(pi, old_pi), dim=0,
-                    weights=mask)
-                kls.append(kl)
-
-        # torch.stack(tensors, dim=0, out=None) → Tensor:
-        # Concatenates sequence of tensors along a new dimension into a list.
-        # All tensors need to be of the same size.
-        # Return the average of losses and kls of the batch of tasks,
-        # and the pis of the batch of tasks as well.
-        return (torch.mean(torch.stack(losses, dim=0)),
-                torch.mean(torch.stack(kls, dim=0)), pis)
-
-    def step(self, episodes, max_kl=1e-3, cg_iters=10, cg_damping=1e-2,
-             ls_max_steps=10, ls_backtrack_ratio=0.5):
-        """Meta-optimization step (ie. update of the initial parameters), based
-        on Trust Region Policy Optimization (TRPO, [4]).
-        """
-        # Get the average of losses of all episodes of all episodes in a batch of 40 tasks.
-        # Get the detached distributions, old_pis for all episodes in a batch of 40 tasks.
-        old_loss, _, old_pis = self.surrogate_loss(episodes)
-        # torch.autograd.grad(outputs, inputs, grad_outputs=None,
-        # retain_graph=None, create_graph=False, only_inputs=True, allow_unused=False):
-        # Computes and returns the sum of gradients of outputs w.r.t. the inputs.
-        # outputs (sequence of Tensor) – outputs of the differentiated function.
-        # inputs (sequence of Tensor) – Inputs w.r.t. which the gradient will be returned
-        # (and not accumulated into .grad).
-        grads = torch.autograd.grad(old_loss, self.policy.parameters())
-        # Convert parameters to one vector, concat each parameter (vector) into one vector.
-        grads = parameters_to_vector(grads)
-
-        # Compute the step direction with Conjugate Gradient
-        hessian_vector_product = self.hessian_vector_product(episodes,
-            damping=cg_damping)
-        # hessian_vector_product here is the pointer of the function _product defined in hessian_vector_product
-        # and will transferred into conjugate_gradient.
-        stepdir = conjugate_gradient(hessian_vector_product, grads,
-            cg_iters=cg_iters)
-
-        # Compute the Lagrange multiplier
-        shs = 0.5 * torch.dot(stepdir, hessian_vector_product(stepdir))
-        lagrange_multiplier = torch.sqrt(shs / max_kl)
-
-        step = stepdir / lagrange_multiplier
-
-        # Save the old parameters
-        old_params = parameters_to_vector(self.policy.parameters())
-
-        # Line search
-        step_size = 1.0
-        for _ in range(ls_max_steps):
-            # Convert value of the vector into the value of parameters.
-            vector_to_parameters(old_params - step_size * step,
-                                 self.policy.parameters())
-            loss, kl, _ = self.surrogate_loss(episodes, old_pis=old_pis)
-            # If new loss is less then old loss, which means having found better parameters.
-            improve = loss - old_loss
-            if (improve.item() < 0.0) and (kl.item() < max_kl):
-                break
-            step_size *= ls_backtrack_ratio
-        else:
-            vector_to_parameters(old_params, self.policy.parameters())
+        return meta_losses, total_samples, skipped_samples, true_reward_argmax_batch, true_reward_sample_batch

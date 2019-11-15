@@ -16,10 +16,6 @@ import ptan
 
 SAVES_DIR = "../data/saves"
 
-# TODO
-# BATCH_SIZE = 8
-BATCH_SIZE = 2
-LEARNING_RATE = 1e-4
 MAX_EPOCHES = 30
 MAX_TOKENS = 40
 TRAIN_RATIO = 0.985
@@ -27,9 +23,7 @@ GAMMA = 0.05
 
 DIC_PATH = '../data/auto_QA_data/share.question'
 TRAIN_QUESTION_ANSWER_PATH = '../data/auto_QA_data/mask_even_1.0%/RL_train_TR.question'
-# todo change this when training
-# TRAIN_944K_QUESTION_ANSWER_PATH = '../data/auto_QA_data/CSQA_DENOTATIONS_full_944K.json'
-TRAIN_944K_QUESTION_ANSWER_PATH = '../data/auto_QA_data/CSQA_DENOTATIONS_full.json'
+TRAIN_944K_QUESTION_ANSWER_PATH = '../data/auto_QA_data/CSQA_DENOTATIONS_full_944K.json'
 DICT_944K = '../data/auto_QA_data/CSQA_result_question_type_944K.json'
 DICT_944K_WEAK = '../data/auto_QA_data/CSQA_result_question_type_count944K.json'
 log = logging.getLogger("train")
@@ -63,10 +57,8 @@ if __name__ == "__main__":
     logging.basicConfig(format="%(asctime)-15s %(levelname)s %(message)s", level=logging.INFO)
     # # command line parameters
     # # -a=True means using adaptive reward to train the model. -a=False is using 0-1 reward.
-    sys.argv = ['train_scst_true_reward.py', '--cuda', '-l=../data/saves/rl_even_TR_batch8_1%/truereward_0.739_29.dat', '-n=maml_1%_batch8_att=0', '-s=5', '-a=0', '--att=0', '--lstm=1', '--fast-lr=100000']
-    # sys.argv = ['train_scst_true_reward.py', '--cuda', '-l=../data/saves/crossent_even_1%/pre_bleu_0.946_55.dat', '-n=rl_even_true_1%', '-s=5']
+    sys.argv = ['train_maml_true_reward.py', '--cuda', '-l=../data/saves/rl_even_TR_batch8_1%/truereward_0.739_29.dat', '-n=maml_1%_batch8_att=0', '-s=5', '-a=0', '--att=0', '--lstm=1', '--fast-lr=0.1', '--meta-lr=1e-4', '--steps=5', '--batches=1', '--weak=1']
     parser = argparse.ArgumentParser()
-    # parser.add_argument("--data", required=True, help="Category to use for training. Empty string to train on full processDataset")
     parser.add_argument("--cuda", action='store_true', default=False, help="Enable cuda")
     parser.add_argument("-n", "--name", required=True, help="Name of the run")
     parser.add_argument("-l", "--load", required=True, help="Load the pre-trained model whereby continue training the RL mode")
@@ -88,6 +80,13 @@ if __name__ == "__main__":
     parser.add_argument('--first-order', action='store_true', help='use the first-order approximation of MAML')
     parser.add_argument('--fast-lr', type=float, default=0.0001,
                         help='learning rate for the 1-step gradient update of MAML')
+    parser.add_argument('--meta-lr', type=float, default=0.0001,
+                        help='learning rate for the meta optimization')
+    parser.add_argument('--steps', type=int, default=5, help='steps in inner loop of MAML')
+    parser.add_argument('--batches', type=int, default=5, help='tasks of a batch in outer loop of MAML')
+    # If weak is true, it means when searching for support set, the questions with same number of E/R/T nut different relation will be retrieved if the questions in this pattern is less than the number of steps.
+    parser.add_argument("--weak", type=lambda x: (str(x).lower() in ['true', '1', 'yes']),
+                        help="Using weak mode to search for support set")
     args = parser.parse_args()
     device = torch.device("cuda" if args.cuda else "cpu")
     log.info("Device info: %s", str(device))
@@ -96,10 +95,10 @@ if __name__ == "__main__":
     os.makedirs(saves_path, exist_ok=True)
 
     # # List of (question, {question information and answer}) pairs, the training pairs are in format of 1:1.
-    phrase_pairs, emb_dict = data.load_RL_data_TR(TRAIN_QUESTION_ANSWER_PATH, DIC_PATH, MAX_TOKENS)
+    phrase_pairs, emb_dict = data.load_data_MAML(TRAIN_QUESTION_ANSWER_PATH, DIC_PATH, MAX_TOKENS)
     log.info("Obtained %d phrase pairs with %d uniq words from %s.", len(phrase_pairs), len(emb_dict), TRAIN_QUESTION_ANSWER_PATH)
-    phrase_pairs_944K = data.load_RL_data_TR(TRAIN_944K_QUESTION_ANSWER_PATH, max_tokens = MAX_TOKENS)
-    log.info("Obtained %d phrase pairs from %s.", len(phrase_pairs), TRAIN_944K_QUESTION_ANSWER_PATH)
+    phrase_pairs_944K = data.load_data_MAML(TRAIN_944K_QUESTION_ANSWER_PATH, max_tokens = MAX_TOKENS)
+    log.info("Obtained %d phrase pairs from %s.", len(phrase_pairs_944K), TRAIN_944K_QUESTION_ANSWER_PATH)
     data.save_emb_dict(saves_path, emb_dict)
     end_token = emb_dict[data.END_TOKEN]
     # Transform token into index in dictionary.
@@ -121,7 +120,7 @@ if __name__ == "__main__":
     train_data, test_data = data.split_train_test(train_data, TRAIN_RATIO)
     log.info("Training data converted, got %d samples", len(train_data))
     log.info("Train set has %d phrases, test %d", len(train_data), len(test_data))
-    log.info("Batch size is %d", BATCH_SIZE)
+    log.info("Batch size is %d", args.batches)
     if (args.att):
         log.info("Using attention mechanism to train the SEQ2SEQ model...")
     else:
@@ -142,9 +141,9 @@ if __name__ == "__main__":
     writer = SummaryWriter(comment="-" + args.name)
     # Load the pre-trained seq2seq model.
     net.load_state_dict(torch.load(args.load))
-    print("Pre-trained network params")
-    for name, param in net.named_parameters():
-        print(name, param.shape)
+    # print("Pre-trained network params")
+    # for name, param in net.named_parameters():
+    #     print(name, param.shape)
     log.info("Model loaded from %s, continue training in RL mode...", args.load)
     if(args.adaptive):
         log.info("Using adaptive reward to train the REINFORCE model...")
@@ -155,7 +154,10 @@ if __name__ == "__main__":
     beg_token = torch.LongTensor([emb_dict[data.BEGIN_TOKEN]]).to(device)
     beg_token = beg_token.cuda()
 
-    metaLearner = metalearner.MetaLearner(net, device=device, beg_token=beg_token, end_token=end_token, adaptive=args.adaptive, samples=args.samples, train_data_support=train_data_944K, rev_emb_dict=rev_emb_dict, first_order=args.first_order, fast_lr=args.fast_lr, meta_optimizer_lr = LEARNING_RATE, dial_shown = False, dict=dict944k, dict_weak=dict944k_weak)
+    metaLearner = metalearner.MetaLearner(net, device=device, beg_token=beg_token, end_token=end_token, adaptive=args.adaptive, samples=args.samples, train_data_support_944K=train_data_944K, rev_emb_dict=rev_emb_dict, first_order=args.first_order, fast_lr=args.fast_lr, meta_optimizer_lr=args.meta_lr, dial_shown=False, dict=dict944k, dict_weak=dict944k_weak, steps=args.steps, weak_flag=args.weak)
+    log.info("Meta-learner: %d inner steps, %f inner learning rate, "
+             "%d outer steps, %f outer learning rate, using weak mode:%s"
+             %(args.steps, args.fast_lr, args.batches, args.meta_lr, str(args.weak)))
 
     # TBMeanTracker (TensorBoard value tracker):
     # allows to batch fixed amount of historical values and write their mean into TB
@@ -163,33 +165,36 @@ if __name__ == "__main__":
         batch_idx = 0
         batch_count = 0
         best_true_reward = None
-
         time_start = time.time()
 
         # Loop in epoches.
         for epoch in range(MAX_EPOCHES):
+            dial_shown = False
             random.shuffle(train_data)
             total_samples = 0
             skipped_samples = 0
             true_reward_argmax = []
             true_reward_sample = []
 
-            for batch in data.iterate_batches(train_data, BATCH_SIZE):
+            for batch in data.iterate_batches(train_data, args.batches):
                 batch_idx += 1
                 # Each batch conduct one gradient upweight.
                 batch_count += 1
 
                 # Batch is represented for a batch of tasks in MAML.
                 # In each task, a batch of support set is established.
-                losses, meta_total_samples, meta_skipped_samples = metaLearner.sample(batch, first_order=args.first_order)
+                losses, meta_total_samples, meta_skipped_samples, true_reward_argmax_batch, true_reward_sample_batch = \
+                    metaLearner.sample(batch, first_order=args.first_order,
+                                       dial_shown=dial_shown, epoch_count=epoch, batch_count=batch_count)
                 total_samples += meta_total_samples
                 skipped_samples += meta_skipped_samples
+                true_reward_argmax.extend(true_reward_argmax_batch)
+                true_reward_sample.extend(true_reward_sample_batch)
                 metaLearner.meta_update(losses)
                 metaLearner.meta_optimizer.zero_grad()
                 metaLearner.net.zero_grad()
-                # tb_tracker.track("advantage", adv_v, batch_idx)
-                # tb_tracker.track("loss_policy", loss_policy_v, batch_idx)
-                # tb_tracker.track("loss_total", loss_v, batch_idx)
+                dial_shown = True
+                tb_tracker.track("meta_losses", losses, batch_idx)
 
             # After one epoch, compute the bleus for samples in test dataset.
             true_reward_test = run_test(test_data, net, rev_emb_dict, end_token, device)
@@ -209,7 +214,6 @@ if __name__ == "__main__":
                 log.info("Best true reward updated: %.4f", true_reward_test)
                 # Save the updated seq2seq parameters trained by RL.
                 torch.save(net.state_dict(), os.path.join(saves_path, "truereward_%.3f_%02d.dat" % (true_reward_test, epoch)))
-            # if epoch % 10 == 0:
             # # The parameters are stored after each epoch.
             torch.save(net.state_dict(), os.path.join(saves_path, "epoch_%03d_%.3f_%.3f.dat" % (epoch, float(true_reward_armax), true_reward_test)))
         time_end = time.time()
