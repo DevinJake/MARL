@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch
+import math
 from torch.autograd import Variable
 KEY_ATTN_SCORE = 'attention_score'
 
@@ -135,3 +136,18 @@ if __name__ == "__main__":
     # for di in range(context2.size(1)):
     #     step_output = context2[:, di, :]
     #     print(step_output)
+
+    dict_temp = {'name': 1}
+    print(list(dict_temp.keys())[0])
+    print(len(dict_temp))
+
+    def MyFn(s,N):
+        return abs(s-N)
+    strs = [1.1, 2.0, 2.4, 4]
+    N=2
+    print(sorted(strs, key=lambda x:MyFn(x,N)))
+
+    strs = [1.1, 2.0, 2.4, 4]
+    strs1 = [5,6]
+    strs.extend(strs1)
+    print(strs)

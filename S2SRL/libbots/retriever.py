@@ -18,9 +18,12 @@ class Retriever():
             'Comparative Reasoning (All)_'
             ]
 
-    def takequestion(self, dict_item):
-        takequestionvalues = list(dict_item.values())[0]
-        return self.CalculatesimilarityStr(takequestionvalues, question) * (-1)
+    def takequestion(self, dict_item, question):
+        if len(dict_item) > 0:
+            takequestionvalues = list(dict_item.values())[0]
+            return self.CalculatesimilarityStr(takequestionvalues, question) * (-1)
+        else:
+            return 0.0
 
     def Retrieve(self, N, key_name, key_weak, question):
         dict_candicate = self.dict944k_weak
@@ -54,34 +57,35 @@ class Retriever():
     # The input of the model is constrained by the maximum number of tokens.
     # When finding top-N, it should considered whether the question in full training dateset
     # is removed from the model or not.
-    def RetrieveWithMaxTokens(self, N, key_name, key_weak, question, train_data_944k):
+    def RetrieveWithMaxTokens(self, N, key_name, key_weak, question, train_data_944k, weak_flag):
         dict_candicate = self.dict944k_weak
-        if key_name in self.dict944k and key_name in train_data_944k:
+        topNList = list()
+        if key_name in self.dict944k:
             candidate_list = self.dict944k[key_name]
-            sort_candidate = sorted(candidate_list, key=self.takequestion)
+            candidate_list_filtered = [x for x in candidate_list if len(x)>0 and list(x.keys())[0] in train_data_944k]
+            sort_candidate = sorted(candidate_list_filtered, key=lambda x: self.takequestion(x, question))
 
             # remove the quesiton itself
             for candidateItem in sort_candidate:
                 if list(candidateItem.values())[0] == question:
                     sort_candidate.remove(candidateItem)
-                    break
 
             topNList = sort_candidate if len(sort_candidate) <= N else sort_candidate[0:N]
 
             # if don't have enough matches, search without relation match
-            if len(topNList) < N:
-                print(len(topNList), " found of ", N)
+            if len(topNList) < N and weak_flag:
+                # print(len(topNList), " found of ", N)
                 if key_weak in dict_candicate:
                     weak_list = dict_candicate[key_weak]
-                    sort_candidate_weak = sorted(weak_list, key=self.takequestion)
+                    weak_list_filtered = [x for x in weak_list if len(x)>0 and list(x.keys())[0] in train_data_944k]
+                    sort_candidate_weak = sorted(weak_list_filtered, key=lambda x: self.takequestion(x, question))
                     for c_weak in sort_candidate_weak:
                         if len(topNList) == N:
                             break
                         if c_weak not in topNList:
                             topNList.append(c_weak)
-                            print(len(topNList))
-
-            return topNList
+                            # print(len(topNList))
+        return topNList
 
     def MoreSimilarity(self, sentence1, sentence2):
         return True
@@ -119,68 +123,73 @@ class Retriever():
         return jaccard
 
     def AnalyzeQuestion(self, question_info):
-        entity_count = len(question_info.value['entity'])
-        relation_count = len(question_info.value['relation'])
-        type_count = len(question_info.value['type'])
-        question = question_info.value['question']
-        relation_list = question_info.value['relation']
-        relation_str = '_'.join(relation_list)
+        type_name = 'NOTYPE'
+        for typei in self.typelist:
+            if typei in question_info['qid']:
+                type_name = typei
+                break
+        entity_count = len(question_info['entity']) if 'entity' in question_info else 0
+        relation_count = len(question_info['relation']) if 'relation' in question_info else 0
+        type_count = len(question_info['type']) if 'type' in question_info else 0
+        question = question_info['question'] if 'question' in question_info else 'NOQUESTION'
+        relation_list = question_info['relation'] if 'relation' in question_info else []
+        relation_str = '_'.join(relation_list) if relation_list != [] else 'NORELATION'
         key_name = '{0}{1}_{2}_{3}_{4}'.format(type_name, entity_count, relation_count, type_count,
                                                relation_str)
         key_weak = '{0}{1}_{2}_{3}'.format(type_name, entity_count, relation_count, type_count)
         return key_name, key_weak, question
 
-if __name__ == "__main__":
-    retriever = Retriever()
-    result_dict = {}
-    with open("RL_train_TR.question", "r", encoding='UTF-8') as questions:
-        load_dict = json.load(questions)
-        # keys = list(load_dict.keys())
-        # random.shuffle(keys)
-        #
-        # shuffled_load_dict = dict()
-        # for key in keys:
-        #     shuffled_load_dict.update({key: load_dict[key]})
-
-        q_topK_map = {}
-
-        current_type = 0
-
-        for i in range(0, 6):
-            current_type = i
-            current_type_count = 0
-            # for key, value in shuffled_load_dict.items():
-            for key, value in load_dict.items():
-                entity_count = len(value['entity'])
-                relation_count = len(value['relation'])
-                type_count = len(value['type'])
-                question = value['question']
-                relation_list = value['relation']
-                relation_str = '_'.join(relation_list)
-
-                type_name = retriever.typelist[0]
-                for typei in retriever.typelist:
-                    if typei in key:
-                        type_name = typei
-                if type_name == retriever.typelist[current_type]:
-                    current_type_count += 1
-
-                    if current_type_count >= 20:
-                        break
-                    else:
-                        key_name = '{0}{1}_{2}_{3}_{4}'.format(type_name, entity_count, relation_count, type_count,
-                                                               relation_str)
-                        key_weak = '{0}{1}_{2}_{3}'.format(type_name, entity_count, relation_count, type_count)
-
-                        topNlist = retriever.Retrieve(5, key_name, key_weak, question)
-                        if True:
-                            # current_type_count += 1
-                            key_question = key + ' : ' + question
-                            item_key = {key_question: topNlist}
-                            q_topK_map.update(item_key)
-
-
-        with open('top5_4weak11.13.json', 'w', encoding='utf-8') as f:
-            json.dump(q_topK_map, f, indent=4)
+# if __name__ == "__main__":
+#     retriever = Retriever()
+#     result_dict = {}
+#     with open("RL_train_TR.question", "r", encoding='UTF-8') as questions:
+#         load_dict = json.load(questions)
+#         # keys = list(load_dict.keys())
+#         # random.shuffle(keys)
+#         #
+#         # shuffled_load_dict = dict()
+#         # for key in keys:
+#         #     shuffled_load_dict.update({key: load_dict[key]})
+#
+#         q_topK_map = {}
+#
+#         current_type = 0
+#
+#         for i in range(0, 6):
+#             current_type = i
+#             current_type_count = 0
+#             # for key, value in shuffled_load_dict.items():
+#             for key, value in load_dict.items():
+#                 entity_count = len(value['entity'])
+#                 relation_count = len(value['relation'])
+#                 type_count = len(value['type'])
+#                 question = value['question']
+#                 relation_list = value['relation']
+#                 relation_str = '_'.join(relation_list)
+#
+#                 type_name = retriever.typelist[0]
+#                 for typei in retriever.typelist:
+#                     if typei in key:
+#                         type_name = typei
+#                 if type_name == retriever.typelist[current_type]:
+#                     current_type_count += 1
+#
+#                     if current_type_count >= 20:
+#                         break
+#                     else:
+#                         key_name = '{0}{1}_{2}_{3}_{4}'.format(type_name, entity_count, relation_count, type_count,
+#                                                                relation_str)
+#                         key_weak = '{0}{1}_{2}_{3}'.format(type_name, entity_count, relation_count, type_count)
+#
+#                         topNlist = retriever.Retrieve(5, key_name, key_weak, question)
+#                         if True:
+#                             # current_type_count += 1
+#                             key_question = key + ' : ' + question
+#                             item_key = {key_question: topNlist}
+#                             q_topK_map.update(item_key)
+#
+#
+#         with open('top5_4weak11.13.json', 'w', encoding='utf-8') as f:
+#             json.dump(q_topK_map, f, indent=4)
 
 

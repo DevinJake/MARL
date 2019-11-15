@@ -319,6 +319,31 @@ def load_RL_data_TR(QUESTION_PATH, DIC_PATH = None, max_tokens = None):
     else:
         return result
 
+def load_data_MAML(QUESTION_PATH, DIC_PATH = None, max_tokens = None):
+    result = []
+    with open(QUESTION_PATH, 'r', encoding="UTF-8") as load_f:
+        load_dict = json.load(load_f)
+        for key, value in load_dict.items():
+            length = len(str(value['input']).strip().split(' '))
+            if 'entity_mask' in value and 'relation_mask' in value and 'type_mask' in value and 'response_bools' in value and 'response_entities' in value and 'orig_response' in value and 'question' in value and length <= max_tokens:
+                question_info = {'qid':key,'entity_mask': value['entity_mask'], 'relation_mask': value['relation_mask'],
+                             'type_mask': value['type_mask'], 'response_bools': value['response_bools'],
+                             'response_entities': value['response_entities'], 'orig_response': value['orig_response'],
+                             'entity':value['entity'], 'relation': value['relation'], 'type': value['type'], 'question':value['question']}
+                result.append((str(value['input']).strip().split(' '), question_info))
+            else:
+                continue
+    if(DIC_PATH!=None):
+        res = {UNKNOWN_TOKEN: 0, BEGIN_TOKEN: 1, END_TOKEN: 2}
+        vocab_list = get_vocab(DIC_PATH)
+        next_id = 3
+        for w in vocab_list:
+            if w not in res:
+                res[w] = next_id
+                next_id += 1
+        return result, res
+    else:
+        return result
 
 def phrase_pairs_dict(phrase_pairs, freq_set):
     """
