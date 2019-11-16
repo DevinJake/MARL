@@ -4,6 +4,7 @@
 from itertools import islice
 import sys
 import json
+import os
 #Python codes to read the binary files.
 import numpy as np
 LINE_SIZE = 100000
@@ -146,10 +147,75 @@ def getSampleTestDataset():
     fwTestA.close()
     print ("Getting test processDataset is done!")
 
+def getSampleTestDatasetForMAML():
+    # Create target directory & all intermediate directories if don't exists
+    dirName = '../../data/auto_QA_data/mask_test'
+    if not os.path.exists(dirName):
+        os.makedirs(dirName)
+        print("Directory ", dirName, " Created ")
+    else:
+        print("Directory ", dirName, " already exists")
+    path = dirName + '/SAMPLE_FINAL_MAML_test.question'
+    fwTestQ = open(path, 'w', encoding="UTF-8")
+    with open("../../data/auto_QA_data/CSQA_ANNOTATIONS_test.json", 'r', encoding="UTF-8") as load_f:
+        count = 1
+        dict_list = {}
+        load_dict = json.load(load_f)
+        list_of_load_dict = list(load_dict.items())
+        # random.seed(SEED+4)
+        # random.shuffle(list_of_load_dict)
+        load_dict = dict(list_of_load_dict)
+        for key, value in load_dict.items():
+            orig_response, question = "", ""
+            try:
+                orig_response = value['orig_response']
+                question = value['question']
+            except SyntaxError:
+                pass
+            if len(orig_response) > 0 and len(question) >0:
+                count += 1
+                if count % 20 == 0:
+                    dict_temp = value
+                    question_string = '<E> '
+                    entities = value['entity_mask']
+                    if len(entities) > 0:
+                        for entity_key, entity_value in entities.items():
+                            if str(entity_value) != '':
+                                question_string += str(entity_value) + ' '
+                    question_string += '</E> <R> '
+                    relations = value['relation_mask']
+                    if len(relations) > 0:
+                        for relation_key, relation_value in relations.items():
+                            if str(relation_value) != '':
+                                question_string += str(relation_value) + ' '
+                    question_string += '</R> <T> '
+                    types = value['type_mask']
+                    if len(types) > 0:
+                        for type_key, type_value in types.items():
+                            if str(type_value) != '':
+                                question_string += str(type_value) + ' '
+                    question_string += '</T> '
+                    question_token = str(value['question']).lower().replace('?', '')
+                    question_token = question_token.replace(',', ' ')
+                    question_token = question_token.replace(':', ' ')
+                    question_token = question_token.replace('(', ' ')
+                    question_token = question_token.replace(')', ' ')
+                    question_token = question_token.replace('"', ' ')
+                    question_token = question_token.strip()
+                    question_string += question_token
+                    question_string = question_string.strip()
+                    dict_temp['input'] = question_string
+                    dict_list[key] = dict_temp
+    if len(dict_list) > 0:
+        fwTestQ.writelines(json.dumps(dict_list, indent=1, ensure_ascii=False))
+    fwTestQ.close()
+    print ("Getting MAML processDataset is done!")
+
 # Run getTestDataset to get the final test processDataset.
 if __name__ == "__main__":
-    getTestDataset()
-    getSampleTestDataset()
+    # getTestDataset()
+    # getSampleTestDataset()
+    getSampleTestDatasetForMAML()
 
 
 

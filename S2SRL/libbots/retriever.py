@@ -17,6 +17,24 @@ class Retriever():
             'Quantitative Reasoning (All)_',
             'Comparative Reasoning (All)_'
             ]
+        self.typelist_for_test = ['SimpleQuestion(Direct)',
+                         'Verification(Boolean)(All)',
+                         'QuantitativeReasoning(Count)(All)',
+                         'LogicalReasoning(All)',
+                         'ComparativeReasoning(Count)(All)',
+                         'QuantitativeReasoning(All)',
+                         'ComparativeReasoning(All)'
+                         ]
+        self.map = {'SimpleQuestion(Direct)':'Simple Question (Direct)_',
+                    'Verification(Boolean)(All)':'Verification (Boolean) (All)_',
+                    'QuantitativeReasoning(Count)(All)':'Quantitative Reasoning (Count) (All)_',
+                    'LogicalReasoning(All)':'Logical Reasoning (All)_',
+                    'ComparativeReasoning(Count)(All)':'Comparative Reasoning (Count) (All)_',
+                    'QuantitativeReasoning(All)':'Quantitative Reasoning (All)_',
+                    'ComparativeReasoning(All)':'Comparative Reasoning (All)_'}
+        # The cache is used to store the retrieved samples for first time in memory.
+        # Therefore in next iteration it is not needed to find support set in 944K file.
+        self.support_set_cache = {}
 
     def takequestion(self, dict_item, question):
         if len(dict_item) > 0:
@@ -57,7 +75,11 @@ class Retriever():
     # The input of the model is constrained by the maximum number of tokens.
     # When finding top-N, it should considered whether the question in full training dateset
     # is removed from the model or not.
-    def RetrieveWithMaxTokens(self, N, key_name, key_weak, question, train_data_944k, weak_flag):
+    def RetrieveWithMaxTokens(self, N, key_name, key_weak, question, train_data_944k, weak_flag, qid):
+        if qid in self.support_set_cache:
+            print('%s is in top-N cache!' %(str(qid)))
+            return self.support_set_cache[qid]
+        print('%s is not in top-N cache!' % (str(qid)))
         dict_candicate = self.dict944k_weak
         topNList = list()
         if key_name in self.dict944k:
@@ -85,6 +107,7 @@ class Retriever():
                         if c_weak not in topNList:
                             topNList.append(c_weak)
                             # print(len(topNList))
+        self.support_set_cache[qid] = topNList
         return topNList
 
     def MoreSimilarity(self, sentence1, sentence2):
@@ -128,6 +151,11 @@ class Retriever():
             if typei in question_info['qid']:
                 type_name = typei
                 break
+        if type_name=='NOTYPE':
+            for typei in self.typelist_for_test:
+                if typei in question_info['qid']:
+                    type_name = self.map[typei]
+                    break
         entity_count = len(question_info['entity']) if 'entity' in question_info else 0
         relation_count = len(question_info['relation']) if 'relation' in question_info else 0
         type_count = len(question_info['type']) if 'type' in question_info else 0
@@ -137,7 +165,7 @@ class Retriever():
         key_name = '{0}{1}_{2}_{3}_{4}'.format(type_name, entity_count, relation_count, type_count,
                                                relation_str)
         key_weak = '{0}{1}_{2}_{3}'.format(type_name, entity_count, relation_count, type_count)
-        return key_name, key_weak, question
+        return key_name, key_weak, question, question_info['qid']
 
 # if __name__ == "__main__":
 #     retriever = Retriever()

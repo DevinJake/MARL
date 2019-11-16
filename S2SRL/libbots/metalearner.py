@@ -90,8 +90,8 @@ class MetaLearner(object):
         if N==0:
             batch.append(task)
         else:
-            key_name, key_weak, question = self.retriever.AnalyzeQuestion(task[1])
-            topNList = self.retriever.RetrieveWithMaxTokens(N, key_name, key_weak, question, train_data_support_944K, weak)
+            key_name, key_weak, question, qid = self.retriever.AnalyzeQuestion(task[1])
+            topNList = self.retriever.RetrieveWithMaxTokens(N, key_name, key_weak, question, train_data_support_944K, weak, qid)
             for name in topNList:
                 qid = list(name.keys())[0] if len(name) > 0 else 'NONE'
                 if qid in train_data_support_944K:
@@ -343,8 +343,6 @@ class MetaLearner(object):
             support_set = self.establish_support_set(task, self.steps, self.weak_flag, self.train_data_support_944K)
 
             for step_sample in support_set:
-                # todo: use the similarity between the sample in support set and the task to scale the reward or loss
-                #  when meta optimization.
                 inner_loss, inner_total_samples, inner_skipped_samples, true_reward_argmax_step, true_reward_sample_step = self.inner_loss(step_sample, weights=names_weights_copy, dial_shown=True)
                 total_samples += inner_total_samples
                 skipped_samples += inner_skipped_samples
@@ -374,3 +372,62 @@ class MetaLearner(object):
             log.info("Epoch %d, Batch %d, task %s is trained!" % (epoch_count, batch_count, str(task[1]['qid'])))
         meta_losses = torch.mean(torch.stack(task_losses))
         return meta_losses, total_samples, skipped_samples, true_reward_argmax_batch, true_reward_sample_batch
+
+    def sampleForTest(self, task, first_order=False, dial_shown=True, epoch_count=0, batch_count=0):
+        """Sample trajectories (before and after the update of the parameters)
+        for all the tasks `tasks`.
+        Here number of tasks is 8.
+        """
+        task_losses = []
+        true_reward_argmax_batch = []
+        true_reward_sample_batch = []
+        total_samples = 0
+        skipped_samples = 0
+        self.net.zero_grad()
+        # To get copied weights of the model for inner training.
+        names_weights_copy = self.get_inner_loop_parameter_dict(self.net.named_parameters())
+
+        log.info("Task %s is training..." % (str(task[1]['qid'])))
+
+        # Establish support set.
+        support_set = self.establish_support_set(task, self.steps, self.weak_flag, self.train_data_support_944K)
+
+        for step_sample in support_set:
+            # todo: use the similarity between the sample in support set and the task to scale the reward or loss
+            #  when meta optimization.
+            inner_loss, inner_total_samples, inner_skipped_samples, true_reward_argmax_step, true_reward_sample_step = self.inner_loss(step_sample, weights=names_weights_copy, dial_shown=True)
+            total_samples += inner_total_samples
+            skipped_samples += inner_skipped_samples
+            true_reward_argmax_batch.extend(true_reward_argmax_step)
+            true_reward_sample_batch.extend(true_reward_sample_step)
+            log.info("        Epoch %d, Batch %d, support sample %s is trained!" % (epoch_count, batch_count, str(step_sample[1]['qid'])))
+
+            # Get the new parameters after a one-step gradient update
+            # Each module parameter is computed as parameter = parameter - step_size * grad.
+            # When being saved in the OrderedDict of self.named_parameters(), it likes:
+            # OrderedDict([('sigma', Parameter containing:
+            # tensor([0.6931, 0.6931], requires_grad=True)), ('0.weight', Parameter containing:
+            # tensor([[1., 1.],
+            #         [1., 1.]], requires_grad=True)), ('0.bias', Parameter containing:
+            # tensor([0., 0.], requires_grad=True)), ('1.weight', Parameter containing:
+            # tensor([[1., 1.],
+            #         [1., 1.]], requires_grad=True)), ('1.bias', Parameter containing:
+            # tensor([0., 0.], requires_grad=True))])
+            names_weights_copy = self.update_params(inner_loss, names_weights_copy=names_weights_copy, step_size=self.fast_lr, first_order=first_order)
+
+        if names_weights_copy is not None:
+            self.net.insert_new_parameter(names_weights_copy, True)
+
+        input_seq = model.pack_input(task[0], self.net.emb)
+        # enc = net.encode(input_seq)
+        context, enc = self.net.encode_context(input_seq)
+        # # Always use the first token in input sequence, which is '#BEG' as the initial input of decoder.
+        _, tokens = self.net.decode_chain_argmax(enc, input_seq.data[0:1],
+                                            seq_len=data.MAX_TOKENS, context=context[0], stop_at_token=self.end_token)
+        token_string = ''
+        for token in tokens:
+            if token in self.rev_emb_dict and self.rev_emb_dict.get(token) != '#END':
+                token_string += str(self.rev_emb_dict.get(token)).upper() + ' '
+        token_string = token_string.strip()
+
+        return token_string

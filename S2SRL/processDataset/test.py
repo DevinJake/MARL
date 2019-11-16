@@ -215,6 +215,15 @@ if __name__ == "__main__":
     for i in range(10):
         print(random.random())
 
+    map = {'SimpleQuestion(Direct)': 'Simple Question (Direct)_',
+           'Verification(Boolean)(All)': 'Verification (Boolean) (All)_',
+           'QuantitativeReasoning(Count)(All)': 'Quantitative Reasoning (Count) (All)_',
+           'LogicalReasoning(All)': 'Logical Reasoning (All)_',
+           'ComparativeReasoning(Count)(All)': 'Comparative Reasoning (Count) (All)_',
+           'QuantitativeReasoning(All)': 'Quantitative Reasoning (All)_',
+           'ComparativeReasoning(All)': 'Comparative Reasoning (All)_'}
+    print(map['LogicalReasoning(All)'])
+
 
 
 
