@@ -12,6 +12,7 @@ from . import attention
 HIDDEN_STATE_SIZE = 128
 EMBEDDING_DIM = 50
 
+
 # nn.Module: Base class for all neural network modules.
 # Your models should also subclass this class.
 class PhraseModel(nn.Module):
@@ -19,6 +20,7 @@ class PhraseModel(nn.Module):
         # Call __init__ function of PhraseModel's parent class (nn.Module).
         super(PhraseModel, self).__init__()
 
+        # todo: How to fix embeddings when training?
         self.emb = nn.Embedding(num_embeddings=dict_size, embedding_dim=emb_size)
         # # BiLSTM
         # self.encoder = nn.LSTM(input_size=emb_size, hidden_size=hid_size,
