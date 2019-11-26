@@ -21,7 +21,7 @@ if __name__ == "__main__":
     # # command line parameters for final test
     # sys.argv = ['data_test.py', '-m=bleu_0.984_09.dat', '-p=final', '--n=rl_even']
     # command line parameters for final test (subset data)
-    sys.argv = ['data_test.py', '-m=epoch_000_0.679_0.667.dat', '-p=sample_final_maml', '--n=maml_1%_batch8_att=0', '--att=0', '--lstm=1', '-s=5', '-a=0',
+    sys.argv = ['data_test_maml.py', '-m=epoch_000_0.679_0.667.dat', '-p=sample_final_maml', '--n=maml_1%_batch8_att=0', '--att=0', '--lstm=1', '-s=5', '-a=0',
                 '--fast-lr=0.1', '--meta-lr=1e-4', '--steps=5', '--batches=1', '--weak=1', '--cuda']
     parser = argparse.ArgumentParser()
     # parser.add_argument("--data", required=True,
