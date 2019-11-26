@@ -346,6 +346,7 @@ def load_data_MAML(QUESTION_PATH, DIC_PATH = None, max_tokens = None):
     else:
         return result
 
+# TODO: unify load_data_MAML_TEST with load_data_MAML with using 'response_bools';
 def load_data_MAML_TEST(QUESTION_PATH, DIC_PATH = None, max_tokens = None):
     result = []
     with open(QUESTION_PATH, 'r', encoding="UTF-8") as load_f:

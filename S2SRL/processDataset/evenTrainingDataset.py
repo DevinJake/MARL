@@ -14,6 +14,7 @@ import os
 #Python codes to read the binary files.
 import numpy as np
 import random
+OLD_SEED = 1988
 SEED = 2019
 LINE_SIZE = 100000
 
@@ -309,9 +310,9 @@ def getTrainingDatasetForRlWithTrueReward(percentage, SIZE):
         print("Directory ", dirName, " Created ")
     else:
         print("Directory ", dirName, " already exists")
-    path = dirName + '/RL_train_TR.question'
+    path = dirName + '/RL_train_TR_new_1k.question'
     fwTrainQ = open(path, 'w', encoding="UTF-8")
-    path = dirName + '/RL_test_TR.question'
+    path = dirName + '/RL_test_TR_new_1k.question'
     fwTestQ = open(path, 'w', encoding="UTF-8")
     with open("../../data/auto_QA_data/CSQA_DENOTATIONS_full.json", 'r', encoding="UTF-8") as load_f:
         dict_list = {}
@@ -369,7 +370,7 @@ def getTrainingDatasetForRlWithTrueReward(percentage, SIZE):
 if __name__ == "__main__":
     # percentage represents how much samples (0.2% ~ 1.2%) are drawn from the whole training dataset.
     percentage = '1.0%'
-    size = 1479
+    size = 148
     # getTrainingDatasetForPytorch(percentage)
     # getTrainingDatasetForRl(percentage)
-    # getTrainingDatasetForRlWithTrueReward(percentage, size)
+    getTrainingDatasetForRlWithTrueReward(percentage, size)
