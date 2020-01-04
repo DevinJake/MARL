@@ -22,14 +22,11 @@ TRAIN_RATIO = 0.985
 GAMMA = 0.05
 
 DIC_PATH = '../data/auto_QA_data/share.question'
-# todo test
-# TRAIN_QUESTION_ANSWER_PATH = '../data/auto_QA_data/mask_even_1.0%/RL_train_TR_new_2k.question'
-TRAIN_QUESTION_ANSWER_PATH = '../data/auto_QA_data/mask_even_1.0%/RL_train_TR_12.question'
+TRAIN_QUESTION_ANSWER_PATH = '../data/auto_QA_data/mask_even_1.0%/RL_train_TR_new_2k.question'
 TRAIN_944K_QUESTION_ANSWER_PATH = '../data/auto_QA_data/CSQA_DENOTATIONS_full_944K.json'
 DICT_944K = '../data/auto_QA_data/CSQA_result_question_type_944K.json'
 DICT_944K_WEAK = '../data/auto_QA_data/CSQA_result_question_type_count944K.json'
 log = logging.getLogger("train")
-
 
 # Calculate 0-1 sparse reward for samples in test dataset to judge the performance of the model.
 def run_test(test_data, net, rev_emb_dict, end_token, device="cuda"):
@@ -60,7 +57,10 @@ if __name__ == "__main__":
     logging.basicConfig(format="%(asctime)-15s %(levelname)s %(message)s", level=logging.INFO)
     # # command line parameters
     # # -a=True means using adaptive reward to train the model. -a=False is using 0-1 reward.
-    sys.argv = ['train_maml_true_reward.py', '--cuda', '-l=../data/saves/rl_even_TR_batch8_1%/truereward_0.739_29.dat', '-n=maml_1%_batch8_att=0_test', '-s=5', '-a=0', '--att=0', '--lstm=1', '--fast-lr=0.1', '--meta-lr=1e-4', '--steps=5', '--batches=1', '--weak=1']
+    # sys.argv = ['train_maml_true_reward.py', '--cuda', '-l=../data/saves/rl_even_TR_batch8_1%/truereward_0.739_29.dat', '-n=maml_1%_batch8_att=0_test', '-s=5', '-a=0', '--att=0', '--lstm=1', '--fast-lr=0.1', '--meta-lr=1e-4', '--steps=5', '--batches=1', '--weak=1']
+    sys.argv = ['train_1st_maml_true_reward.py', '--cuda', '-l=../data/saves/rl_even_TR_batch8_1%/truereward_0.739_29.dat',
+                '-n=maml_1%_batch8_att=0_1st_order', '-s=5', '-a=0', '--att=0', '--lstm=1', '--fast-lr=0.1',
+                '--meta-lr=1e-4', '--steps=5', '--batches=1', '--weak=1', '--embed-grad']
     parser = argparse.ArgumentParser()
     parser.add_argument("--cuda", action='store_true', default=False, help="Enable cuda")
     parser.add_argument("-n", "--name", required=True, help="Name of the run")
@@ -77,10 +77,13 @@ if __name__ == "__main__":
                         help="Using attention mechanism in seq2seq")
     parser.add_argument("--lstm", type=lambda x: (str(x).lower() in ['true', '1', 'yes']),
                         help="Using LSTM mechanism in seq2seq")
-    # The action='store_true' means once the parameter is assigned a value, the action is to mark it as 'True';
+    # The action='store_true' means once the parameter is appeared in the command line, such as '--first-order',
+    # the action is to mark it as 'True';
     # If there is no value of the parameter, the value is assigned as 'False'.
     # Conversely, if action is 'store_false', if the parameter has a value, the parameter is viewed as 'False'.
     parser.add_argument('--first-order', action='store_true', help='use the first-order approximation of MAML')
+    # If false, the embedding tensors in the model do not need to be trained.
+    parser.add_argument('--embed-grad', action='store_false', help='use the first-order approximation of MAML')
     parser.add_argument('--fast-lr', type=float, default=0.0001,
                         help='learning rate for the 1-step gradient update of MAML')
     parser.add_argument('--meta-lr', type=float, default=0.0001,
@@ -133,11 +136,15 @@ if __name__ == "__main__":
         log.info("Using LSTM mechanism to train the SEQ2SEQ model...")
     else:
         log.info("Using RNN mechanism to train the SEQ2SEQ model...")
+    if (args.embed_grad):
+        log.info("Word embedding in the model will be updated during the training...")
+    else:
+        log.info("Word embedding in the model will be fixed during the training...")
 
     # Index -> word.
     rev_emb_dict = {idx: word for word, idx in emb_dict.items()}
     # PhraseModel.__init__() to establish a LSTM model.
-    net = model.PhraseModel(emb_size=model.EMBEDDING_DIM, dict_size=len(emb_dict), hid_size=model.HIDDEN_STATE_SIZE, LSTM_FLAG=args.lstm, ATT_FLAG=args.att).to(device)
+    net = model.PhraseModel(emb_size=model.EMBEDDING_DIM, dict_size=len(emb_dict), hid_size=model.HIDDEN_STATE_SIZE, LSTM_FLAG=args.lstm, ATT_FLAG=args.att, EMBED_FLAG=args.embed_grad).to(device)
     # Using cuda.
     net.cuda()
     log.info("Model: %s", net)
@@ -181,24 +188,25 @@ if __name__ == "__main__":
             true_reward_sample = []
 
             for batch in data.iterate_batches(train_data, args.batches):
+                # The dict stores the initial parameters in the modules.
+                old_param_dict = metaLearner.get_net_named_parameter()
+                # temp_param_dict = metaLearner.get_net_parameter()
                 batch_idx += 1
                 # Each batch conduct one gradient upweight.
                 batch_count += 1
 
                 # Batch is represented for a batch of tasks in MAML.
                 # In each task, a minibatch of support set is established.
-                losses, meta_total_samples, meta_skipped_samples, true_reward_argmax_batch, true_reward_sample_batch = \
-                    metaLearner.sample(batch, first_order=args.first_order,
+                meta_losses, grads_list, meta_total_samples, meta_skipped_samples, true_reward_argmax_batch, true_reward_sample_batch = metaLearner.first_order_sample(batch, old_param_dict = old_param_dict, first_order=args.first_order,
                                        dial_shown=dial_shown, epoch_count=epoch, batch_count=batch_count)
                 total_samples += meta_total_samples
                 skipped_samples += meta_skipped_samples
                 true_reward_argmax.extend(true_reward_argmax_batch)
                 true_reward_sample.extend(true_reward_sample_batch)
-                metaLearner.meta_update(losses)
-                metaLearner.meta_optimizer.zero_grad()
+                metaLearner.first_order_meta_update(grads_list, old_param_dict)
                 metaLearner.net.zero_grad()
                 dial_shown = True
-                tb_tracker.track("meta_losses", (float)(losses.cpu().detach().numpy()), batch_idx)
+                tb_tracker.track("meta_losses", (float)(meta_losses.cpu().detach().numpy()), batch_idx)
 
             # After one epoch, compute the bleus for samples in test dataset.
             true_reward_test = run_test(test_data, net, rev_emb_dict, end_token, device)

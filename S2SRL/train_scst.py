@@ -36,7 +36,7 @@ def run_test(test_data, net, end_token, device="cuda"):
     # p1 is one sentence, p2 is sentence list.
     for p1, p2 in test_data:
         # Transform sentence to padded embeddings.
-        input_seq = model.pack_input(p1, net.emb, device)
+        input_seq = net.pack_input(p1, net.emb, device)
         # Get hidden states from encoder.
         # enc = net.encode(input_seq)
         context, enc = net.encode_context(input_seq)
@@ -155,7 +155,7 @@ if __name__ == "__main__":
                 # input_seq: the padded and embedded batch-sized input sequence.
                 # input_batch: the token ID matrix of batch-sized input sequence. Each row is corresponding to one input sentence.
                 # output_batch: the token ID matrix of batch-sized output sequences. Each row is corresponding to a list of several output sentences.
-                input_seq, input_batch, output_batch = model.pack_batch_no_out(batch, net.emb, device)
+                input_seq, input_batch, output_batch = net.pack_batch_no_out(batch, net.emb, device)
                 input_seq = input_seq.cuda()
                 # Get (two-layer) hidden state of encoder of samples in batch.
                 # enc = net.encode(input_seq)

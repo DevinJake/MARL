@@ -32,7 +32,7 @@ def run_test(test_data, net, end_token, device="cuda"):
     bleu_sum = 0.0
     bleu_count = 0
     for p1, p2 in test_data:
-        input_seq = model.pack_input(p1, net.emb, device)
+        input_seq = net.pack_input(p1, net.emb, device)
         # enc = net.encode(input_seq)
         context, enc = net.encode_context(input_seq)
         # Return logits (N*outputvocab), res_tokens (1*N)
@@ -127,7 +127,7 @@ if __name__ == "__main__":
         [ 2.1937, -0.5535, -0.9000,  ..., -0.1032,  0.3514, -1.2759],
         [-0.8078,  0.1575,  1.1064,  ...,  0.1365,  0.4121, -0.4211]],
        device='cuda:0')'''
-            input_seq, out_seq_list, _, out_idx = model.pack_batch(batch, net.emb, device)
+            input_seq, out_seq_list, _, out_idx = net.pack_batch(batch, net.emb, device)
             # net.encode calls nn.LSTM by which the forward function is called to run the neural network.
             # enc is a batch of last time step's hidden state outputted by encoder.
             # enc = net.encode(input_seq)
@@ -143,7 +143,7 @@ if __name__ == "__main__":
                 if random.random() < TEACHER_PROB:
                     context_temp = context[idx]
                     r = net.decode_teacher(enc_item, out_seq, context[idx])
-                    blue_temp = model.seq_bleu(r, ref_indices)
+                    blue_temp = net.seq_bleu(r, ref_indices)
                     bleu_sum += blue_temp
                     # Get predicted tokens.
                     seq = torch.max(r.data, dim=1)[1]

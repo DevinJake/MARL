@@ -72,7 +72,7 @@ if __name__ == "__main__":
     # seq_1是輸入，targets是references，可能有多個；
     for seq_1, targets in train_data:
         test_dataset_count += 1
-        input_seq = model.pack_input(seq_1, net.emb)
+        input_seq = net.pack_input(seq_1, net.emb)
         # enc = net.encode(input_seq)
         context, enc = net.encode_context(input_seq)
         # # Always use the first token in input sequence, which is '#BEG' as the initial input of decoder.

@@ -16,12 +16,15 @@ EMBEDDING_DIM = 50
 # nn.Module: Base class for all neural network modules.
 # Your models should also subclass this class.
 class PhraseModel(nn.Module):
-    def __init__(self, emb_size, dict_size, hid_size, LSTM_FLAG, ATT_FLAG):
+    def __init__(self, emb_size, dict_size, hid_size, LSTM_FLAG, ATT_FLAG, EMBED_FLAG=True):
         # Call __init__ function of PhraseModel's parent class (nn.Module).
         super(PhraseModel, self).__init__()
 
-        # todo: How to fix embeddings when training?
         self.emb = nn.Embedding(num_embeddings=dict_size, embedding_dim=emb_size)
+        if not EMBED_FLAG:
+            for p in self.parameters():
+                p.requires_grad = False
+
         # # BiLSTM
         # self.encoder = nn.LSTM(input_size=emb_size, hidden_size=hid_size,
         #                        num_layers=1, batch_first=True, bidirectional=True)
@@ -49,7 +52,6 @@ class PhraseModel(nn.Module):
             self.attention = attention.Attention(hid_size)
             print('Build attention layer.')
 
-
     def zero_grad(self, params=None):
         if params is None:
             for param in self.parameters():
@@ -67,9 +69,48 @@ class PhraseModel(nn.Module):
                             param.grad.zero_()
                             params[name].grad = None
 
+
     # Using the parameters to insert into network and compute output.
     def insert_new_parameter(self, state_dict, strict):
             self.load_state_dict(state_dict, strict)
+
+    # Using the parameters to insert into network and compute output.
+    def insert_new_parameter_to_layers(self, old_param_dict):
+        for (name, param) in self.named_parameters():
+            if param.requires_grad:
+                param.data = old_param_dict[name].clone().detach()
+
+    # Return all the parameters that have grads.
+    def grad_parameters(self, recurse=True):
+        r"""Returns an iterator over module parameters.
+
+        This is typically passed to an optimizer.
+
+        Args:
+            recurse (bool): if True, then yields parameters of this module
+                and all submodules. Otherwise, yields only parameters that
+                are direct members of this module.
+
+        Yields:
+            Parameter: module parameter
+
+        Example::
+
+            # >>> for param in model.parameters():
+            # >>>     print(type(param.data), param.size())
+            <class 'torch.FloatTensor'> (20L,)
+            <class 'torch.FloatTensor'> (20L, 1L, 5L, 5L)
+
+        """
+        for name, param in self.named_parameters(recurse=recurse):
+            if param.requires_grad:
+                yield param
+
+    # Return all the named_parameters that have grads.
+    def grad_named_parameters(self, recurse=True):
+        for name, param in self.named_parameters(recurse=recurse):
+            if param.requires_grad:
+                yield (name, param)
 
     # hidden state;
     # return hid: (h_n, c_n) is tensor containing the hidden state and cell state for t = seq_len.
@@ -213,86 +254,86 @@ class PhraseModel(nn.Module):
                 break
         return torch.cat(res_logits), res_actions
 
-def pack_batch_no_out(batch, embeddings, device="cpu"):
-    # Asserting statements is a convenient way to insert debugging assertions into a program.
-    # To guarantee that the batch is a list.
-    assert isinstance(batch, list)
-    # The format of batch is a list of tuple: ((tuple),[[list of token ID list]])
-    # A lambda function is a small anonymous function, the example is as following.
-    # x = lambda a, b: a * b
-    # print(x(5, 6))
-    # Sort descending (CuDNN requirements) batch中第一个元素为最长的句子；
-    batch.sort(key=lambda s: len(s[0]), reverse=True)
-    # input_idx：一个batch的输入句子的tokens对应的ID矩阵；Each row is corresponding to one input sentence.
-    # output_idx：一个batch的输出句子的tokens对应的ID矩阵；Each row is corresponding to a list of several output sentences.
-    # zip wants a bunch of arguments to zip together, but what you have is a single argument (a list, whose elements are also lists).
-    # The * in a function call "unpacks" a list (or other iterable), making each of its elements a separate argument.
-    # For list p = [[1,2,3],[4,5,6]];
-    # So without the *, you're doing zip( [[1,2,3],[4,5,6]] ). With the *, you're doing zip([1,2,3], [4,5,6]) = [(1, 4), (2, 5), (3, 6)].
-    input_idx, output_idx = zip(*batch)
-    # create padded matrix of inputs
-    # map() function returns a list of the results after applying the given function to each item of a given iterable (list, tuple etc.)
-    # For example:
-    # numbers = (1, 2, 3, 4)
-    # result = map(lambda x: x + x, numbers)
-    # print(list(result))
-    # Output: {2, 4, 6, 8}
-    # 建立长度词典，为batch中每一个元素的长度；
-    lens = list(map(len, input_idx))
-    # 以最长的句子来建立batch*最长句子长度的全0矩阵；
-    input_mat = np.zeros((len(batch), lens[0]), dtype=np.int64)
-    # 将batch中每个句子的tokens对应的ID向量填入全0矩阵完成padding；
-    # idx：index，x：token ID 组成的向量；
-    for idx, x in enumerate(input_idx):
-        input_mat[idx, :len(x)] = x
-    # 将padding后的矩阵转换为tensor matrix；
-    input_v = torch.tensor(input_mat).to(device)
-    input_v = input_v.cuda()
-    # 封装成PackedSequence类型的对象；
-    # The padded sequence is the transposed matrix which is ``B x T x *``,
-    # where `T` is the length of the longest sequence and `B` is the batch size.
-    # Following the matrix is the list of lengths of each sequence in the batch (also in transposed format).
-    # For instance:
-    # [ a b c c d d d ]
-    # [ a b c d ]
-    # [ a b c ]
-    # [ a b ]
-    # could be transformed into [a,a,a,a,b,b,b,b,c,c,c,c,d,d,d,d] with batch size [4,4,3,2,1,1,1].
-    input_seq = rnn_utils.pack_padded_sequence(input_v, lens, batch_first=True)
-    input_seq = input_seq.cuda()
-    r = embeddings(input_seq.data)
-    # lookup embeddings；embeddings为模型已经建立的词向量矩阵；
-    # r: the [B x T x dimension] matrix of the embeddings of the occurred words in input sequence.
-    # The order is followed by the order in input_seq.
-    # Which is transforming [a,a,a,a,b,b,b,b,c,c,c,c,d,d,d,d] into [embedding(a), embedding(a), ..., embedding(d), embedding(d)]
-    r = r.cuda()
-    # 加入了词嵌入的input_seq；
-    # For instance, given data  ``abc`` and `x`
-    #         the :class:`PackedSequence` would contain data ``axbc`` with ``batch_sizes=[2,1,1]``.
-    # emb_input_seq is [B x T x dimension] matrix of the embeddings of the occurred words in input sequence with the batch size.
-    # For instance, emb_input_seq is the padded data: [embedding(a), embedding(a), ..., embedding(d), embedding(d)] with batch size [4,4,3,2,1,1,1].
-    emb_input_seq = rnn_utils.PackedSequence(r, input_seq.batch_sizes)
-    emb_input_seq = emb_input_seq.cuda()
-    return emb_input_seq, input_idx, output_idx
+    def pack_batch_no_out(self, batch, embeddings, device="cpu"):
+        # Asserting statements is a convenient way to insert debugging assertions into a program.
+        # To guarantee that the batch is a list.
+        assert isinstance(batch, list)
+        # The format of batch is a list of tuple: ((tuple),[[list of token ID list]])
+        # A lambda function is a small anonymous function, the example is as following.
+        # x = lambda a, b: a * b
+        # print(x(5, 6))
+        # Sort descending (CuDNN requirements) batch中第一个元素为最长的句子；
+        batch.sort(key=lambda s: len(s[0]), reverse=True)
+        # input_idx：一个batch的输入句子的tokens对应的ID矩阵；Each row is corresponding to one input sentence.
+        # output_idx：一个batch的输出句子的tokens对应的ID矩阵；Each row is corresponding to a list of several output sentences.
+        # zip wants a bunch of arguments to zip together, but what you have is a single argument (a list, whose elements are also lists).
+        # The * in a function call "unpacks" a list (or other iterable), making each of its elements a separate argument.
+        # For list p = [[1,2,3],[4,5,6]];
+        # So without the *, you're doing zip( [[1,2,3],[4,5,6]] ). With the *, you're doing zip([1,2,3], [4,5,6]) = [(1, 4), (2, 5), (3, 6)].
+        input_idx, output_idx = zip(*batch)
+        # create padded matrix of inputs
+        # map() function returns a list of the results after applying the given function to each item of a given iterable (list, tuple etc.)
+        # For example:
+        # numbers = (1, 2, 3, 4)
+        # result = map(lambda x: x + x, numbers)
+        # print(list(result))
+        # Output: {2, 4, 6, 8}
+        # 建立长度词典，为batch中每一个元素的长度；
+        lens = list(map(len, input_idx))
+        # 以最长的句子来建立batch*最长句子长度的全0矩阵；
+        input_mat = np.zeros((len(batch), lens[0]), dtype=np.int64)
+        # 将batch中每个句子的tokens对应的ID向量填入全0矩阵完成padding；
+        # idx：index，x：token ID 组成的向量；
+        for idx, x in enumerate(input_idx):
+            input_mat[idx, :len(x)] = x
+        # 将padding后的矩阵转换为tensor matrix；
+        input_v = torch.tensor(input_mat).to(device)
+        input_v = input_v.cuda()
+        # 封装成PackedSequence类型的对象；
+        # The padded sequence is the transposed matrix which is ``B x T x *``,
+        # where `T` is the length of the longest sequence and `B` is the batch size.
+        # Following the matrix is the list of lengths of each sequence in the batch (also in transposed format).
+        # For instance:
+        # [ a b c c d d d ]
+        # [ a b c d ]
+        # [ a b c ]
+        # [ a b ]
+        # could be transformed into [a,a,a,a,b,b,b,b,c,c,c,c,d,d,d,d] with batch size [4,4,3,2,1,1,1].
+        input_seq = rnn_utils.pack_padded_sequence(input_v, lens, batch_first=True)
+        input_seq = input_seq.cuda()
+        r = embeddings(input_seq.data)
+        # lookup embeddings；embeddings为模型已经建立的词向量矩阵；
+        # r: the [B x T x dimension] matrix of the embeddings of the occurred words in input sequence.
+        # The order is followed by the order in input_seq.
+        # Which is transforming [a,a,a,a,b,b,b,b,c,c,c,c,d,d,d,d] into [embedding(a), embedding(a), ..., embedding(d), embedding(d)]
+        r = r.cuda()
+        # 加入了词嵌入的input_seq；
+        # For instance, given data  ``abc`` and `x`
+        #         the :class:`PackedSequence` would contain data ``axbc`` with ``batch_sizes=[2,1,1]``.
+        # emb_input_seq is [B x T x dimension] matrix of the embeddings of the occurred words in input sequence with the batch size.
+        # For instance, emb_input_seq is the padded data: [embedding(a), embedding(a), ..., embedding(d), embedding(d)] with batch size [4,4,3,2,1,1,1].
+        emb_input_seq = rnn_utils.PackedSequence(r, input_seq.batch_sizes)
+        emb_input_seq = emb_input_seq.cuda()
+        return emb_input_seq, input_idx, output_idx
 
-def pack_input(input_data, embeddings, device="cpu"):
-    input_v = torch.LongTensor([input_data]).to(device)
-    input_v = input_v.cuda()
-    r = embeddings(input_v)
-    return rnn_utils.pack_padded_sequence(r, [len(input_data)], batch_first=True)
-
-
-def pack_batch(batch, embeddings, device="cpu"):
-    emb_input_seq, input_idx, output_idx = pack_batch_no_out(batch, embeddings, device)
-
-    # prepare output sequences, with end token stripped
-    output_seq_list = []
-    for out in output_idx:
-        output_seq_list.append(pack_input(out[:-1], embeddings, device))
-    return emb_input_seq, output_seq_list, input_idx, output_idx
+    def pack_input(self, input_data, embeddings, device="cpu"):
+        input_v = torch.LongTensor([input_data]).to(device)
+        input_v = input_v.cuda()
+        r = embeddings(input_v)
+        return rnn_utils.pack_padded_sequence(r, [len(input_data)], batch_first=True)
 
 
-def seq_bleu(model_out, ref_seq):
-    model_seq = torch.max(model_out.data, dim=1)[1]
-    model_seq = model_seq.cpu().numpy()
-    return utils.calc_bleu(model_seq, ref_seq)
+    def pack_batch(self, batch, embeddings, device="cpu"):
+        emb_input_seq, input_idx, output_idx = self.pack_batch_no_out(batch, embeddings, device)
+
+        # prepare output sequences, with end token stripped
+        output_seq_list = []
+        for out in output_idx:
+            output_seq_list.append(self.pack_input(out[:-1], embeddings, device))
+        return emb_input_seq, output_seq_list, input_idx, output_idx
+
+
+    def seq_bleu(self, model_out, ref_seq):
+        model_seq = torch.max(model_out.data, dim=1)[1]
+        model_seq = model_seq.cpu().numpy()
+        return utils.calc_bleu(model_seq, ref_seq)

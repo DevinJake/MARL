@@ -151,3 +151,44 @@ if __name__ == "__main__":
     strs1 = [5,6]
     strs.extend(strs1)
     print(strs)
+
+    a = np.array([[1, 2], [3, 4]])
+    print(float(np.mean(a)))
+
+    lin = nn.Linear(1, 1)
+    w = lin.weight
+
+    lin(torch.randn(1, 1)).backward()
+
+    print('lin.weight.grad: ' + str(lin.weight.grad))
+    print('w.grad: ' + str(w.grad))
+    print(id(w) == id(lin.weight))
+
+
+    def basic_fun(x):
+        return 3 * (x * x)
+
+    def get_grad(inp, grad_var):
+        A = basic_fun(inp)
+        A.backward()
+        return grad_var.grad
+
+    x = torch.tensor([1.0], requires_grad=True)
+    xx = x.clone()
+
+    # Grad wrt x will work
+    # print(x.creator is None)  # is it a leaf? Yes
+    # grad = 6;
+    print(get_grad(x, x))
+    # grad = 12;
+    # Since xx is cloned by x, so x is the leaf node.
+    # When grad of xx is computed by backward(), the gradients propagating to the cloned tensor will propagate to the original tensor, so the grad of x is accumlated by the grad of xx, i.e., 6.
+    print(get_grad(xx, x))
+
+    # Grad wrt xx won't work
+    # print(xx.creator is None)  # is it a leaf? No
+    # When using backward() to calculate the gradients automatically, the un-leaf node will not hold the gradients.
+    # grad = None;
+    print(get_grad(xx, xx))
+    # grad = None;
+    print(get_grad(x, xx))
