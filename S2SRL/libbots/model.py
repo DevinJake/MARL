@@ -124,6 +124,11 @@ class PhraseModel(nn.Module):
     # tensor containing the output features (h_t) from the last layer of the LSTM, for each t.
     # hid is (h_n, c_n), which is tensor containing the hidden state and cell state for t = seq_len.
     def encode_context(self, x):
+        # Try to solve the bug: "UserWarning: RNN module weights are not part of single contiguous chunk of memory".
+        if not hasattr(self, 'encode_flattened'):
+            self.encoder.flatten_parameters()
+            setattr(self, 'encode_flattened', True)
+
         packed_context, hid = self.encoder(x)
         # It is an inverse operation to :func:`pack_padded_sequence`.
         # Unpack your output if required.
@@ -157,6 +162,12 @@ class PhraseModel(nn.Module):
         #                     [ 2],
         #                     [ 3],
         #                     [ 4]])
+
+        # Try to solve the bug: "UserWarning: RNN module weights are not part of single contiguous chunk of memory".
+        if not hasattr(self, 'decode_flattened'):
+            self.decoder.flatten_parameters()
+            setattr(self, 'decode_flattened', True)
+
         out, new_hid = self.decoder(input_x.unsqueeze(0), hid)
         if (self.attention_flag):
             out, attn = self.attention(out, context)
@@ -173,6 +184,9 @@ class PhraseModel(nn.Module):
         res_tokens = []
         # First cur_emb is the embedding of '#BEG'.
         cur_emb = begin_emb
+
+        # Try to solve the bug: "UserWarning: RNN module weights are not part of single contiguous chunk of memory".
+        self.decoder.flatten_parameters()
 
         # At first using the '#BEG' as first input token and hidden states from encoder as initial hidden state to predict the first output token and first decoder hidden state.
         # Then predict the output token by using last step's output token as current step's input and last step's decoder hidden state.
