@@ -841,6 +841,9 @@ class MetaLearner(object):
             if old_param_dict is not None:
                 self.net.insert_new_parameter_to_layers(old_param_dict)
             # temp_param_dict = self.get_net_parameter()
+            # Try to solve the bug: "UserWarning: RNN module weights are not part of single contiguous chunk of memory".
+            self.net.encoder.flatten_parameters()
+            self.net.decoder.flatten_parameters()
             self.net.zero_grad()
             log.info("Task %s is training..." % (str(task[1]['qid'])))
             # Establish support set.
