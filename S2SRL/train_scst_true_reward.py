@@ -76,6 +76,8 @@ if __name__ == "__main__":
                         help="Using attention mechanism in seq2seq")
     parser.add_argument("--lstm", type=lambda x: (str(x).lower() in ['true', '1', 'yes']),
                         help="Using LSTM mechanism in seq2seq")
+    # If false, the embedding tensors in the model do not need to be trained.
+    parser.add_argument('--embed-grad', action='store_false', help='use the first-order approximation of MAML')
     args = parser.parse_args()
     device = torch.device("cuda" if args.cuda else "cpu")
     log.info("Device info: %s", str(device))
@@ -131,6 +133,7 @@ if __name__ == "__main__":
     # TBMeanTracker (TensorBoard value tracker):
     # allows to batch fixed amount of historical values and write their mean into TB
     with ptan.common.utils.TBMeanTracker(writer, batch_size=100) as tb_tracker:
+        # TODO: filter(lambda p: p.requires_grad, net.parameters())
         optimiser = optim.Adam(net.parameters(), lr=LEARNING_RATE, eps=1e-3)
         batch_idx = 0
         batch_count = 0
