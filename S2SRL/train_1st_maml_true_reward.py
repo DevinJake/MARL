@@ -22,8 +22,7 @@ TRAIN_RATIO = 0.985
 GAMMA = 0.05
 
 DIC_PATH = '../data/auto_QA_data/share.question'
-# TRAIN_QUESTION_ANSWER_PATH = '../data/auto_QA_data/mask_even_1.0%/RL_train_TR_new_2k.question'
-TRAIN_QUESTION_ANSWER_PATH = '../data/auto_QA_data/mask_even_1.0%/RL_train_TR_12.question'
+TRAIN_QUESTION_ANSWER_PATH = '../data/auto_QA_data/mask_even_1.0%/RL_train_TR_new_2k.question'
 TRAIN_944K_QUESTION_ANSWER_PATH = '../data/auto_QA_data/CSQA_DENOTATIONS_full_944K.json'
 DICT_944K = '../data/auto_QA_data/CSQA_result_question_type_944K.json'
 DICT_944K_WEAK = '../data/auto_QA_data/CSQA_result_question_type_count944K.json'
@@ -61,7 +60,7 @@ if __name__ == "__main__":
     # sys.argv = ['train_maml_true_reward.py', '--cuda', '-l=../data/saves/rl_even_TR_batch8_1%/truereward_0.739_29.dat', '-n=maml_1%_batch8_att=0_test', '-s=5', '-a=0', '--att=0', '--lstm=1', '--fast-lr=0.1', '--meta-lr=1e-4', '--steps=5', '--batches=1', '--weak=1']
     sys.argv = ['train_1st_maml_true_reward.py', '--cuda', '-l=../data/saves/rl_even_TR_batch8_1%/truereward_0.739_29.dat',
                 '-n=maml_att=0_newdata2k_1storder', '-s=5', '-a=0', '--att=0', '--lstm=1', '--fast-lr=0.1',
-                '--meta-lr=1e-4', '--steps=5', '--batches=5', '--weak=1', '--embed-grad']
+                '--meta-lr=1e-4', '--steps=5', '--batches=1', '--weak=1', '--embed-grad']
     parser = argparse.ArgumentParser()
     parser.add_argument("--cuda", action='store_true', default=False, help="Enable cuda")
     parser.add_argument("-n", "--name", required=True, help="Name of the run")
