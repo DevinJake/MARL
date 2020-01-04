@@ -67,7 +67,7 @@ if __name__ == "__main__":
     # seq_1是輸入，targets是references，可能有多個；
     for seq_1, targets in train_data:
         test_dataset_count += 1
-        input_seq = model.pack_input(seq_1, net.emb)
+        input_seq = net.pack_input(seq_1, net.emb)
         enc = net.encode(input_seq)
         _, tokens = net.decode_chain_argmax(enc, input_seq.data[0:1],
                                             seq_len=data.MAX_TOKENS, stop_at_token=end_token)
