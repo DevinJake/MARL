@@ -77,9 +77,10 @@ class Retriever():
     # is removed from the model or not.
     def RetrieveWithMaxTokens(self, N, key_name, key_weak, question, train_data_944k, weak_flag, qid):
         if qid in self.support_set_cache:
-            print('%s is in top-N cache!' %(str(qid)))
+            # todo
+            # print('%s is in top-N cache!' %(str(qid)))
             return self.support_set_cache[qid]
-        print('%s is not in top-N cache!' % (str(qid)))
+        # print('%s is not in top-N cache!' % (str(qid)))
         dict_candicate = self.dict944k_weak
         topNList = list()
         if key_name in self.dict944k:
@@ -94,19 +95,19 @@ class Retriever():
 
             topNList = sort_candidate if len(sort_candidate) <= N else sort_candidate[0:N]
 
-            # if don't have enough matches, search without relation match
-            if len(topNList) < N and weak_flag:
-                # print(len(topNList), " found of ", N)
-                if key_weak in dict_candicate:
-                    weak_list = dict_candicate[key_weak]
-                    weak_list_filtered = [x for x in weak_list if len(x)>0 and list(x.keys())[0] in train_data_944k]
-                    sort_candidate_weak = sorted(weak_list_filtered, key=lambda x: self.takequestion(x, question))
-                    for c_weak in sort_candidate_weak:
-                        if len(topNList) == N:
-                            break
-                        if c_weak not in topNList:
-                            topNList.append(c_weak)
-                            # print(len(topNList))
+        # if don't have enough matches, search without relation match
+        if len(topNList) < N and weak_flag:
+            # print(len(topNList), " found of ", N)
+            if key_weak in dict_candicate:
+                weak_list = dict_candicate[key_weak]
+                weak_list_filtered = [x for x in weak_list if len(x)>0 and list(x.keys())[0] in train_data_944k]
+                sort_candidate_weak = sorted(weak_list_filtered, key=lambda x: self.takequestion(x, question))
+                for c_weak in sort_candidate_weak:
+                    if len(topNList) == N:
+                        break
+                    if c_weak not in topNList:
+                        topNList.append(c_weak)
+                        # print(len(topNList))
         self.support_set_cache[qid] = topNList
         return topNList
 
