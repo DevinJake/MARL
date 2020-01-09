@@ -11,7 +11,7 @@ def get_id(idx):
 from flask import Flask, request, jsonify
 app = Flask(__name__)
 # Remote Server
-# post_url = "http://10.201.34.3:5001/post"
+# post_url = "http://10.201.34.3:5002/post"
 # # local server
 post_url = "http://127.0.0.1:5001/post"
 
@@ -353,6 +353,7 @@ class Symbolics_WebQSP():
                 jsonpost = json.dumps(json_pack)
                 # result_content = requests.post(post_url,json=json_pack)
                 # print(result_content)
+                #print(jsonpost)
                 content, content_result = requests.post(post_url, json=jsonpost).json()['content']
                 if content is not None and content_result == 0:
                     content = set(content)
@@ -1283,7 +1284,7 @@ if __name__ == "__main__":
             total_reward_precision = 0
             total_reward_recall = 0
 
-            for q in myquestions:
+            for q in mytrainquestions:
                 question = q["ProcessedQuestion"]
                 # answer = q["Parses"][0]["Answers"][0]["AnswerArgument"]
                 Answers = []
@@ -1418,7 +1419,8 @@ if __name__ == "__main__":
             # fileObject.write(jsondata)
             # fileObject.close()
             #
-            # jsondata = json.dumps(WebQSPList_Correct, indent=1, default=WebQSP.obj_2_json)
-            # fileObject = open('right_answer_reorder_mask.json', 'w')
-            # fileObject.write(jsondata)
-            # fileObject.close()
+
+            jsondata = json.dumps(WebQSPList_Correct, indent=1, default=WebQSP.obj_2_json)
+            fileObject = open('right_answer_reorder_mask.json', 'w')
+            fileObject.write(jsondata)
+            fileObject.close()
