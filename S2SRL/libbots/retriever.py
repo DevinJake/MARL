@@ -77,10 +77,9 @@ class Retriever():
     # is removed from the model or not.
     def RetrieveWithMaxTokens(self, N, key_name, key_weak, question, train_data_944k, weak_flag, qid):
         if qid in self.support_set_cache:
-            # todo
-            # print('%s is in top-N cache!' %(str(qid)))
+            print('%s is in top-N cache!' %(str(qid)))
             return self.support_set_cache[qid]
-        # print('%s is not in top-N cache!' % (str(qid)))
+        print('%s is not in top-N cache!' % (str(qid)))
         dict_candicate = self.dict944k_weak
         topNList = list()
         if key_name in self.dict944k:
