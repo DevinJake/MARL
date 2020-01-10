@@ -310,15 +310,15 @@ def getTrainingDatasetForRlWithTrueReward(percentage, SIZE):
         print("Directory ", dirName, " Created ")
     else:
         print("Directory ", dirName, " already exists")
-    path = dirName + '/RL_train_TR_new_1k.question'
+    path = dirName + '/RL_train_TR_new_500.question'
     fwTrainQ = open(path, 'w', encoding="UTF-8")
-    path = dirName + '/RL_test_TR_new_1k.question'
+    path = dirName + '/RL_test_TR_new_500.question'
     fwTestQ = open(path, 'w', encoding="UTF-8")
-    with open("../../data/auto_QA_data/CSQA_DENOTATIONS_full.json", 'r', encoding="UTF-8") as load_f:
+    with open("../../data/auto_QA_data/CSQA_DENOTATIONS_full_944K.json", 'r', encoding="UTF-8") as load_f:
         dict_list = {}
         load_dict = json.load(load_f)
         list_of_load_dict = list(load_dict.items())
-        random.seed(SEED+4)
+        random.seed(SEED+8)
         random.shuffle(list_of_load_dict)
         load_dict = dict(list_of_load_dict)
         count_dict = {'simple_': 0, 'logical_': 0, 'quantative_': 0, 'count_': 0, 'bool_': 0, 'comp_': 0, 'compcount_': 0}
@@ -370,7 +370,7 @@ def getTrainingDatasetForRlWithTrueReward(percentage, SIZE):
 if __name__ == "__main__":
     # percentage represents how much samples (0.2% ~ 1.2%) are drawn from the whole training dataset.
     percentage = '1.0%'
-    size = 148
+    size = 74
     # getTrainingDatasetForPytorch(percentage)
     # getTrainingDatasetForRl(percentage)
     getTrainingDatasetForRlWithTrueReward(percentage, size)

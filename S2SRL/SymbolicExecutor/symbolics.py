@@ -46,6 +46,8 @@ class Symbolics():
                         self.temp_bool_dict = temp_result
                     except:
                         print('ERROR! The action is Select(%s,%s,%s).' %(e,r,t))
+                        print('The sequence is:')
+                        print(self.seq)
                     finally:
                         self.print_answer()
                 # A2: SelectAll (et, r, t)
@@ -54,6 +56,8 @@ class Symbolics():
                         self.answer = self.select_all(e, r, t)
                     except:
                         print('ERROR! The action is SelectAll(%s,%s,%s).' % (e,r,t))
+                        print('The sequence is:')
+                        print(self.seq)
                     finally:
                         self.print_answer()
                 # A3: Bool(e)
@@ -69,6 +73,8 @@ class Symbolics():
                                 self.answer.setdefault('|BOOL_RESULT|', temp)
                     except:
                         print('ERROR! The action is Bool(%s).' %e)
+                        print('The sequence is:')
+                        print(self.seq)
                     finally:
                         self.print_answer()
                 # A4: ArgMin
@@ -77,6 +83,8 @@ class Symbolics():
                         self.answer = self.arg_min()
                     except:
                         print('ERROR! The action is ArgMin.')
+                        print('The sequence is:')
+                        print(self.seq)
                     finally:
                         self.print_answer()
                 # A5: ArgMax
@@ -85,6 +93,8 @@ class Symbolics():
                         self.answer = self.arg_max()
                     except:
                         print('ERROR! The action is ArgMax.')
+                        print('The sequence is:')
+                        print(self.seq)
                     finally:
                         self.print_answer()
                 # A6: GreaterThan(e)
@@ -93,6 +103,8 @@ class Symbolics():
                         self.answer = self.greater_than(e,r,t)
                     except:
                         print('ERROR! The action is GreaterThan(%s,%s,%s).' % (e,r,t))
+                        print('The sequence is:')
+                        print(self.seq)
                     finally:
                         self.print_answer()
                 # A7: LessThan(e)
@@ -101,6 +113,8 @@ class Symbolics():
                         self.answer = self.less_than(e,r,t)
                     except:
                         print('ERROR! The action is LessThan(%s,%s,%s).' % (e,r,t))
+                        print('The sequence is:')
+                        print(self.seq)
                     finally:
                         self.print_answer()
                 # A9: Union(e，r，t)
@@ -109,6 +123,8 @@ class Symbolics():
                         self.answer = self.union(e, r, t)
                     except:
                         print('ERROR! The action is Union(%s,%s,%s).' % (e,r,t))
+                        print('The sequence is:')
+                        print(self.seq)
                     finally:
                         self.print_answer()
                 # A8: Inter(e，r，t)
@@ -117,6 +133,8 @@ class Symbolics():
                         self.answer = self.inter(e, r, t)
                     except:
                         print('ERROR! The action is Inter(%s,%s,%s).' % (e,r,t))
+                        print('The sequence is:')
+                        print(self.seq)
                     finally:
                         self.print_answer()
                 # A10: Diff(e，r，t)
@@ -125,6 +143,8 @@ class Symbolics():
                         self.answer = self.diff(e, r, t)
                     except:
                         print('ERROR! The action is Diff(%s,%s,%s).' % (e,r,t))
+                        print('The sequence is:')
+                        print(self.seq)
                     finally:
                         self.print_answer()
                 # A11: Count(e)
@@ -133,6 +153,8 @@ class Symbolics():
                         self.answer = self.count(e)
                     except:
                         print('ERROR! The action is Count(%s).' %e)
+                        print('The sequence is:')
+                        print(self.seq)
                     finally:
                         self.print_answer()
                 # A12: ATLEAST(N)
@@ -141,6 +163,8 @@ class Symbolics():
                         self.answer = self.at_least(e)
                     except:
                         print('ERROR! The action is ATLEAST(%s).' %e)
+                        print('The sequence is:')
+                        print(self.seq)
                     finally:
                         self.print_answer()
                 # A13: ATMOST(N)
@@ -149,6 +173,8 @@ class Symbolics():
                         self.answer = self.at_most(e)
                     except:
                         print('ERROR! The action is ATMOST(%s).' %e)
+                        print('The sequence is:')
+                        print(self.seq)
                     finally:
                         self.print_answer()
                 # A14: EQUAL(N)
@@ -157,6 +183,8 @@ class Symbolics():
                         self.answer = self.equal(e)
                     except:
                         print('ERROR! The action is EQUAL(%s).' %e)
+                        print('The sequence is:')
+                        print(self.seq)
                     finally:
                         self.print_answer()
                 # A15: Almost(N)
@@ -169,8 +197,12 @@ class Symbolics():
                     except:
                         if r == "" and t == "":
                             print('ERROR! The action is Almost(%s).' %e)
+                            print('The sequence is:')
+                            print(self.seq)
                         else:
                             print('ERROR! The action is Almost(%s,%s,%s).' %(e,r,t))
+                            print('The sequence is:')
+                            print(self.seq)
                     finally:
                         self.print_answer()
                 elif ("A17" in symbolic):
@@ -201,6 +233,8 @@ class Symbolics():
                     content = content_json['content']
             except:
                 print("ERROR for command: is_A(%s)" %e)
+                print('The sequence is:')
+                print(self.seq)
             finally:
                 return content
 
@@ -228,6 +262,8 @@ class Symbolics():
                     content = content_json['content']
             except:
                 print("ERROR for command: select(%s,%s,%s)" % (e, r, t))
+                print('The sequence is:')
+                print(self.seq)
             finally:
                 if content is not None:
                     # Store records in set.
@@ -265,6 +301,8 @@ class Symbolics():
                     content = content_json['content']
             except:
                 print("ERROR for command: select_all(%s,%s,%s)" %(et,r,t))
+                print('The sequence is:')
+                print(self.seq)
             # content = requests.post("http://127.0.0.1:5000/post", json=json_pack).json()['content']
             # for k, v in content.items():
             #   if len(v) == 0: content.pop(k)
@@ -344,6 +382,8 @@ class Symbolics():
                 answer_dict.update(self.select(e, r, t))
         except:
             print("ERROR for command: union(%s,%s,%s)" % (e, r, t))
+            print('The sequence is:')
+            print(self.seq)
         finally:
             # 进行 union 操作
             # todo 这里前面都和select部分一样 所以还是应该拆开？ union单独做 好处是union可以不止合并两个 字典里的都可以合并
@@ -373,6 +413,8 @@ class Symbolics():
                 answer_dict.update(s)
         except:
             print("ERROR for command: inter(%s,%s,%s)" % (e, r, t))
+            print('The sequence is:')
+            print(self.seq)
         finally:
             # 进行 inter 类似 union
             inter_key = "&"
@@ -403,6 +445,8 @@ class Symbolics():
                 answer_dict.update(self.select(e, r, t))
         except:
             print("ERROR for command: diff(%s,%s,%s)" % (e, r, t))
+            print('The sequence is:')
+            print(self.seq)
         # 进行 diff 操作 类似 union
         finally:
             diff_key = "-"
@@ -439,6 +483,8 @@ class Symbolics():
                 return 0
         except:
             print("ERROR! THE ACTION IS count(%s)!" %e)
+            print('The sequence is:')
+            print(self.seq)
             return 0
 
     # TODO: NOT TESTED
@@ -501,7 +547,7 @@ class Symbolics():
                     for k, v in self.answer.items():
                         if abs(len(v)-int(number)) <= 1:
                             answer_keys.append(k)
-                if number == 1:
+                elif number == 1:
                     for k, v in self.answer.items():
                         if abs(len(v) - int(number)) < (int(number) * 0.6):
                             answer_keys.append(k)
@@ -517,6 +563,8 @@ class Symbolics():
                 self.temp_set = set(answer_keys)
         except:
             print('ERROR!The action is around(%s, %s, %s)' %(N,r,t))
+            print('The sequence is:')
+            print(self.seq)
         finally:
             return answer_keys
 
@@ -571,7 +619,8 @@ if __name__ == "__main__":
     # for e in kb.find('Q2619632', 'P138'):
     #     print(e,kb.is_A(e))
     # 'e' is the keys of returned dictionary.
-    result_dict = kb.select('Q2619632', 'P138', 'Q355304')
+    # result_dict = kb.select('Q2619632', 'P138', 'Q355304')
+    result_dict = kb.around('Q17', 'P180', 'Q15989253')
     for e in result_dict:
         # 'val' is the set corresponding to the key.
         val = result_dict[e]
