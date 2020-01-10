@@ -1,10 +1,8 @@
 import numpy as np
-import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch
 import math
-from torch.autograd import Variable
 KEY_ATTN_SCORE = 'attention_score'
 
 # (5, 3, 256) & (5, 5, 256);

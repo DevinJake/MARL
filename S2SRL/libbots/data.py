@@ -48,6 +48,19 @@ def encode_words(words, emb_dict):
     res.append(emb_dict[END_TOKEN])
     return res
 
+def encode_words_for_retriever(words, emb_dict):
+    """
+    Convert list of words into list of embeddings indices, adding our tokens
+    :param words: list of strings
+    :param emb_dict: embeddings dictionary
+    :return: list of IDs
+    """
+    res = []
+    unk_idx = emb_dict[UNKNOWN_TOKEN]
+    for w in words:
+        idx = emb_dict.get(w.lower(), unk_idx)
+        res.append(idx)
+    return res
 
 def encode_phrase_pairs(phrase_pairs, emb_dict, filter_unknows=True):
     """
@@ -77,7 +90,7 @@ def encode_phrase_pairs_RLTR(phrase_pairs, emb_dict, filter_unknows=True):
     result = []
     for p1, p2 in phrase_pairs:
         p = encode_words(p1, emb_dict), p2
-        # STAR: It is not correct to exclude the sample with 'UNK' from the dataset.
+        # STAR: It is incorrect to exclude the sample with 'UNK' from the dataset.
         # if unk_token in p[0] or unk_token in p[1]:
         #     continue
         result.append(p)
@@ -373,6 +386,19 @@ def load_data_MAML_TEST(QUESTION_PATH, DIC_PATH = None, max_tokens = None):
         return result, res
     else:
         return result
+
+def load_dict(DIC_PATH = None):
+    if(DIC_PATH!=None):
+        res = {UNKNOWN_TOKEN: 0, BEGIN_TOKEN: 1, END_TOKEN: 2}
+        vocab_list = get_vocab(DIC_PATH)
+        next_id = 3
+        for w in vocab_list:
+            if w not in res:
+                res[w] = next_id
+                next_id += 1
+        return res
+    else:
+        return {}
 
 def phrase_pairs_dict(phrase_pairs, freq_set):
     """

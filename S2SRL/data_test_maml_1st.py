@@ -91,6 +91,10 @@ if __name__ == "__main__":
     net = model.PhraseModel(emb_size=model.EMBEDDING_DIM, dict_size=len(emb_dict), hid_size=model.HIDDEN_STATE_SIZE,
                             LSTM_FLAG=args.lstm, ATT_FLAG=args.att, EMBED_FLAG=args.embed_grad).to(device)
 
+    model_path = '../data/saves/' + str(args.name) + '/' + str(args.model)
+    net.load_state_dict((torch.load(model_path)))
+    log.info("Model loaded from %s, continue testing in MAML first-order mode...", model_path)
+
     # BEGIN token
     beg_token = torch.LongTensor([emb_dict[data.BEGIN_TOKEN]]).to(device)
     beg_token = beg_token.cuda()
@@ -114,16 +118,15 @@ if __name__ == "__main__":
     refer_string_list = list()
     batch_count = 0
     # seq_1是輸入，targets是references，可能有多個；
+
+    # The dict stores the initial parameters in the modules.
+    old_param_dict = metaLearner.get_net_named_parameter()
+
     for test_task in test_data:
-
-        model_path = '../data/saves/' + str(args.name) + '/' + str(args.model)
-        net.load_state_dict((torch.load(model_path)))
-        log.info("Model loaded from %s, continue testing in MAML mode...", model_path)
-
         batch_count += 1
         # Batch is represented for a batch of tasks in MAML.
         # In each task, a batch of support set is established.
-        token_string = metaLearner.sampleForTest(test_task, first_order=args.first_order, epoch_count=0, batch_count=batch_count)
+        token_string = metaLearner.first_order_sampleForTest(test_task, old_param_dict=old_param_dict, first_order=args.first_order, epoch_count=0, batch_count=batch_count)
 
         test_dataset_count += 1
         # log.info("%d PREDICT: %s", test_dataset_count, token_string)

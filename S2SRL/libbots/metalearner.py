@@ -1,7 +1,7 @@
 import torch
 from torch.nn.utils.convert_parameters import (vector_to_parameters,
                                                parameters_to_vector)
-from . import data, model, utils, retriever, reparam_module
+from . import data, model, utils, retriever, reparam_module, adabound
 import torch.optim as optim
 import torch.nn.functional as F
 import random
@@ -28,7 +28,7 @@ class MetaLearner(object):
         Pieter Abbeel, "Trust Region Policy Optimization", 2015
         (https://arxiv.org/abs/1502.05477)
     """
-    def __init__(self, net, device='cpu', beg_token=None, end_token = None, adaptive=False, samples=5, train_data_support_944K=None, rev_emb_dict=None, first_order=False, fast_lr=0.001, meta_optimizer_lr=0.0001, dial_shown = False, dict=None, dict_weak=None, steps=5, weak_flag=False):
+    def __init__(self, net=None, device='cpu', beg_token=None, end_token = None, adaptive=False, samples=5, train_data_support_944K=None, rev_emb_dict=None, first_order=False, fast_lr=0.001, meta_optimizer_lr=0.0001, dial_shown = False, dict=None, dict_weak=None, steps=5, weak_flag=False):
         self.net = net
         self.device = device
         self.beg_token = beg_token
@@ -43,11 +43,11 @@ class MetaLearner(object):
         self.meta_optimizer_lr = meta_optimizer_lr
         # self.meta_optimizer = optim.Adam(self.trainable_parameters(), lr=args.meta_learning_rate, amsgrad=False)
         # self.meta_optimizer = optim.Adam(net.parameters(), lr=meta_optimizer_lr, eps=1e-3)
-        self.meta_optimizer = optim.Adam(filter(lambda p: p.requires_grad, net.parameters()), lr=meta_optimizer_lr, eps=1e-3)
+        self.meta_optimizer = None if self.net is None else optim.Adam(filter(lambda p: p.requires_grad, net.parameters()), lr=meta_optimizer_lr, eps=1e-3)
         # self.inner_optimizer = optim.Adam(net.parameters(), lr=fast_lr, eps=1e-3)
-        self.inner_optimizer = optim.Adam(filter(lambda p: p.requires_grad, net.parameters()), lr=fast_lr, eps=1e-3)
+        self.inner_optimizer = None if self.net is None else optim.Adam(filter(lambda p: p.requires_grad, net.parameters()), lr=fast_lr, eps=1e-3)
         self.dial_shown = dial_shown
-        self.retriever = retriever.Retriever(dict, dict_weak)
+        self.retriever = None if (dict is None or dict_weak is None) else retriever.Retriever(dict, dict_weak)
         self.steps = steps
         self.weak_flag = weak_flag
         '''# note: Reparametrize it!
@@ -969,6 +969,69 @@ class MetaLearner(object):
         for step_sample in support_set:
             # todo: use the similarity between the sample in support set and the task to scale the reward or loss
             #  when meta optimization.
+            inner_loss, inner_total_samples, inner_skipped_samples, true_reward_argmax_step, true_reward_sample_step = self.inner_loss(step_sample, weights=names_weights_copy, dial_shown=True)
+            total_samples += inner_total_samples
+            skipped_samples += inner_skipped_samples
+            true_reward_argmax_batch.extend(true_reward_argmax_step)
+            true_reward_sample_batch.extend(true_reward_sample_step)
+            log.info("        Epoch %d, Batch %d, support sample %s is trained!" % (epoch_count, batch_count, str(step_sample[1]['qid'])))
+
+            # Get the new parameters after a one-step gradient update
+            # Each module parameter is computed as parameter = parameter - step_size * grad.
+            # When being saved in the OrderedDict of self.named_parameters(), it likes:
+            # OrderedDict([('sigma', Parameter containing:
+            # tensor([0.6931, 0.6931], requires_grad=True)), ('0.weight', Parameter containing:
+            # tensor([[1., 1.],
+            #         [1., 1.]], requires_grad=True)), ('0.bias', Parameter containing:
+            # tensor([0., 0.], requires_grad=True)), ('1.weight', Parameter containing:
+            # tensor([[1., 1.],
+            #         [1., 1.]], requires_grad=True)), ('1.bias', Parameter containing:
+            # tensor([0., 0.], requires_grad=True))])
+            names_weights_copy = self.update_params(inner_loss, names_weights_copy=names_weights_copy, step_size=self.fast_lr, first_order=first_order)
+
+        if names_weights_copy is not None:
+            self.net.insert_new_parameter(names_weights_copy, True)
+
+        input_seq = self.net.pack_input(task[0], self.net.emb)
+        # enc = net.encode(input_seq)
+        context, enc = self.net.encode_context(input_seq)
+        # # Always use the first token in input sequence, which is '#BEG' as the initial input of decoder.
+        _, tokens = self.net.decode_chain_argmax(enc, input_seq.data[0:1],
+                                            seq_len=data.MAX_TOKENS, context=context[0], stop_at_token=self.end_token)
+        token_string = ''
+        for token in tokens:
+            if token in self.rev_emb_dict and self.rev_emb_dict.get(token) != '#END':
+                token_string += str(self.rev_emb_dict.get(token)).upper() + ' '
+        token_string = token_string.strip()
+
+        return token_string
+
+    def first_order_sampleForTest(self, task, old_param_dict = None, first_order=False, dial_shown=True, epoch_count=0, batch_count=0):
+        """Sample trajectories (before and after the update of the parameters)
+        for all the tasks `tasks`.
+        Here number of tasks is 1.
+        """
+        # For each task, the initial parameters are the same, i.e., the value stored in old_param_dict.
+        # temp_param_dict = self.get_net_parameter()
+        if old_param_dict is not None:
+            self.net.insert_new_parameter_to_layers(old_param_dict)
+        temp_param_dict = self.get_net_parameter()
+        # Try to solve the bug: "UserWarning: RNN module weights are not part of single contiguous chunk of memory".
+        self.net.encoder.flatten_parameters()
+        self.net.decoder.flatten_parameters()
+        self.net.zero_grad()
+        log.info("Task %s is testing..." % (str(task[1]['qid'])))
+
+        true_reward_argmax_batch = []
+        true_reward_sample_batch = []
+        total_samples = 0
+        skipped_samples = 0
+
+        # Establish support set.
+        support_set = self.establish_support_set(task, self.steps, self.weak_flag, self.train_data_support_944K)
+
+        for step_sample in support_set:
+            self.inner_optimizer.zero_grad()
             inner_loss, inner_total_samples, inner_skipped_samples, true_reward_argmax_step, true_reward_sample_step = self.inner_loss(step_sample, weights=names_weights_copy, dial_shown=True)
             total_samples += inner_total_samples
             skipped_samples += inner_skipped_samples
