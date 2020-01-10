@@ -77,9 +77,9 @@ class Retriever():
     # is removed from the model or not.
     def RetrieveWithMaxTokens(self, N, key_name, key_weak, question, train_data_944k, weak_flag, qid):
         if qid in self.support_set_cache:
-            print('%s is in top-N cache!' %(str(qid)))
+            # print('%s is in top-N cache!' %(str(qid)))
             return self.support_set_cache[qid]
-        print('%s is not in top-N cache!' % (str(qid)))
+        # print('%s is not in top-N cache!' % (str(qid)))
         dict_candicate = self.dict944k_weak
         topNList = list()
         if key_name in self.dict944k:
@@ -89,7 +89,7 @@ class Retriever():
 
             # remove the quesiton itself
             for candidateItem in sort_candidate:
-                if list(candidateItem.values())[0] == question:
+                if list(candidateItem.keys())[0] == qid:
                     sort_candidate.remove(candidateItem)
 
             topNList = sort_candidate if len(sort_candidate) <= N else sort_candidate[0:N]
@@ -104,9 +104,12 @@ class Retriever():
                 for c_weak in sort_candidate_weak:
                     if len(topNList) == N:
                         break
+                    if list(c_weak.keys())[0] == qid:
+                        sort_candidate_weak.remove(c_weak)
+                        continue
                     if c_weak not in topNList:
                         topNList.append(c_weak)
-                        # print(len(topNList))
+                        # print('%s used weak mode.' %(str(qid)))
         self.support_set_cache[qid] = topNList
         return topNList
 
