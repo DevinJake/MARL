@@ -9,25 +9,21 @@ class Retriever_WebQSP():
     def __init__(self, dictwebqsp, dictwebqsp_weak):
         self.dictwebqsp = dictwebqsp
         self.dictwebqsp_weak = dictwebqsp_weak
-
         # The cache is used to store the retrieved samples for first time in memory.
         # Therefore in next iteration it is not needed to find support set in webqsp file.
         self.support_set_cache = {}
 
-    def takequestion(self, dict_item, question):
-        if len(dict_item) > 0:
-            takequestionvalues = list(dict_item.values())[0]
-            return self.CalculatesimilarityStr(takequestionvalues, question) * (-1)
-        else:
-            return 0.0
+    def takequestion(self, candicate_question, question):
+        return self.CalculatesimilarityStr(candicate_question, question) * (-1)
 
-    def Retrieve(self, N, question):
-        candidate_list = question
-        sort_candidate = sorted(candidate_list, key=self.takequestion)
+
+    def retrieve(self, N, question):
+        candidate_list = self.dictwebqsp
+        sort_candidate = sorted(candidate_list, key=lambda x: self.takequestion(x["ProcessedQuestion"], question))
 
         # remove the quesiton itself
         for candidateItem in sort_candidate:
-            if list(candidateItem.values())[0] == question:
+            if candidateItem["ProcessedQuestion"] == question:
                 sort_candidate.remove(candidateItem)
                 break
 
@@ -107,30 +103,30 @@ class Retriever_WebQSP():
         jaccard = float(len(intersec)) / float(len(union)) if len(union) != 0 else 0
         return jaccard
 
+# if __name__ == "__main__":
+#     result_dict = {}
+#     q_topK_map = {}
+#
+#     with open("WebQSP.train.json", "r", encoding='UTF-8') as questions:
+#         load_dict = json.load(questions)
+#         questions = load_dict["Questions"]
+#         simple_question_list = []
+#         for q in questions:
+#             simple_question_list.append({"QuestionId": q["QuestionId"], "ProcessedQuestion": q["ProcessedQuestion"]})
+#         retriever = Retriever_WebQSP(simple_question_list, {})
+#
+#         for q in simple_question_list:
+#             topNlist = retriever.retrieve(5, q["ProcessedQuestion"])
+#             key = q["QuestionId"]
+#
+#             if True:
+#                 key_question = key + ' : ' + q["ProcessedQuestion"]
+#                 item_key = {key_question: topNlist}
+#                 q_topK_map.update(item_key)
+#
+#         with open('top5_webqsp_train_all_week.json', 'w', encoding='utf-8') as f:
+#             json.dump(q_topK_map, f, indent=4)
 
-if __name__ == "__main__":
-
-    result_dict = {}
-    with open("WebQSP.train.json", "r", encoding='UTF-8') as questions:
-        load_dict = json.load(questions)
-        questions = load_dict["Questions"]
-        retriever = Retriever_WebQSP(questions, {})
-
-        print(len(questions))
-        for q in questions:
-            question = q["ProcessedQuestion"]
-            Answers = []
-            id = q["QuestionId"]
-            answerList = q["Parses"][0]["Answers"]
-            for an in answerList:
-                Answers.append(an['AnswerArgument'])
-            sparql = q["Parses"][0]["Sparql"]
-
-            retriever = Retriever_WebQSP(load_dict, {})
-            topNlist = retriever.Retrieve(5, question)
-
-
-        # with open('top5_4weak11.13.json', 'w', encoding='utf-8') as f:
 
 
 

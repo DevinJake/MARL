@@ -3,7 +3,7 @@ import json
 import os
 import sys
 
-from ..libbots import retriever_webqsp
+from libbots import retriever_webqsp
 
 # action sequence
 class Action():
