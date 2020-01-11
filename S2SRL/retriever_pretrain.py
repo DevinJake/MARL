@@ -114,6 +114,14 @@ def get_docID_indices(order_list):
                 next_id += 1
     return did_indices, d_list
 
+def get_qid_question_pairs(filepath):
+    pair = {}
+    pair_list = get_ordered_docID_document(filepath)
+    for temp in pair_list:
+        docID, document = list(temp.items())[0]
+        pair[docID] = document
+    return pair
+
 def get_document_embedding(doc_list, emb_dict, net):
     d_embed_list = []
     for i, doc in enumerate(doc_list):
@@ -142,7 +150,6 @@ def initialize_document_embedding():
     # Index -> qid.
     rev_docID_dict = {id: doc for doc, id in docID_dict.items()}
 
-    path = '../data/saves/maml_batch8_att=0_newdata2k_1storder_1task/epoch_002_0.394_0.796.dat'
     net = RetrieverModel(emb_size=50, dict_size=len(docID_dict), EMBED_FLAG=False,
                          device='cuda').to('cuda')
     net.cuda()
@@ -150,6 +157,7 @@ def initialize_document_embedding():
     # temp_param_dict = get_net_parameter(net)
 
     # Get trained wording embeddings.
+    path = '../data/saves/maml_batch8_att=0_newdata2k_1storder_1task/epoch_002_0.394_0.796.dat'
     net1 = model.PhraseModel(emb_size=model.EMBEDDING_DIM, dict_size=len(emb_dict), hid_size=model.HIDDEN_STATE_SIZE,
                              LSTM_FLAG=True, ATT_FLAG=False, EMBED_FLAG=False).to(device)
     net1.load_state_dict(torch.load(path))
@@ -290,7 +298,37 @@ def generate_training_samples():
     fw.close()
     print('Writing retriever_training_samples.json is done!')
 
-def retriever_training(epoches):
+def get_question_embedding(question, emb_dict, net):
+    question_token = question.lower().replace('?', '')
+    question_token = question_token.replace(',', ' ')
+    question_token = question_token.replace(':', ' ')
+    question_token = question_token.replace('(', ' ')
+    question_token = question_token.replace(')', ' ')
+    question_token = question_token.replace('"', ' ')
+    question_token = question_token.strip().split()
+    question_token_indices = [emb_dict['#UNK'] if token not in emb_dict else emb_dict[token] for token in question_token]
+    question_token_embeddings = net.emb(torch.tensor(question_token_indices, requires_grad=False).cuda())
+    question_embeddings = torch.mean(question_token_embeddings, 0).view(1,-1)
+    question_embeddings = torch.tensor(question_embeddings.tolist(), requires_grad=False).cuda()
+    return question_embeddings
+
+def retriever_training(epoches, RETRIEVER_EMBED_FLAG=True, query_embedding=True):
+    ''' One instance of the retriever training samples:
+        query_index = [800000, 0, 2, 100000, 400000, 600000]
+        document_range = [(700000, 944000),
+                          (1, 10),
+                          (10, 300000),
+                          (10, 300000),
+                          (300000, 500000),
+                          (500000, 700000)]
+        positive_document_list =
+        [[700001-700000, 700002-700000, 900000-700000, 910000-700000, 944000-2-700000],
+        [2, 3],
+        [13009-10, 34555-10, 234-10, 6789-10, 300000-1-10],
+        [11-10, 16-10, 111111-10, 222222-10, 222223-10],
+        [320000-300000, 330000-300000, 340000-300000, 350000-300000, 360000-300000],
+        [600007-500000, 610007-500000, 620007-500000, 630007-500000, 690007-500000]]'''
+
     retriever_path = '../data/saves/retriever/initial_epoch_000_1.000.dat'
     device = 'cuda'
     learning_rate = 0.01
@@ -299,7 +337,7 @@ def retriever_training(epoches):
     rev_docID_dict = {id: doc for doc, id in docID_dict.items()}
     training_samples = load_json(TRAINING_SAMPLE_DICT)
 
-    net = RetrieverModel(emb_size=50, dict_size=len(docID_dict), EMBED_FLAG=True,
+    net = RetrieverModel(emb_size=50, dict_size=len(docID_dict), EMBED_FLAG=RETRIEVER_EMBED_FLAG,
                          device=device).to(device)
     net.load_state_dict(torch.load(retriever_path))
     net.zero_grad()
@@ -307,24 +345,39 @@ def retriever_training(epoches):
     # retriever_optimizer = optim.SGD(filter(lambda p: p.requires_grad, net.parameters()), lr=learning_rate)
     # retriever_optimizer = optim.Adam(filter(lambda p: p.requires_grad, net.parameters()), lr=learning_rate, eps=1e-3)
     retriever_optimizer = adabound.AdaBound(filter(lambda p: p.requires_grad, net.parameters()), lr=1e-3, final_lr=0.1)
-    temp_param_dict = get_net_parameter(net)
+    # temp_param_dict = get_net_parameter(net)
 
-    # query_index = [800000, 0, 2, 100000, 400000, 600000]
-    # document_range = [(700000, 944000), (1, 10), (10, 300000), (10, 300000), (300000, 500000), (500000, 700000)]
-    # positive_document_list = [[700001-700000, 700002-700000, 900000-700000, 910000-700000, 944000-2-700000],
-    #                           [2, 3],
-    #              [13009-10, 34555-10, 234-10, 6789-10, 300000-1-10],
-    #              [11-10, 16-10, 111111-10, 222222-10, 222223-10],
-    #              [320000-300000, 330000-300000, 340000-300000, 350000-300000, 360000-300000],
-    #              [600007-500000, 610007-500000, 620007-500000, 630007-500000, 690007-500000]]
-    max_value = MAP_for_queries = MAX_MAP
+    emb_dict = None
+    net1 = None
+    qid_question_pair = {}
+    if query_embedding:
+        emb_dict = data.load_dict(DIC_PATH=DIC_PATH)
+        # Get trained wording embeddings.
+        path = '../data/saves/maml_batch8_att=0_newdata2k_1storder_1task/epoch_002_0.394_0.796.dat'
+        net1 = model.PhraseModel(emb_size=model.EMBEDDING_DIM, dict_size=len(emb_dict),
+                                 hid_size=model.HIDDEN_STATE_SIZE,
+                                 LSTM_FLAG=True, ATT_FLAG=False, EMBED_FLAG=False).to(device)
+        net1.load_state_dict(torch.load(path))
+        qid_question_pair = get_qid_question_pairs(ORDERED_QID_QUESTION_DICT)
+
+    max_value = MAX_MAP
+    MAP_for_queries = MAX_MAP
+
     for i in range(epoches):
         print('Epoch %d is training......' %(i))
         # count= 0
         for key, value in training_samples.items():
             retriever_optimizer.zero_grad()
             net.zero_grad()
-            query_tensor = torch.tensor(net.pack_input(value['query_index']).tolist(), requires_grad=False).cuda()
+            if query_embedding:
+                if key in qid_question_pair:
+                    question_tokens = qid_question_pair[key]
+                else:
+                    print("ERROR! NO SUCH QUESTION: %s!" %(str(key)))
+                    continue
+                query_tensor = get_question_embedding(question_tokens, emb_dict, net1)
+            else:
+                query_tensor = torch.tensor(net.pack_input(value['query_index']).tolist(), requires_grad=False).cuda()
             document_range = (value['document_range'][0], value['document_range'][1])
             logsoftmax_output = net(query_tensor, document_range)
             logsoftmax_output = logsoftmax_output.cuda()
@@ -334,7 +387,7 @@ def retriever_training(epoches):
             loss_policy_v = loss_policy_v.cuda()
             loss_policy_v.backward()
             retriever_optimizer.step()
-            temp_param_dict = get_net_parameter(net)
+            # temp_param_dict = get_net_parameter(net)
             # if count%100==0:
             #     print('     Epoch %d, %d samples have been trained.' %(i, count))
             # count+=1
@@ -345,7 +398,11 @@ def retriever_training(epoches):
             for j in range(int(len(training_samples)/40)):
                 random.seed(datetime.now())
                 key, value = random.choice(list(training_samples.items()))
-                query_tensor = torch.tensor(net.pack_input(value['query_index']).tolist(), requires_grad=False).cuda()
+                if query_embedding:
+                    question_tokens = qid_question_pair[key]
+                    query_tensor = get_question_embedding(question_tokens, emb_dict, net1)
+                else:
+                    query_tensor = torch.tensor(net.pack_input(value['query_index']).tolist(), requires_grad=False).cuda()
                 document_range = (value['document_range'][0], value['document_range'][1])
                 logsoftmax_output = net(query_tensor, document_range)
                 order = net.calculate_rank(logsoftmax_output.tolist())
@@ -370,4 +427,7 @@ if __name__ == "__main__":
     # establish_positive_question_documents_pair(MAX_TOKENS)
     # generate_training_samples()
     epoches = 300
-    retriever_training(epoches)
+    # If query_embedding is true, using the sum of word embedding to represent the questions.
+    # If query_embedding is false, using the query embedding,
+    # which is stored in the retriever model, to represent the questions.
+    retriever_training(epoches, RETRIEVER_EMBED_FLAG=True, query_embedding=True)
