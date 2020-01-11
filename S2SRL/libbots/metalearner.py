@@ -1015,7 +1015,7 @@ class MetaLearner(object):
         # temp_param_dict = self.get_net_parameter()
         if old_param_dict is not None:
             self.net.insert_new_parameter_to_layers(old_param_dict)
-        temp_param_dict = self.get_net_parameter()
+        # temp_param_dict = self.get_net_parameter()
         # Try to solve the bug: "UserWarning: RNN module weights are not part of single contiguous chunk of memory".
         self.net.encoder.flatten_parameters()
         self.net.decoder.flatten_parameters()
@@ -1032,28 +1032,16 @@ class MetaLearner(object):
 
         for step_sample in support_set:
             self.inner_optimizer.zero_grad()
-            inner_loss, inner_total_samples, inner_skipped_samples, true_reward_argmax_step, true_reward_sample_step = self.inner_loss(step_sample, weights=names_weights_copy, dial_shown=True)
+            inner_loss, inner_total_samples, inner_skipped_samples, true_reward_argmax_step, true_reward_sample_step = self.first_order_inner_loss(step_sample, dial_shown=True)
             total_samples += inner_total_samples
             skipped_samples += inner_skipped_samples
             true_reward_argmax_batch.extend(true_reward_argmax_step)
             true_reward_sample_batch.extend(true_reward_sample_step)
             log.info("        Epoch %d, Batch %d, support sample %s is trained!" % (epoch_count, batch_count, str(step_sample[1]['qid'])))
-
-            # Get the new parameters after a one-step gradient update
-            # Each module parameter is computed as parameter = parameter - step_size * grad.
-            # When being saved in the OrderedDict of self.named_parameters(), it likes:
-            # OrderedDict([('sigma', Parameter containing:
-            # tensor([0.6931, 0.6931], requires_grad=True)), ('0.weight', Parameter containing:
-            # tensor([[1., 1.],
-            #         [1., 1.]], requires_grad=True)), ('0.bias', Parameter containing:
-            # tensor([0., 0.], requires_grad=True)), ('1.weight', Parameter containing:
-            # tensor([[1., 1.],
-            #         [1., 1.]], requires_grad=True)), ('1.bias', Parameter containing:
-            # tensor([0., 0.], requires_grad=True))])
-            names_weights_copy = self.update_params(inner_loss, names_weights_copy=names_weights_copy, step_size=self.fast_lr, first_order=first_order)
-
-        if names_weights_copy is not None:
-            self.net.insert_new_parameter(names_weights_copy, True)
+            # Inner update.
+            inner_loss.backward()
+            self.inner_optimizer.step()
+            # temp_param_dict = self.get_net_parameter()
 
         input_seq = self.net.pack_input(task[0], self.net.emb)
         # enc = net.encode(input_seq)
