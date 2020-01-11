@@ -299,15 +299,15 @@ def retriever_training(epoches):
     rev_docID_dict = {id: doc for doc, id in docID_dict.items()}
     training_samples = load_json(TRAINING_SAMPLE_DICT)
 
-    net = RetrieverModel(emb_size=50, dict_size=len(docID_dict), EMBED_FLAG=False,
+    net = RetrieverModel(emb_size=50, dict_size=len(docID_dict), EMBED_FLAG=True,
                          device=device).to(device)
     net.load_state_dict(torch.load(retriever_path))
     net.zero_grad()
     # temp_param_dict = get_net_parameter(net)
-    retriever_optimizer = optim.SGD(filter(lambda p: p.requires_grad, net.parameters()), lr=learning_rate)
+    # retriever_optimizer = optim.SGD(filter(lambda p: p.requires_grad, net.parameters()), lr=learning_rate)
     # retriever_optimizer = optim.Adam(filter(lambda p: p.requires_grad, net.parameters()), lr=learning_rate, eps=1e-3)
-    # retriever_optimizer = adabound.AdaBound(filter(lambda p: p.requires_grad, net.parameters()), lr=1e-3, final_lr=0.1)
-    # temp_param_dict = get_net_parameter(net)
+    retriever_optimizer = adabound.AdaBound(filter(lambda p: p.requires_grad, net.parameters()), lr=1e-3, final_lr=0.1)
+    temp_param_dict = get_net_parameter(net)
 
     # query_index = [800000, 0, 2, 100000, 400000, 600000]
     # document_range = [(700000, 944000), (1, 10), (10, 300000), (10, 300000), (300000, 500000), (500000, 700000)]
@@ -320,7 +320,7 @@ def retriever_training(epoches):
     max_value = MAP_for_queries = MAX_MAP
     for i in range(epoches):
         print('Epoch %d is training......' %(i))
-        count= 0
+        # count= 0
         for key, value in training_samples.items():
             retriever_optimizer.zero_grad()
             net.zero_grad()
@@ -333,11 +333,11 @@ def retriever_training(epoches):
             loss_policy_v = -possitive_logsoftmax_output.mean()
             loss_policy_v = loss_policy_v.cuda()
             loss_policy_v.backward()
-            # print(net.emb.weight.grad[10])
             retriever_optimizer.step()
-            if count%100==0:
-                print('     Epoch %d, %d samples have been trained.' %(i, count))
-            count+=1
+            temp_param_dict = get_net_parameter(net)
+            # if count%100==0:
+            #     print('     Epoch %d, %d samples have been trained.' %(i, count))
+            # count+=1
 
         # Record trained parameters.
         if i % 1 == 0:
