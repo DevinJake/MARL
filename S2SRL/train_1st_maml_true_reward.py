@@ -83,7 +83,7 @@ if __name__ == "__main__":
     # Conversely, if action is 'store_false', if the parameter has a value, the parameter is viewed as 'False'.
     parser.add_argument('--first-order', action='store_true', help='use the first-order approximation of MAML')
     # If false, the embedding tensors in the model do not need to be trained.
-    parser.add_argument('--embed-grad', action='store_false', help='use the first-order approximation of MAML')
+    parser.add_argument('--embed-grad', action='store_false', help='fix embeddings when training')
     parser.add_argument('--fast-lr', type=float, default=0.0001,
                         help='learning rate for the 1-step gradient update of MAML')
     parser.add_argument('--meta-lr', type=float, default=0.0001,
