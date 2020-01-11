@@ -454,3 +454,8 @@ def get944k(path):
     with open(path, "r", encoding='UTF-8') as CSQA_List:
         dict944k = json.load(CSQA_List)
     return dict944k
+
+def get_webqsp(path):
+    with open(path, "r", encoding='UTF-8') as WEBQSP_List:
+        dict_webqsp = json.load(WEBQSP_List)
+    return dict_webqsp

@@ -25,7 +25,7 @@ TRAIN_RATIO = 0.985
 GAMMA = 0.05
 
 DIC_PATH = '../data/webqsp_data/share.question'
-TRAIN_QUESTION_ANSWER_PATH = '../data/auto_QA_data/mask_even_1.0%/RL_train_TR_sub_webqsp.json'
+TRAIN_QUESTION_ANSWER_PATH = '../data/webqsp_data/RL_mask_even/RL_train_TR_sub_webqsp.json'
 log = logging.getLogger("train")
 
 
@@ -36,12 +36,13 @@ def run_test(test_data, net, rev_emb_dict, end_token, device="cuda"):
     # p1 is one sentence, p2 is sentence list.
     for p1, p2 in test_data:
         # Transform sentence to padded embeddings.
-        input_seq = model.pack_input(p1, net.emb, device)
+        input_seq = net.pack_input(p1, net.emb, device)
         # Get hidden states from encoder.
-        enc = net.encode(input_seq)
+        # enc = net.encode(input_seq)
+        context, enc = net.encode_context(input_seq)
         # Decode sequence by feeding predicted token to the net again. Act greedily.
         # Return N*outputvocab, N output token indices.
-        _, tokens = net.decode_chain_argmax(enc, net.emb(beg_token), seq_len=data.MAX_TOKENS, stop_at_token=end_token)
+        _, tokens = net.decode_chain_argmax(enc, net.emb(beg_token), seq_len=data.MAX_TOKENS, context = context[0], stop_at_token=end_token)
         # Show what the output action sequence is.
         action_tokens = []
         for temp_idx in tokens:
@@ -59,7 +60,7 @@ if __name__ == "__main__":
     logging.basicConfig(format="%(asctime)-15s %(levelname)s %(message)s", level=logging.INFO)
     # # command line parameters
     # # -a=True means using adaptive reward to train the model. -a=False is using 0-1 reward.
-    sys.argv = ['train_scst_true_reward.py', '--cuda', '-l=../data/saves/webqsp/crossent_even/epoch_040_0.994_0.946.dat', '-n=rl_even_adaptive_1%', '-s=5', '-a=0']
+    sys.argv = ['train_scst_true_reward.py', '--cuda', '-l=../data/saves/webqsp/crossent_even_1%_att=1/pre_bleu_0.938_07.dat', '-n=rl_even_adaptive_1%_att=1', '-s=5', '-a=0', '--att=1', '--lstm=1']
 
     # sys.argv = ['train_scst_true_reward.py', '--cuda', '-l=../data/saves/crossent_even_1%/pre_bleu_0.946_55.dat', '-n=rl_even_true_1%', '-s=5']
     parser = argparse.ArgumentParser()
@@ -67,12 +68,20 @@ if __name__ == "__main__":
     parser.add_argument("--cuda", action='store_true', default=False, help="Enable cuda")
     parser.add_argument("-n", "--name", required=True, help="Name of the run")
     parser.add_argument("-l", "--load", required=True, help="Load the pre-trained model whereby continue training the RL mode")
-    # # Number of decoding samples.
+    # Number of decoding samples.
     parser.add_argument("-s", "--samples", type=int, default=4, help="Count of samples in prob mode")
-    # # Choose the function to compute reward (0-1 or adaptive reward).
-    # # If a = true, 1 or yes, the adaptive reward is used. Otherwise 0-1 reward is used.
+    # Choose the function to compute reward (0-1 or adaptive reward).
+    # If a = true, 1 or yes, the adaptive reward is used. Otherwise 0-1 reward is used.
     parser.add_argument("-a", "--adaptive", type=lambda x: (str(x).lower() in ['true', '1', 'yes']), help="0-1 or adaptive reward")
     parser.add_argument("--disable-skip", default=False, action='store_true', help="Disable skipping of samples with high argmax BLEU")
+    # Choose the function to compute reward (0-1 or adaptive reward).
+    # If a = true, 1 or yes, the adaptive reward is used. Otherwise 0-1 reward is used.
+    parser.add_argument("--att", type=lambda x: (str(x).lower() in ['true', '1', 'yes']),
+                        help="Using attention mechanism in seq2seq")
+    parser.add_argument("--lstm", type=lambda x: (str(x).lower() in ['true', '1', 'yes']),
+                        help="Using LSTM mechanism in seq2seq")
+    # If false, the embedding tensors in the model do not need to be trained.
+    parser.add_argument('--embed-grad', action='store_false', help='use the first-order approximation of MAML')
     args = parser.parse_args()
     device = torch.device("cuda" if args.cuda else "cpu")
     log.info("Device info: %s", str(device))
@@ -82,7 +91,6 @@ if __name__ == "__main__":
 
     # # List of (question, {question information and answer}) pairs, the training pairs are in format of 1:1.
     phrase_pairs, emb_dict = data.load_RL_data_TR(TRAIN_QUESTION_ANSWER_PATH, DIC_PATH, MAX_TOKENS)
-    print("len(phrase_pairs)", len(phrase_pairs))
     log.info("Obtained %d phrase pairs with %d uniq words from %s.", len(phrase_pairs), len(emb_dict), TRAIN_QUESTION_ANSWER_PATH)
     data.save_emb_dict(saves_path, emb_dict)
     end_token = emb_dict[data.END_TOKEN]
@@ -95,11 +103,20 @@ if __name__ == "__main__":
     train_data, test_data = data.split_train_test(train_data, TRAIN_RATIO)
     log.info("Training data converted, got %d samples", len(train_data))
     log.info("Train set has %d phrases, test %d", len(train_data), len(test_data))
+    log.info("Batch size is %d", BATCH_SIZE)
+    if (args.att):
+        log.info("Using attention mechanism to train the SEQ2SEQ model...")
+    else:
+        log.info("Train the SEQ2SEQ model without attention mechanism...")
+    if (args.lstm):
+        log.info("Using LSTM mechanism to train the SEQ2SEQ model...")
+    else:
+        log.info("Using RNN mechanism to train the SEQ2SEQ model...")
 
     # Index -> word.
     rev_emb_dict = {idx: word for word, idx in emb_dict.items()}
     # PhraseModel.__init__() to establish a LSTM model.
-    net = model.PhraseModel(emb_size=model.EMBEDDING_DIM, dict_size=len(emb_dict), hid_size=model.HIDDEN_STATE_SIZE).to(device)
+    net = model.PhraseModel(emb_size=model.EMBEDDING_DIM, dict_size=len(emb_dict), hid_size=model.HIDDEN_STATE_SIZE, LSTM_FLAG=args.lstm, ATT_FLAG=args.att).to(device)
     # Using cuda.
     net.cuda()
     log.info("Model: %s", net)
@@ -107,7 +124,6 @@ if __name__ == "__main__":
     writer = SummaryWriter(comment="-" + args.name)
     # Load the pre-trained seq2seq model.
     net.load_state_dict(torch.load(args.load))
-    #net.load_state_dict({k.replace('module.',''):v for k,v in torch.load(args.load).items()})
     log.info("Model loaded from %s, continue training in RL mode...", args.load)
     if(args.adaptive):
         log.info("Using adaptive reward to train the REINFORCE model...")
@@ -121,6 +137,7 @@ if __name__ == "__main__":
     # TBMeanTracker (TensorBoard value tracker):
     # allows to batch fixed amount of historical values and write their mean into TB
     with ptan.common.utils.TBMeanTracker(writer, batch_size=100) as tb_tracker:
+        # TODO: filter(lambda p: p.requires_grad, net.parameters())
         optimiser = optim.Adam(net.parameters(), lr=LEARNING_RATE, eps=1e-3)
         batch_idx = 0
         batch_count = 0
@@ -142,14 +159,18 @@ if __name__ == "__main__":
                 batch_idx += 1
                 # Each batch conduct one gradient upweight.
                 batch_count += 1
+                # optimizer.zero_grad() clears x.grad for every parameter x in the optimizer.
+                # It’s important to call this before loss.backward(),
+                # otherwise you’ll accumulate the gradients from multiple passes.
                 optimiser.zero_grad()
                 # input_seq: the padded and embedded batch-sized input sequence.
                 # input_batch: the token ID matrix of batch-sized input sequence. Each row is corresponding to one input sentence.
                 # output_batch: the token ID matrix of batch-sized output sequences. Each row is corresponding to a list of several output sentences.
-                input_seq, input_batch, output_batch = model.pack_batch_no_out(batch, net.emb, device)
+                input_seq, input_batch, output_batch = net.pack_batch_no_out(batch, net.emb, device)
                 input_seq = input_seq.cuda()
                 # Get (two-layer) hidden state of encoder of samples in batch.
-                enc = net.encode(input_seq)
+                # enc = net.encode(input_seq)
+                context, enc = net.encode_context(input_seq)
 
                 net_policies = []
                 net_actions = []
@@ -170,8 +191,7 @@ if __name__ == "__main__":
                     item_enc = net.get_encoded_item(enc, idx)
                     # # 'r_argmax' is the list of out_logits list and 'actions' is the list of output tokens.
                     # # The output tokens are generated greedily by using chain_argmax (using last setp's output token as current input token).
-                    r_argmax, actions = net.decode_chain_argmax(item_enc, beg_embedding, data.MAX_TOKENS,
-                                                                stop_at_token=end_token)
+                    r_argmax, actions = net.decode_chain_argmax(item_enc, beg_embedding, data.MAX_TOKENS, context[idx], stop_at_token=end_token)
                     # Show what the output action sequence is.
                     action_tokens = []
                     for temp_idx in actions:
@@ -205,8 +225,7 @@ if __name__ == "__main__":
                     for _ in range(args.samples):
                         # 'r_sample' is the list of out_logits list and 'actions' is the list of output tokens.
                         # The output tokens are sampled following probabilitis by using chain_sampling.
-                        r_sample, actions = net.decode_chain_sampling(item_enc, beg_embedding,
-                                                                      data.MAX_TOKENS, stop_at_token=end_token)
+                        r_sample, actions = net.decode_chain_sampling(item_enc, beg_embedding, data.MAX_TOKENS, context[idx], stop_at_token=end_token)
                         total_samples += 1
 
                         # Omit duplicate action sequence to decrease the computing time and to avoid the case that
@@ -264,7 +283,7 @@ if __name__ == "__main__":
                 # Indices of all output tokens whose size is 1 * N;
                 actions_t = torch.LongTensor(net_actions).to(device)
                 actions_t = actions_t.cuda()
-                # All output tokens reward whose size is 1 * N;
+                # All output tokens reward whose size is 1 *pack_batch N;
                 adv_v = torch.FloatTensor(net_advantages).to(device)
                 adv_v = adv_v.cuda()
                 # Compute log(softmax(logits)) of all output tokens in size of N * output vocab size;
@@ -284,8 +303,14 @@ if __name__ == "__main__":
                 loss_policy_v = loss_policy_v.cuda()
 
                 loss_v = loss_policy_v
+                # loss.backward() computes dloss/dx for every parameter x which has requires_grad=True.
+                # These are accumulated into x.grad for every parameter x. In pseudo-code:
+                # x.grad += dloss/dx
                 loss_v.backward()
                 # To conduct a gradient ascent to minimize the loss (which is to maximize the reward).
+                # optimizer.step updates the value of x using the gradient x.grad.
+                # For example, the SGD optimizer performs:
+                # x += -lr * x.grad
                 optimiser.step()
 
                 tb_tracker.track("advantage", adv_v, batch_idx)

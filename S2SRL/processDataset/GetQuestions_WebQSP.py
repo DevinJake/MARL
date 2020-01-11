@@ -3,9 +3,57 @@ import json
 import os
 import sys
 
-from libbots import retriever_webqsp
-
 # action sequence
+from S2SRL.SymbolicExecutor.symbolics_webqsp import Symbolics_WebQSP
+
+class WebQSP(object):
+    def __init__(self, id, question, action_sequence_list, entity, relation, type, entity_mask, relation_mask, type_mask, mask_action_sequence_list, answerlist):
+        self.id = id
+        self.question = question
+        self.action_sequence_list = action_sequence_list
+        self.entity = entity
+        self.relation = relation
+        self.type = type
+        self.entity_mask = entity_mask
+        self.relation_mask = relation_mask
+        self.type_mask = type_mask
+        self.mask_action_sequence_list = mask_action_sequence_list
+        self.answerlist = answerlist
+
+    def obj_2_json(obj):
+        return {
+            obj.id: {
+                "question": obj.question,
+                "action_sequence_list": obj.action_sequence_list,
+                "entity": obj.entity,
+                "relation": obj.relation,
+                "type": obj.type,
+                "entity_mask": obj.entity_mask,
+                "relation_mask": obj.relation_mask,
+                "type_mask": obj.type_mask,
+                "mask_action_sequence_list": obj.mask_action_sequence_list,
+                "answers": obj.answerlist,
+            }
+        }
+
+class QapairSeq(object):
+    def __init__(self, id, question, answer, sparql, seq):
+        self.id = id
+        self.question = question
+        self.answer = answer
+        self.sparql = sparql
+        self.seq = seq
+
+    def obj_2_json_seq(obj):
+        return {
+            obj.id:{
+                "question": obj.question,
+                "answer": obj.answer,
+                "sparql": obj.sparql,
+                "seq": obj.seq,
+            }
+        }
+
 class Action():
     def __init__(self, action_type, e, r, t):
         self.action_type = action_type
@@ -15,7 +63,6 @@ class Action():
 
     def to_str(self):
         return "{{\'{0}\':[\'{1}\', \'{2}\', \'{3}\']}}".format(self.action_type, self.e, self.r, self.t)
-
 
 # parse sparql in dataset to action sequence
 def processSparql(sparql_str, id="empty"):
@@ -262,8 +309,6 @@ def add_next_variable(sparql_list, variable_key, reorder_sparql_list):
 
 
 w_1 = 0.2
-
-
 def calc_01_reward(answer, true_answer):
     true_reward = 0.0
     try:
@@ -283,8 +328,6 @@ def calc_01_reward(answer, true_answer):
 
 
 w_1 = 0.2
-
-
 def calc_01_reward_type(target_value, gold_entities_set, type="jaccard"):
     true_reward = 0.0
     intersec = {}
@@ -309,26 +352,7 @@ def calc_01_reward_type(target_value, gold_entities_set, type="jaccard"):
     return true_reward
 
 
-# # for given questions, get similarity questions for each of them
-# def get_RetrieverDict(path):
-#     with open(path, "r", encoding='UTF-8') as dataset:
-#         load_dict = json.load(dataset)
-#         questions = load_dict["Questions"]
-#         print(len(questions))
-#         for q in questions:
-#             question = q["ProcessedQuestion"]
-#             Answers = []
-#             id = q["QuestionId"]
-#             answerList = q["Parses"][0]["Answers"]
-#             for an in answerList:
-#                 Answers.append(an['AnswerArgument'])
-#             sparql = q["Parses"][0]["Sparql"]
-#
-#             retriever = Retriever_WebQSP(load_dict, {})
-#             topNlist = retriever.Retrieve(5, question)
-
-
-def get_right_answer_reorder_mask_file(path):
+def get_right_answer_reorder_mask_file(path, outpath):
     # Load WebQuestions Semantic Parses
     WebQSPList = []
     WebQSPList_Correct = []
@@ -360,7 +384,7 @@ def get_right_answer_reorder_mask_file(path):
             mypair = Qapair(question, Answers, sparql)
 
             # if id == "WebQTest-1822": # test one
-            if False:  # test all
+            if True:  # test all
                 # test seq
                 true_answer = mypair.answer
                 test_sparql = mypair.sparql

@@ -958,7 +958,7 @@ def processSparql(sparql_str, id="empty"):
                             if action.e == s or action.t == s:  # already has variable
                                 action_type = "A4"
                         # special for webqsp: swap s and t ,A3->A1 "6" means single action_seq
-                        print(len(untreated_list), "length of untreated_list")
+                        # print(len(untreated_list), "length of untreated_list")
                         if len(untreated_list) == 6:
                             action_type = "A1"
                             temp = s
@@ -1182,19 +1182,29 @@ if __name__ == "__main__":
     # print("answer test1: ", answer)
 
 
+    seq74 =[
+            {'A1': ['m.0fq2vj2', 'type.object.name', '?y']},
+        ]
+    symbolic_exe = Symbolics_WebQSP(seq74)
+    answer = symbolic_exe.executor()
+    print("answer 74: ", answer)
+
     # seq74 =[
-    #         {'A1': ['m.0fjp3', 'sports.sports_championship.events', '?x']},
+    #         {'A1': ['m.024v2j', 'people.person.parents', '?x']},
     #     ]
     # symbolic_exe = Symbolics_WebQSP(seq74)
     # answer = symbolic_exe.executor()
     # print("answer 74: ", answer)
 
-    seq74 =[
-            {'A1': ['m.024v2j', 'people.person.parents', '?x']},
+    seq_3496 =[
+            # {'A1': ['m.0b90_r', 'location.statistical_region.places_exported_to', '?y']},
+            # {'A4': ['?y', 'location.imports_and_exports.exported_to', '?x']},
+            {'A1': ['m.0b90_r', 'location.statistical_region.places_imported_from', '?y']},
+            {'A4': ['?y', 'location.imports_and_exports.imported_from', '?x']},
         ]
-    symbolic_exe = Symbolics_WebQSP(seq74)
+    symbolic_exe = Symbolics_WebQSP(seq_3496)
     answer = symbolic_exe.executor()
-    print("answer 74: ", answer)
+    print("answer WebQTrn_3496: ", answer)
 
     # Load WebQuestions Semantic Parses
     WebQSPList = []
@@ -1295,8 +1305,8 @@ if __name__ == "__main__":
                 sparql = q["Parses"][0]["Sparql"]
                 mypair = Qapair(question, Answers, sparql)
 
-                # if id == "WebQTest-1822": # test one
-                if True: # test all
+                if id == "WebQTrn-3496":  # test one
+                # if True: # test all
                     # test seq
                     true_answer = mypair.answer
                     test_sparql = mypair.sparql
@@ -1341,15 +1351,15 @@ if __name__ == "__main__":
                                 relation_mask = dict()
                                 type_mask = dict()
                                 for e in entity:
-                                    dict_entity = {e : "ENTITY{0}".format(e_index)}
+                                    dict_entity = {e: "ENTITY{0}".format(e_index)}
                                     entity_mask.update(dict_entity)
                                     e_index += 1
                                 for r in relation:
-                                    dict_relation = {r : "RELATION{0}".format(r_index)}
+                                    dict_relation = {r: "RELATION{0}".format(r_index)}
                                     relation_mask.update(dict_relation)
                                     r_index += 1
                                 for t in type:
-                                    dict_type = {t : "TYPE{0}".format(t_index)}
+                                    dict_type = {t: "TYPE{0}".format(t_index)}
                                     type_mask.update(dict_type)
                                     t_index += 1
                                 mask_action_sequence_list = []
@@ -1381,7 +1391,7 @@ if __name__ == "__main__":
                                 # print(question)
                                 # print(answer)
                                 WebQSPList_Correct.append(correct_item)
-                            else:
+                            elif reward == 0.0:
                                 print('incorrect!', reward)
                                 WebQSPList_Incorrect.append(mypair)
                                 print("answer", answer)
@@ -1414,13 +1424,12 @@ if __name__ == "__main__":
             print(errorlist)
 
             # # 写入转换后的json
-            # jsondata = json.dumps(json_errorlist, indent=1)
-            # fileObject = open('errorlist_full.json', 'w')
-            # fileObject.write(jsondata)
-            # fileObject.close()
-            #
-
-            jsondata = json.dumps(WebQSPList_Correct, indent=1, default=WebQSP.obj_2_json)
-            fileObject = open('right_answer_reorder_mask.json', 'w')
+            jsondata = json.dumps(json_errorlist, indent=1)
+            fileObject = open('errorlist_zero_full.json', 'w')
             fileObject.write(jsondata)
             fileObject.close()
+
+            # jsondata = json.dumps(WebQSPList_Correct, indent=1, default=WebQSP.obj_2_json)
+            # fileObject = open('right_answer_reorder_mask.json', 'w')
+            # fileObject.write(jsondata)
+            # fileObject.close()
