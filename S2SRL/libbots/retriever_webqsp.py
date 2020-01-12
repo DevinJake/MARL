@@ -18,16 +18,20 @@ class Retriever_WebQSP():
 
 
     def retrieve(self, N, question):
-        candidate_list = self.dictwebqsp
-        sort_candidate = sorted(candidate_list, key=lambda x: self.takequestion(x["ProcessedQuestion"], question))
+        # candidate_list = []
+        return self.dictwebqsp[question["qid"]]
+
+        # sort_candidate = sorted(candidate_list, key=lambda x: self.takequestion(x["ProcessedQuestion"], question))
 
         # remove the quesiton itself
-        for candidateItem in sort_candidate:
-            if candidateItem["ProcessedQuestion"] == question:
-                sort_candidate.remove(candidateItem)
-                break
+        # for candidateItem in sort_candidate:
+        #     if candidateItem["ProcessedQuestion"] == question:
+        #         sort_candidate.remove(candidateItem)
+        #         break
+        #
+        # topNList = sort_candidate if len(sort_candidate) <= N else sort_candidate[0:N]
 
-        topNList = sort_candidate if len(sort_candidate) <= N else sort_candidate[0:N]
+        topNList = []
         return topNList
 
     # The input of the model is constrained by the maximum number of tokens.
@@ -103,29 +107,51 @@ class Retriever_WebQSP():
         jaccard = float(len(intersec)) / float(len(union)) if len(union) != 0 else 0
         return jaccard
 
-# if __name__ == "__main__":
-#     result_dict = {}
-#     q_topK_map = {}
-#
-#     with open("WebQSP.train.json", "r", encoding='UTF-8') as questions:
-#         load_dict = json.load(questions)
-#         questions = load_dict["Questions"]
-#         simple_question_list = []
-#         for q in questions:
-#             simple_question_list.append({"QuestionId": q["QuestionId"], "ProcessedQuestion": q["ProcessedQuestion"]})
-#         retriever = Retriever_WebQSP(simple_question_list, {})
-#
-#         for q in simple_question_list:
-#             topNlist = retriever.retrieve(5, q["ProcessedQuestion"])
-#             key = q["QuestionId"]
-#
-#             if True:
-#                 key_question = key + ' : ' + q["ProcessedQuestion"]
-#                 item_key = {key_question: topNlist}
-#                 q_topK_map.update(item_key)
-#
-#         with open('top5_webqsp_train_all_week.json', 'w', encoding='utf-8') as f:
-#             json.dump(q_topK_map, f, indent=4)
+    # def AnalyzeQuestion(self, question_info):
+    #     type_name = 'NOTYPE'
+    #     for typei in self.typelist:
+    #         if typei in question_info['qid']:
+    #             type_name = typei
+    #             break
+    #     if type_name=='NOTYPE':
+    #         for typei in self.typelist_for_test:
+    #             if typei in question_info['qid']:
+    #                 type_name = self.map[typei]
+    #                 break
+    #     entity_count = len(question_info['entity']) if 'entity' in question_info else 0
+    #     relation_count = len(question_info['relation']) if 'relation' in question_info else 0
+    #     type_count = len(question_info['type']) if 'type' in question_info else 0
+    #     question = question_info['question'] if 'question' in question_info else 'NOQUESTION'
+    #     relation_list = question_info['relation'] if 'relation' in question_info else []
+    #     relation_str = '_'.join(relation_list) if relation_list != [] else 'NORELATION'
+    #     key_name = '{0}{1}_{2}_{3}_{4}'.format(type_name, entity_count, relation_count, type_count,
+    #                                            relation_str)
+    #     key_weak = '{0}{1}_{2}_{3}'.format(type_name, entity_count, relation_count, type_count)
+    #     return key_name, key_weak, question, question_info['qid']
+if __name__ == "__main__":
+    result_dict = {}
+    q_topK_map = {}
+
+    with open("WebQSP.train.json", "r", encoding='UTF-8') as questions:
+        load_dict = json.load(questions)
+        questions = load_dict["Questions"]
+        simple_question_list = []
+        for q in questions:
+            simple_question_list.append({"QuestionId": q["QuestionId"], "ProcessedQuestion": q["ProcessedQuestion"]})
+        retriever = Retriever_WebQSP(simple_question_list, {})
+
+        for q in simple_question_list:
+            topNlist = retriever.retrieve(5, q["ProcessedQuestion"])
+            key = q["QuestionId"]
+
+            if True:
+                key_question = key + ' : ' + q["ProcessedQuestion"]
+                # item_key = {key_question: topNlist}
+                item_key = {key: topNlist}
+                q_topK_map.update(item_key)
+
+        with open('top5_webqsp_train_all_iddict_week.json', 'w', encoding='utf-8') as f:
+            json.dump(q_topK_map, f, indent=4)
 
 
 

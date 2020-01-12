@@ -1,7 +1,7 @@
 import torch
 from torch.nn.utils.convert_parameters import (vector_to_parameters,
                                                parameters_to_vector)
-from . import data, model, utils, retriever, reparam_module, adabound
+from . import data, model, utils, retriever_webqsp, reparam_module, adabound
 import torch.optim as optim
 import torch.nn.functional as F
 import random
@@ -47,7 +47,7 @@ class MetaLearner(object):
         # self.inner_optimizer = optim.Adam(net.parameters(), lr=fast_lr, eps=1e-3)
         self.inner_optimizer = None if self.net is None else optim.Adam(filter(lambda p: p.requires_grad, net.parameters()), lr=fast_lr, eps=1e-3)
         self.dial_shown = dial_shown
-        self.retriever = None if (dict is None or dict_weak is None) else retriever.Retriever(dict, dict_weak)
+        self.retriever = None if (dict is None or dict_weak is None) else retriever_webqsp.Retriever_WebQSP(dict, dict_weak)
         self.steps = steps
         self.weak_flag = weak_flag
         '''# note: Reparametrize it!
@@ -197,8 +197,9 @@ class MetaLearner(object):
         if N==0:
             batch.append(task)
         else:
-            key_name, key_weak, question, qid = self.retriever.AnalyzeQuestion(task[1])
-            topNList = self.retriever.RetrieveWithMaxTokens(N, key_name, key_weak, question, train_data_support_944K, weak, qid)
+            # key_name, key_weak, question, qid = self.retriever.AnalyzeQuestion(task[1])
+            # topNList = self.retriever.RetrieveWithMaxTokens(N, train_data_support_944K, weak)
+            topNList = self.retriever.retrieve(N, task[1])
             for name in topNList:
                 qid = list(name.keys())[0] if len(name) > 0 else 'NONE'
                 if qid in train_data_support_944K:

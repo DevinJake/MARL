@@ -396,7 +396,7 @@ class Symbolics_WebQSP():
 
 
     def select_max_as(self, e, r, t):
-        if e == "" or t == "" or r != "":
+        if e == "" or t == "" or r != "" or e not in self.answer:
             return {}
         max = -1
         for item in self.answer[e]:
@@ -464,7 +464,10 @@ class Symbolics_WebQSP():
                 if '?' in e and t != '?x':
                     json_pack = dict()
                     json_pack['op'] = "joint"
-                    json_pack['e'] = list(self.answer[e])
+                    if e in self.answer:
+                        json_pack['e'] = list(self.answer[e])
+                    else:
+                        json_pack['e'] = []
                     json_pack['r'] = r
                     json_pack['t'] = t
                     jsonpost = json.dumps(json_pack)
@@ -480,7 +483,10 @@ class Symbolics_WebQSP():
                     # print(e, self.answer[e])
                     json_pack = dict()
                     json_pack['op'] = "get_joint_answer"
-                    json_pack['e'] = list(self.answer[e])
+                    if e in self.answer:
+                        json_pack['e'] = list(self.answer[e])
+                    else:
+                        json_pack['e'] = []
                     json_pack['r'] = r
                     jsonpost = json.dumps(json_pack)
                     # result_content = requests.post(post_url,json=json_pack)
@@ -508,7 +514,10 @@ class Symbolics_WebQSP():
                 if "?" in e:
                     json_pack = dict()
                     json_pack['op'] = "get_filter_answer"
-                    json_pack['e'] = list(self.answer[e])
+                    if e in self.answer:
+                        json_pack['e'] = list(self.answer[e])
+                    else:
+                        json_pack['e'] = []
                     json_pack['r'] = r
                     json_pack['t'] = t
                     jsonpost = json.dumps(json_pack)
@@ -691,8 +700,11 @@ class Symbolics_WebQSP():
 
     # equal, or equal
     def filter_or_equal(self, e, r, t):
-        self.answer[e].add(t)
-        return self.answer[e]
+        if e in self.answer[e]:
+            self.answer[e].add(t)
+            return self.answer[e]
+        else:
+            return []
 
     def count(self,e= None):
         #print("A11:Count")
@@ -791,7 +803,10 @@ class Symbolics_WebQSP():
                 if "?" in e:
                     json_pack = dict()
                     json_pack['op'] = "execute_select_oper_date_lt"
-                    json_pack['e'] = list(self.answer[e])
+                    if e in self.answer:
+                        json_pack['e'] = list(self.answer[e])
+                    else:
+                        json_pack['e'] = []
                     json_pack['date'] = date(json_pack)
                     jsonpost = json.dumps(json_pack)
                     content, content_result = requests.post(post_url, json=jsonpost).json()['content']
@@ -816,7 +831,10 @@ class Symbolics_WebQSP():
                 if "?" in e:
                     json_pack = dict()
                     json_pack['op'] = "execute_select_oper_date_lt"
-                    json_pack['set_date'] = list(self.answer[e])
+                    if e in self.answer:
+                        json_pack['set_date'] = list(self.answer[e])
+                    else:
+                        json_pack['set_date'] = []
                     json_pack['date'] = date(json_pack)
                     jsonpost = json.dumps(json_pack)
                     content, content_result = requests.post(post_url, json=jsonpost).json()['content']
@@ -841,7 +859,10 @@ class Symbolics_WebQSP():
                 if e == 'VARIABLE':
                     json_pack = dict()
                     json_pack['op'] = "execute_select_oper_date_gt"
-                    json_pack['set_date'] = list(self.answer[e])
+                    if e in self.answer:
+                        json_pack['set_date'] = list(self.answer[e])
+                    else:
+                        json_pack['set_date'] = []
                     json_pack['date'] = date
                     jsonpost = json.dumps(json_pack)
                     content, content_result = requests.post(post_url, json=jsonpost).json()['content']
@@ -866,7 +887,10 @@ class Symbolics_WebQSP():
                 if "?" in e:
                     json_pack = dict()
                     json_pack['op'] = "execute_select_oper_date_gt"
-                    json_pack['e'] = list(self.answer[e])
+                    if e in self.answer:
+                        json_pack['e'] = list(self.answer[e])
+                    else:
+                        json_pack['e'] = []
                     json_pack['date'] = date
                     jsonpost = json.dumps(json_pack)
                     content, content_result = requests.post(post_url, json=jsonpost).json()['content']
@@ -1305,8 +1329,8 @@ if __name__ == "__main__":
                 sparql = q["Parses"][0]["Sparql"]
                 mypair = Qapair(question, Answers, sparql)
 
-                if id == "WebQTrn-3496":  # test one
-                # if True: # test all
+                # if id == "WebQTrn-194":  # test one
+                if True: # test all
                     # test seq
                     true_answer = mypair.answer
                     test_sparql = mypair.sparql
@@ -1424,10 +1448,10 @@ if __name__ == "__main__":
             print(errorlist)
 
             # # 写入转换后的json
-            jsondata = json.dumps(json_errorlist, indent=1)
-            fileObject = open('errorlist_zero_full.json', 'w')
-            fileObject.write(jsondata)
-            fileObject.close()
+            # jsondata = json.dumps(json_errorlist, indent=1)
+            # fileObject = open('errorlist_zero_full.json', 'w')
+            # fileObject.write(jsondata)
+            # fileObject.close()
 
             # jsondata = json.dumps(WebQSPList_Correct, indent=1, default=WebQSP.obj_2_json)
             # fileObject = open('right_answer_reorder_mask.json', 'w')

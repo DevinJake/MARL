@@ -24,8 +24,8 @@ GAMMA = 0.05
 DIC_PATH = '../data/webqsp_data/share.question'
 TRAIN_QUESTION_ANSWER_PATH = '../data/webqsp_data/mask_even_10.0%/RL_train_TR_sub_webqsp.json'
 TRAIN_WEBQSP_QUESTION_ANSWER_PATH = '../data/webqsp_data/RL_train_TR_sub_webqsp.json'
-DICT_WEBQSP = '../data/webqsp_data/top5_webqsp_train_all_week.json'
-DICT_WEBQSP_WEAK = '../data/webqsp_data/top5_webqsp_train_all_week.json'
+DICT_WEBQSP = '../data/webqsp_data/top5_webqsp_train_all_iddict_week.json'
+DICT_WEBQSP_WEAK = '../data/webqsp_data/top5_webqsp_train_all_iddict_week.json'
 log = logging.getLogger("train")
 
 # Calculate 0-1 sparse reward for samples in test dataset to judge the performance of the model.
