@@ -64,6 +64,13 @@ class MetaLearner(object):
         assert tuple(self.reparam_net.parameters()) == (self.reparam_net.flat_param,)
         print(f"reparam_net now has **only one** vector parameter of shape {self.reparam_net.flat_param.shape}")'''
 
+    def reptile_meta_update(self, running_vars, old_param_dict, beta):
+        for (name, param) in self.net.named_parameters():
+            if param.requires_grad:
+                mean = torch.stack(running_vars[name]).mean(0).clone().detach()
+                old = old_param_dict[name].clone().detach()
+                param.data = old + beta * (mean - old)
+
     def first_order_meta_update(self, grads_list, old_param_dict):
         # self.named_parameters() is consisted of an iterator over module parameters,
         # yielding both the name of the parameter as well as the parameter itself.
@@ -891,6 +898,87 @@ class MetaLearner(object):
             log.info("Epoch %d, Batch %d, task %s is trained!" % (epoch_count, batch_count, str(task[1]['qid'])))
         meta_losses = torch.sum(torch.stack(task_losses))
         return meta_losses, grads_list, total_samples, skipped_samples, true_reward_argmax_batch, true_reward_sample_batch
+
+    # Using reptile to implement MAML.
+    def reptile_sample(self, tasks, old_param_dict=None, dial_shown=True, epoch_count=0,
+                           batch_count=0):
+        """Sample trajectories (before and after the update of the parameters)
+        for all the tasks `tasks`.
+        Here number of tasks is 1.
+        """
+        task_losses = []
+        true_reward_argmax_batch = []
+        true_reward_sample_batch = []
+        total_samples = 0
+        skipped_samples = 0
+        running_vars = {}
+
+        for task in tasks:
+            # For each task, the initial parameters are the same, i.e., the value stored in old_param_dict.
+            temp_param_dict = self.get_net_parameter()
+            if old_param_dict is not None:
+                self.net.insert_new_parameter_to_layers(old_param_dict)
+            temp_param_dict = self.get_net_parameter()
+            # Try to solve the bug: "UserWarning: RNN module weights are not part of single contiguous chunk of memory".
+            self.net.encoder.flatten_parameters()
+            self.net.decoder.flatten_parameters()
+            self.net.zero_grad()
+            log.info("Task %s is training..." % (str(task[1]['qid'])))
+            # Establish support set.
+            support_set = self.establish_support_set(task, self.steps, self.weak_flag, self.train_data_support_944K)
+
+            for step_sample in support_set:
+                self.inner_optimizer.zero_grad()
+                inner_loss, inner_total_samples, inner_skipped_samples, true_reward_argmax_step, true_reward_sample_step = self.first_order_inner_loss(
+                    step_sample, dial_shown=True)
+                total_samples += inner_total_samples
+                skipped_samples += inner_skipped_samples
+                true_reward_argmax_batch.extend(true_reward_argmax_step)
+                true_reward_sample_batch.extend(true_reward_sample_step)
+                log.info("        Epoch %d, Batch %d, support sample %s is trained!" % (
+                epoch_count, batch_count, str(step_sample[1]['qid'])))
+                # Inner update.
+                inner_loss.backward()
+                # To conduct a gradient ascent to minimize the loss (which is to maximize the reward).
+                # optimizer.step updates the value of x using the gradient x.grad.
+                # For example, the SGD optimizer performs:
+                # x += -lr * x.grad
+                self.inner_optimizer.step()
+                temp_param_dict = self.get_net_parameter()
+
+            # optimizer.zero_grad() clears x.grad for every parameter x in the optimizer.
+            # It’s important to call this before loss.backward(),
+            # otherwise you’ll accumulate the gradients from multiple passes.
+            self.inner_optimizer.zero_grad()
+            self.net.zero_grad()
+            meta_loss, outer_total_samples, outer_skipped_samples, true_reward_argmax_step, true_reward_sample_step = self.first_order_inner_loss(
+                task, dial_shown=dial_shown)
+            task_losses.append(meta_loss)
+
+            meta_loss.backward()
+            # To conduct a gradient ascent to minimize the loss (which is to maximize the reward).
+            # optimizer.step updates the value of x using the gradient x.grad.
+            # For example, the SGD optimizer performs:
+            # x += -lr * x.grad
+            self.inner_optimizer.step()
+            temp_param_dict = self.get_net_parameter()
+            # Store the parameters of model for each meta gradient update step (each task).
+            if running_vars == {}:
+                for name, param in self.get_net_named_parameter().items():
+                    running_vars[name] = []
+                    running_vars[name].append(param.data)
+            else:
+                for name, param in self.get_net_named_parameter().items():
+                    # Add up the value of each parameter of the model in each meta gradient update step.
+                    running_vars[name].append(param.data)
+
+            total_samples += outer_total_samples
+            skipped_samples += outer_skipped_samples
+            true_reward_argmax_batch.extend(true_reward_argmax_step)
+            true_reward_sample_batch.extend(true_reward_sample_step)
+            log.info("Epoch %d, Batch %d, task %s is trained!" % (epoch_count, batch_count, str(task[1]['qid'])))
+        meta_losses = torch.sum(torch.stack(task_losses))
+        return meta_losses, running_vars, total_samples, skipped_samples, true_reward_argmax_batch, true_reward_sample_batch,
 
     # Using reparam class to accomplish 2nd derivative for MAML.
     def reparam_sample(self, tasks, first_order=False, dial_shown=True, epoch_count=0, batch_count=0):
