@@ -21,7 +21,12 @@ if __name__ == "__main__":
     # # command line parameters for final test
     # sys.argv = ['data_test.py', '-m=bleu_0.984_09.dat', '-p=final', '--n=rl_even']
     # command line parameters for final test (subset data)
-    sys.argv = ['data_test_maml.py', '-m=epoch_000_0.679_0.667.dat', '-p=sample_final_maml', '--n=maml_1%_batch8_att=0', '--cuda', '-s=5', '-a=0', '--att=0', '--lstm=1', '--fast-lr=0.1', '--meta-lr=1e-4', '--steps=5', '--batches=1', '--weak=1', '--embed-grad']
+    # Args for 1st-order maml.
+    # sys.argv = ['data_test_maml.py', '-m=epoch_009_0.398_0.796.dat', '-p=sample_final_maml', '--n=maml_batch8_att=0_newdata2k_1storder_1task', '--cuda', '-s=5', '-a=0', '--att=0', '--lstm=1', '--fast-lr=0.1', '--meta-lr=1e-4', '--steps=5', '--batches=1', '--weak=1', '--embed-grad']
+    # Args for reptile.
+    sys.argv = ['data_test_maml.py', '-m=epoch_009_0.398_0.796.dat', '-p=sample_final_maml',
+                '--n=maml_batch8_att=0_newdata2k_1storder_1task', '--cuda', '-s=5', '-a=0', '--att=0', '--lstm=1',
+                '--fast-lr=1e-4', '--meta-lr=1e-4', '--steps=5', '--batches=1', '--weak=1', '--embed-grad']
     parser = argparse.ArgumentParser()
     # parser.add_argument("--data", required=True,
     #                     help="Category to use for training. Empty string to train on full processDataset")
@@ -55,7 +60,7 @@ if __name__ == "__main__":
     parser.add_argument("-a", "--adaptive", type=lambda x: (str(x).lower() in ['true', '1', 'yes']),
                         help="0-1 or adaptive reward")
     # If false, the embedding tensors in the model do not need to be trained.
-    parser.add_argument('--embed-grad', action='store_false', help='use the first-order approximation of MAML')
+    parser.add_argument('--embed-grad', action='store_false', help='fix embeddings when training')
     args = parser.parse_args()
 
     device = torch.device("cuda" if args.cuda else "cpu")
@@ -91,6 +96,10 @@ if __name__ == "__main__":
     net = model.PhraseModel(emb_size=model.EMBEDDING_DIM, dict_size=len(emb_dict), hid_size=model.HIDDEN_STATE_SIZE,
                             LSTM_FLAG=args.lstm, ATT_FLAG=args.att, EMBED_FLAG=args.embed_grad).to(device)
 
+    model_path = '../data/saves/' + str(args.name) + '/' + str(args.model)
+    net.load_state_dict((torch.load(model_path)))
+    log.info("Model loaded from %s, continue testing in MAML first-order mode...", model_path)
+
     # BEGIN token
     beg_token = torch.LongTensor([emb_dict[data.BEGIN_TOKEN]]).to(device)
     beg_token = beg_token.cuda()
@@ -114,16 +123,15 @@ if __name__ == "__main__":
     refer_string_list = list()
     batch_count = 0
     # seq_1是輸入，targets是references，可能有多個；
+
+    # The dict stores the initial parameters in the modules.
+    old_param_dict = metaLearner.get_net_named_parameter()
+
     for test_task in test_data:
-
-        model_path = '../data/saves/' + str(args.name) + '/' + str(args.model)
-        net.load_state_dict((torch.load(model_path)))
-        log.info("Model loaded from %s, continue testing in MAML mode...", model_path)
-
         batch_count += 1
         # Batch is represented for a batch of tasks in MAML.
         # In each task, a batch of support set is established.
-        token_string = metaLearner.sampleForTest(test_task, first_order=args.first_order, epoch_count=0, batch_count=batch_count)
+        token_string = metaLearner.first_order_sampleForTest(test_task, old_param_dict=old_param_dict, first_order=args.first_order, epoch_count=0, batch_count=batch_count)
 
         test_dataset_count += 1
         # log.info("%d PREDICT: %s", test_dataset_count, token_string)

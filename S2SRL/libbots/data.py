@@ -5,6 +5,7 @@ import logging
 import itertools
 import pickle
 import json
+import torch
 
 from . import cornell
 
@@ -454,3 +455,47 @@ def get944k(path):
     with open(path, "r", encoding='UTF-8') as CSQA_List:
         dict944k = json.load(CSQA_List)
     return dict944k
+
+def get_docID_indices(order_list):
+    did_indices = {}
+    d_list = []
+    next_id = 0
+    for w in order_list:
+        if not len(w)<1:
+            docID, document = list(w.items())[0]
+            if docID not in did_indices:
+                did_indices[docID] = next_id
+                d_list.append(document)
+                next_id += 1
+    return did_indices, d_list
+
+def get_ordered_docID_document(filepath):
+    with open(filepath, 'r', encoding="UTF-8") as load_f:
+        return(json.load(load_f))
+
+def load_json(QUESTION_PATH):
+    with open(QUESTION_PATH, 'r', encoding="UTF-8") as load_f:
+        load_dict = json.load(load_f)
+        return load_dict
+
+def get_qid_question_pairs(filepath):
+    pair = {}
+    pair_list = get_ordered_docID_document(filepath)
+    for temp in pair_list:
+        docID, document = list(temp.items())[0]
+        pair[docID] = document
+    return pair
+
+def get_question_embedding(question, emb_dict, net):
+    question_token = question.lower().replace('?', '')
+    question_token = question_token.replace(',', ' ')
+    question_token = question_token.replace(':', ' ')
+    question_token = question_token.replace('(', ' ')
+    question_token = question_token.replace(')', ' ')
+    question_token = question_token.replace('"', ' ')
+    question_token = question_token.strip().split()
+    question_token_indices = [emb_dict['#UNK'] if token not in emb_dict else emb_dict[token] for token in question_token]
+    question_token_embeddings = net.emb(torch.tensor(question_token_indices, requires_grad=False).cuda())
+    question_embeddings = torch.mean(question_token_embeddings, 0).view(1,-1)
+    question_embeddings = torch.tensor(question_embeddings.tolist(), requires_grad=False).cuda()
+    return question_embeddings

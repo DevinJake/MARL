@@ -28,8 +28,9 @@ class MetaLearner(object):
         Pieter Abbeel, "Trust Region Policy Optimization", 2015
         (https://arxiv.org/abs/1502.05477)
     """
-    def __init__(self, net=None, device='cpu', beg_token=None, end_token = None, adaptive=False, samples=5, train_data_support_944K=None, rev_emb_dict=None, first_order=False, fast_lr=0.001, meta_optimizer_lr=0.0001, dial_shown = False, dict=None, dict_weak=None, steps=5, weak_flag=False):
+    def __init__(self, net=None, retriever_net = None, device='cpu', beg_token=None, end_token = None, adaptive=False, samples=5, train_data_support_944K=None, rev_emb_dict=None, first_order=False, fast_lr=0.001, meta_optimizer_lr=0.0001, dial_shown = False, dict=None, dict_weak=None, steps=5, weak_flag=False, query_embed=True):
         self.net = net
+        self.retriever_net = retriever_net
         self.device = device
         self.beg_token = beg_token
         self.end_token = end_token
@@ -50,6 +51,7 @@ class MetaLearner(object):
         self.retriever = None if (dict is None or dict_weak is None) else retriever.Retriever(dict, dict_weak)
         self.steps = steps
         self.weak_flag = weak_flag
+        self.query_embed = query_embed
         '''# note: Reparametrize it!
         self.reparam_net = reparam_module.ReparamModule(self.net)
         print(f"reparam_net has {self.reparam_net.param_numel} parameters")
@@ -210,6 +212,60 @@ class MetaLearner(object):
                 qid = list(name.keys())[0] if len(name) > 0 else 'NONE'
                 if qid in train_data_support_944K:
                     batch.append(train_data_support_944K[qid])
+                if len(batch) ==N:
+                    break
+        return batch
+
+    # Randomly select training samples as support set.
+    def establish_random_support_set(self, task=None, N=5, train_data_support_944K=None):
+        batch = list()
+        if N==0:
+            batch.append(task)
+        else:
+            key_name, key_weak, question, qid = self.retriever.AnalyzeQuestion(task[1])
+            topNList = self.retriever.RetrieveRandomSamplesWithMaxTokens(N=N, key_weak=key_weak, train_data_944k=train_data_support_944K, qid=qid)
+            for name in topNList:
+                qid = list(name.keys())[0] if len(name) > 0 else 'NONE'
+                if qid in train_data_support_944K:
+                    batch.append(train_data_support_944K[qid])
+                if len(batch) ==N:
+                    break
+        return batch
+
+    # Return support samples strictly following the ranking.
+    def establish_support_set_by_retriever_argmax(self, task, N=5, weak=False, train_data_support_944K=None, docID_dict=None, rev_docID_dict=None, emb_dict=None, qtype_docs_range=None):
+        # Find top-N in train_data_support;
+        # get_top_N(train_data, train_data_support, N)
+        # Support set is none. Use the training date per se as support set.
+        batch = list()
+        if N==0:
+            batch.append(task)
+        else:
+            key_name, key_weak, question, qid = self.retriever.AnalyzeQuestion(task[1])
+            if not self.query_embed:
+                query_tensor = torch.tensor(self.retriever_net.pack_input(docID_dict['qid']).tolist(), requires_grad=False).cuda()
+            else:
+                query_tensor = data.get_question_embedding(question, emb_dict, self.net)
+            if key_weak in qtype_docs_range:
+                document_range = (qtype_docs_range[key_weak]['start'], qtype_docs_range[key_weak]['end'])
+            else:
+                document_range = (0, len(docID_dict))
+            logsoftmax_output = self.retriever_net(query_tensor, document_range)
+            orders = torch.topk(logsoftmax_output, N+10)
+            order_temp = self.retriever_net.calculate_rank(logsoftmax_output.tolist())
+            first_index = 0
+            for i, temp in enumerate(order_temp):
+                if temp==1:
+                    first_index = i
+                    break
+            order_list = orders[1].tolist()
+            topNIndices = [k+document_range[0] for k in order_list]
+            topNList = [rev_docID_dict[k] for k in topNIndices]
+            for qid in topNList:
+                if qid in train_data_support_944K:
+                    batch.append(train_data_support_944K[qid])
+                if len(batch)==N:
+                    break
         return batch
 
     def reparam_update_params(self, inner_loss, theta, lr=0.1, first_order=False):
@@ -901,7 +957,7 @@ class MetaLearner(object):
 
     # Using reptile to implement MAML.
     def reptile_sample(self, tasks, old_param_dict=None, dial_shown=True, epoch_count=0,
-                           batch_count=0):
+                           batch_count=0, docID_dict=None, rev_docID_dict=None, emb_dict=None, qtype_docs_range=None, random=False):
         """Sample trajectories (before and after the update of the parameters)
         for all the tasks `tasks`.
         Here number of tasks is 1.
@@ -915,17 +971,22 @@ class MetaLearner(object):
 
         for task in tasks:
             # For each task, the initial parameters are the same, i.e., the value stored in old_param_dict.
-            temp_param_dict = self.get_net_parameter()
+            # temp_param_dict = self.get_net_parameter()
             if old_param_dict is not None:
                 self.net.insert_new_parameter_to_layers(old_param_dict)
-            temp_param_dict = self.get_net_parameter()
+            # temp_param_dict = self.get_net_parameter()
             # Try to solve the bug: "UserWarning: RNN module weights are not part of single contiguous chunk of memory".
             self.net.encoder.flatten_parameters()
             self.net.decoder.flatten_parameters()
             self.net.zero_grad()
             log.info("Task %s is training..." % (str(task[1]['qid'])))
             # Establish support set.
-            support_set = self.establish_support_set(task, self.steps, self.weak_flag, self.train_data_support_944K)
+            # If random_flag==True, randomly select support samples in the same question category.
+            if random:
+                support_set = self.establish_random_support_set(task=task, N=self.steps, train_data_support_944K=self.train_data_support_944K)
+            else:
+                support_set = self.establish_support_set(task, self.steps, self.weak_flag, self.train_data_support_944K)
+                support_set1 = self.establish_support_set_by_retriever_argmax(task, self.steps, docID_dict, rev_docID_dict, emb_dict, qtype_docs_range)
 
             for step_sample in support_set:
                 self.inner_optimizer.zero_grad()
@@ -944,7 +1005,7 @@ class MetaLearner(object):
                 # For example, the SGD optimizer performs:
                 # x += -lr * x.grad
                 self.inner_optimizer.step()
-                temp_param_dict = self.get_net_parameter()
+                # temp_param_dict = self.get_net_parameter()
 
             # optimizer.zero_grad() clears x.grad for every parameter x in the optimizer.
             # It’s important to call this before loss.backward(),
@@ -961,7 +1022,7 @@ class MetaLearner(object):
             # For example, the SGD optimizer performs:
             # x += -lr * x.grad
             self.inner_optimizer.step()
-            temp_param_dict = self.get_net_parameter()
+            # temp_param_dict = self.get_net_parameter()
             # Store the parameters of model for each meta gradient update step (each task).
             if running_vars == {}:
                 for name, param in self.get_net_named_parameter().items():
@@ -991,7 +1052,6 @@ class MetaLearner(object):
         total_samples = 0
         skipped_samples = 0
         self.net.zero_grad()
-        # To get copied weights of the model for inner training.
 
         for task in tasks:
             log.info("Task %s is training..." % (str(task[1]['qid'])))

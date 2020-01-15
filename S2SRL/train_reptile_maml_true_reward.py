@@ -7,7 +7,7 @@ import logging
 import numpy as np
 from tensorboardX import SummaryWriter
 
-from libbots import data, model, utils, metalearner
+from libbots import data, model, utils, metalearner, retriever_module
 
 import torch
 import torch.optim as optim
@@ -26,6 +26,9 @@ TRAIN_QUESTION_ANSWER_PATH = '../data/auto_QA_data/mask_even_1.0%/RL_train_TR_ne
 TRAIN_944K_QUESTION_ANSWER_PATH = '../data/auto_QA_data/CSQA_DENOTATIONS_full_944K.json'
 DICT_944K = '../data/auto_QA_data/CSQA_result_question_type_944K.json'
 DICT_944K_WEAK = '../data/auto_QA_data/CSQA_result_question_type_count944K.json'
+ORDERED_QID_QUESTION_DICT = '../data/auto_QA_data/CSQA_result_question_type_count944k_orderlist.json'
+RETRIEVER_PARAM = '../data/saves/retriever/AdaBound_DocEmbed_QueryEmbed_epoch_140_4.306.dat'
+QTYPE_DOC_RANGE = '../data/auto_QA_data/944k_rangeDict.json'
 log = logging.getLogger("train")
 
 # Calculate 0-1 sparse reward for samples in test dataset to judge the performance of the model.
@@ -60,7 +63,7 @@ if __name__ == "__main__":
     # sys.argv = ['train_maml_true_reward.py', '--cuda', '-l=../data/saves/rl_even_TR_batch8_1%/truereward_0.739_29.dat', '-n=maml_1%_batch8_att=0_test', '-s=5', '-a=0', '--att=0', '--lstm=1', '--fast-lr=0.1', '--meta-lr=1e-4', '--steps=5', '--batches=1', '--weak=1']
     sys.argv = ['train_reptile_maml_true_reward.py', '-l=../data/saves/rl_even_TR_batch8_1%/truereward_0.739_29.dat',
                 '-n=maml_att=0_newdata2k_reptile', '--cuda', '-s=5', '-a=0', '--att=0', '--lstm=1', '--fast-lr=1e-4',
-                '--meta-lr=1e-4', '--steps=5', '--batches=1', '--weak=1', '--embed-grad', '--beta=0.1']
+                '--meta-lr=1e-4', '--steps=5', '--batches=1', '--weak=1', '--embed-grad', '--beta=0.1', '--retriever-random']
     parser = argparse.ArgumentParser()
     parser.add_argument("--cuda", action='store_true', default=False, help="Enable cuda")
     parser.add_argument("-n", "--name", required=True, help="Name of the run")
@@ -84,6 +87,9 @@ if __name__ == "__main__":
     parser.add_argument('--first-order', action='store_true', help='use the first-order approximation of MAML')
     # If false, the embedding tensors in the model do not need to be trained.
     parser.add_argument('--embed-grad', action='store_false', help='fix embeddings when training')
+    parser.add_argument('--docembed-grad', action='store_false', help='fix doc embeddings when training')
+    # If query_embed is true, using the sum of word embedding to represent the questions.
+    parser.add_argument('--query-embed', action='store_false', help='using the sum of word embedding to represent the questions')
     parser.add_argument('--fast-lr', type=float, default=0.0001,
                         help='learning rate for the 1-step gradient update of MAML')
     parser.add_argument('--meta-lr', type=float, default=0.0001,
@@ -95,6 +101,7 @@ if __name__ == "__main__":
     # If weak is true, it means when searching for support set, the questions with same number of E/R/T nut different relation will be retrieved if the questions in this pattern is less than the number of steps.
     parser.add_argument("--weak", type=lambda x: (str(x).lower() in ['true', '1', 'yes']),
                         help="Using weak mode to search for support set")
+    parser.add_argument('--retriever-random', action='store_true', help='randomly get support set for the retriever')
     args = parser.parse_args()
     device = torch.device("cuda" if args.cuda else "cpu")
     log.info("Device info: %s", str(device))
@@ -104,9 +111,9 @@ if __name__ == "__main__":
 
     # TODO: In maml, all data points in 944K training dataset will be used. So it is much better to use the dict of 944K training the model from scratch.
     # # List of (question, {question information and answer}) pairs, the training pairs are in format of 1:1.
-    phrase_pairs, emb_dict = data.load_data_MAML(TRAIN_QUESTION_ANSWER_PATH, DIC_PATH, MAX_TOKENS)
+    phrase_pairs, emb_dict = data.load_data_MAML(QUESTION_PATH=TRAIN_QUESTION_ANSWER_PATH, DIC_PATH=DIC_PATH, max_tokens=MAX_TOKENS)
     log.info("Obtained %d phrase pairs with %d uniq words from %s.", len(phrase_pairs), len(emb_dict), TRAIN_QUESTION_ANSWER_PATH)
-    phrase_pairs_944K = data.load_data_MAML(TRAIN_944K_QUESTION_ANSWER_PATH, max_tokens = MAX_TOKENS)
+    phrase_pairs_944K = data.load_data_MAML(QUESTION_PATH=TRAIN_944K_QUESTION_ANSWER_PATH, max_tokens = MAX_TOKENS)
     log.info("Obtained %d phrase pairs from %s.", len(phrase_pairs_944K), TRAIN_944K_QUESTION_ANSWER_PATH)
     data.save_emb_dict(saves_path, emb_dict)
     end_token = emb_dict[data.END_TOKEN]
@@ -142,6 +149,14 @@ if __name__ == "__main__":
         log.info("Word embedding in the model will be updated during the training...")
     else:
         log.info("Word embedding in the model will be fixed during the training...")
+    if (args.docembed_grad):
+        log.info("Document embedding in the retriever model will be updated during the training...")
+    else:
+        log.info("Document embedding in the retriever model will be fixed during the training...")
+    if (args.query_embed):
+        log.info("Using the sum of word embedding to represent the questions during the training...")
+    else:
+        log.info("Using the document_emb which is stored in the retriever model to represent the questions...")
 
     # Index -> word.
     rev_emb_dict = {idx: word for word, idx in emb_dict.items()}
@@ -151,23 +166,36 @@ if __name__ == "__main__":
     net.cuda()
     log.info("Model: %s", net)
 
-    writer = SummaryWriter(comment="-" + args.name)
     # Load the pre-trained seq2seq model.
     net.load_state_dict(torch.load(args.load))
     # print("Pre-trained network params")
     # for name, param in net.named_parameters():
     #     print(name, param.shape)
     log.info("Model loaded from %s, continue training in RL mode...", args.load)
-    if(args.adaptive):
+    if (args.adaptive):
         log.info("Using adaptive reward to train the REINFORCE model...")
     else:
         log.info("Using 0-1 sparse reward to train the REINFORCE model...")
 
+    docID_dict, _ = data.get_docID_indices(data.get_ordered_docID_document(ORDERED_QID_QUESTION_DICT))
+    # Index -> qid.
+    rev_docID_dict = {id: doc for doc, id in docID_dict.items()}
+
+    qtype_docs_range = data.load_json(QTYPE_DOC_RANGE)
+
+    retriever_net = retriever_module.RetrieverModel(emb_size=50, dict_size=len(docID_dict), EMBED_FLAG=args.docembed_grad,
+                         device=device).to(device)
+    retriever_net.cuda()
+    log.info("Retriever model: %s", retriever_net)
+    retriever_net.load_state_dict(torch.load(RETRIEVER_PARAM))
+    log.info("Retriever model loaded from %s, continue training in RL mode...", str(RETRIEVER_PARAM))
+
+    writer = SummaryWriter(comment="-" + args.name)
     # BEGIN token
     beg_token = torch.LongTensor([emb_dict[data.BEGIN_TOKEN]]).to(device)
     beg_token = beg_token.cuda()
 
-    metaLearner = metalearner.MetaLearner(net, device=device, beg_token=beg_token, end_token=end_token, adaptive=args.adaptive, samples=args.samples, train_data_support_944K=train_data_944K, rev_emb_dict=rev_emb_dict, first_order=args.first_order, fast_lr=args.fast_lr, meta_optimizer_lr=args.meta_lr, dial_shown=False, dict=dict944k, dict_weak=dict944k_weak, steps=args.steps, weak_flag=args.weak)
+    metaLearner = metalearner.MetaLearner(net=net, retriever_net=retriever_net, device=device, beg_token=beg_token, end_token=end_token, adaptive=args.adaptive, samples=args.samples, train_data_support_944K=train_data_944K, rev_emb_dict=rev_emb_dict, first_order=args.first_order, fast_lr=args.fast_lr, meta_optimizer_lr=args.meta_lr, dial_shown=False, dict=dict944k, dict_weak=dict944k_weak, steps=args.steps, weak_flag=args.weak, query_embed = args.query_embed)
     log.info("Meta-learner: %d inner steps, %f inner learning rate, "
              "%d outer steps, %f outer learning rate, using weak mode:%s"
              %(args.steps, args.fast_lr, args.batches, args.meta_lr, str(args.weak)))
@@ -199,7 +227,7 @@ if __name__ == "__main__":
 
                 # Batch is represented for a batch of tasks in MAML.
                 # In each task, a minibatch of support set is established.
-                meta_losses, running_vars, meta_total_samples, meta_skipped_samples, true_reward_argmax_batch, true_reward_sample_batch = metaLearner.reptile_sample(batch, old_param_dict = old_param_dict, dial_shown=dial_shown, epoch_count=epoch, batch_count=batch_count)
+                meta_losses, running_vars, meta_total_samples, meta_skipped_samples, true_reward_argmax_batch, true_reward_sample_batch = metaLearner.reptile_sample(batch, old_param_dict = old_param_dict, dial_shown=dial_shown, epoch_count=epoch, batch_count=batch_count, docID_dict=docID_dict, rev_docID_dict=rev_docID_dict, emb_dict=emb_dict, qtype_docs_range=qtype_docs_range, random=args.retriever_random)
                 total_samples += meta_total_samples
                 skipped_samples += meta_skipped_samples
                 true_reward_argmax.extend(true_reward_argmax_batch)

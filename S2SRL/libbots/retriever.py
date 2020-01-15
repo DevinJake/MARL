@@ -113,6 +113,31 @@ class Retriever():
         self.support_set_cache[qid] = topNList
         return topNList
 
+    def RetrieveRandomSamplesWithMaxTokens(self, N, key_weak, train_data_944k, qid):
+        if qid in self.support_set_cache:
+            # print('%s is in top-N cache!' %(str(qid)))
+            return self.support_set_cache[qid]
+        # print('%s is not in top-N cache!' % (str(qid)))
+        dict_candicate = self.dict944k_weak
+        topNList = list()
+
+        # print(len(topNList), " found of ", N)
+        if key_weak in dict_candicate:
+            weak_list = dict_candicate[key_weak]
+            weak_list_filtered = [x for x in weak_list if len(x) > 0 and list(x.keys())[0] in train_data_944k]
+            sort_candidate_weak = random.choices(weak_list_filtered, k=N)
+            for c_weak in sort_candidate_weak:
+                if len(topNList) == N:
+                    break
+                if list(c_weak.keys())[0] == qid:
+                    sort_candidate_weak.remove(c_weak)
+                    continue
+                if c_weak not in topNList:
+                    topNList.append(c_weak)
+                    # print('%s used weak mode.' %(str(qid)))
+        self.support_set_cache[qid] = topNList
+        return topNList
+
     def MoreSimilarity(self, sentence1, sentence2):
         return True
         # sim1 = self.Calculatesimilarity(sentence1, question)
