@@ -191,6 +191,10 @@ if __name__ == "__main__":
 
     detach_test()
 
+    x = torch.tensor([3,6,100,5.5,3.4,2.2,-1.0,101])
+    orders = torch.topk(x, 3)
+    print(orders)
+
 
 
 
