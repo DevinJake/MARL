@@ -15,7 +15,7 @@ import torch.nn.functional as F
 import time
 import ptan
 
-SAVES_DIR = "../data/saves"
+SAVES_DIR = "../data/saves/webqsp_rl_infchain_1"
 
 BATCH_SIZE = 16
 LEARNING_RATE = 1e-4
@@ -25,7 +25,8 @@ TRAIN_RATIO = 0.985
 GAMMA = 0.05
 
 DIC_PATH = '../data/webqsp_data/share.question'
-TRAIN_QUESTION_ANSWER_PATH = '../data/webqsp_data/RL_mask_even/RL_train_TR_sub_webqsp.json'
+# TRAIN_QUESTION_ANSWER_PATH = '../data/webqsp_data/RL_mask_even/RL_train_TR_sub_webqsp.json'
+TRAIN_QUESTION_ANSWER_PATH = '../data/webqsp_data/RL_mask_even/RL_train_TR_sub_webqsp_infchain_1.json'
 log = logging.getLogger("train")
 
 

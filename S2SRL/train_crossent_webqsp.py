@@ -24,8 +24,8 @@ log = logging.getLogger("train")
 
 TEACHER_PROB = 1.0
 
-TRAIN_QUESTION_PATH = '../data/webqsp_data/mask_even/PT_train.question'
-TRAIN_ACTION_PATH = '../data/webqsp_data/mask_even/PT_train.action'
+TRAIN_QUESTION_PATH = '../data/webqsp_data/mask_even/infchain_1/PT_train.webqsp.infchain_1.question'
+TRAIN_ACTION_PATH = '../data/webqsp_data/mask_even/infchain_1/PT_train.webqsp.infchain_1.action'
 DIC_PATH = '../data/webqsp_data/share.question'
 
 def run_test(test_data, net, end_token, device="cuda"):

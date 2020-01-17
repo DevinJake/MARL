@@ -10,7 +10,7 @@ import torch
 
 log = logging.getLogger("data_test")
 
-TEST_QUESTION_ANSWER_PATH = '../data/webqsp_data/RL_mask_even_1.0%/webqsp_question/RL_test_TR_sub_webqsp.json'
+TEST_QUESTION_ANSWER_PATH = '../data/webqsp_data/RL_mask_even/webqsp_question/RL_test_TR_sub_webqsp_infchain_1.json'
 DIC_PATH = '../data/webqsp_data/share.question'
 MAX_TOKENS = 40
 
@@ -20,7 +20,7 @@ if __name__ == "__main__":
     # # command line parameters for final test
     # sys.argv = ['data_test.py', '-m=bleu_0.984_09.dat', '-p=final', '--n=rl_even']
     # command line parameters for final test (subset data)
-    sys.argv = ['data_test.py', '-m=epoch_022_0.917_0.909.dat', '-p=rl', '--n=crossent_even']
+    sys.argv = ['data_test_RL_webqsp.py', '-m=truereward_0.800_00.dat', '-p=rl', '--n=crossent_even', '--att=1', '--lstm=1']
 
     parser = argparse.ArgumentParser()
     # parser.add_argument("--data", required=True,
@@ -29,6 +29,12 @@ if __name__ == "__main__":
     parser.add_argument("-p", "--pred", required=True, help="the test processDataset format, " \
                                                             "py is one-to-one (one sentence with one reference), rl is one-to-many")
     parser.add_argument("-n", "--name", required=True, help="Name of the run")
+    # Choose the function to compute reward (0-1 or adaptive reward).
+    # If a = true, 1 or yes, the adaptive reward is used. Otherwise 0-1 reward is used.
+    parser.add_argument("--att", type=lambda x: (str(x).lower() in ['true', '1', 'yes']),
+                        help="Using attention mechanism in seq2seq")
+    parser.add_argument("--lstm", type=lambda x: (str(x).lower() in ['true', '1', 'yes']),
+                        help="Using LSTM mechanism in seq2seq")
     args = parser.parse_args()
 
     PREDICT_PATH = '../data/saves/webqsp/' + str(args.name) + '/' + str(args.pred) + '_predict.actions'
@@ -57,10 +63,11 @@ if __name__ == "__main__":
         train_data = data.group_train_data_one_to_one(train_data)
     rev_emb_dict = {idx: word for word, idx in emb_dict.items()}
 
-    net = model.PhraseModel(emb_size=model.EMBEDDING_DIM, dict_size=len(emb_dict), hid_size=model.HIDDEN_STATE_SIZE)
+    net = model.PhraseModel(emb_size=model.EMBEDDING_DIM, dict_size=len(emb_dict), hid_size=model.HIDDEN_STATE_SIZE,
+                            LSTM_FLAG=args.lstm, ATT_FLAG=args.att)
     net = net.cuda()
     # model_path = '../data/saves/rl_even_adaptive_1%/' + str(args.name) + '/' + str(args.model)
-    model_path = '../data/saves/rl_even_adaptive_1%/' + str(args.model)
+    model_path = '../data/saves/webqsp/crossent_even_1%_att=1/' + str(args.name) + '/' + str(args.model)
     net.load_state_dict((torch.load(model_path)))
     end_token = emb_dict[data.END_TOKEN]
 
@@ -79,10 +86,12 @@ if __name__ == "__main__":
     # seq_1是輸入，targets是references，可能有多個；
     for seq_1, targets in train_data:
         test_dataset_count += 1
-        input_seq = model.pack_input(seq_1, net.emb)
-        enc = net.encode(input_seq)
+        input_seq = net.pack_input(seq_1, net.emb)
+        # enc = net.encode(input_seq)
+        context, enc = net.encode_context(input_seq)
+        # # Always use the first token in input sequence, which is '#BEG' as the initial input of decoder.
         _, tokens = net.decode_chain_argmax(enc, input_seq.data[0:1],
-                                            seq_len=data.MAX_TOKENS, stop_at_token=end_token)
+                                            seq_len=data.MAX_TOKENS, context=context[0], stop_at_token=end_token)
         references = [seq[1:] for seq in targets]
         # references = [seq[1:] if seq[1:] != '' else ['NONE'] for seq in targets]
         token_string, reference_string = '', ''
