@@ -31,7 +31,20 @@ class RetrieverModel(nn.Module):
         documents = self.output_layer(documents)
         cosine_output = torch.cosine_similarity(query_tensor, documents, dim=1)
         logsoftmax_output = F.log_softmax(cosine_output, dim=0)
-        return logsoftmax_output
+        softmax_output = F.softmax(cosine_output, dim=0)
+        return logsoftmax_output, softmax_output, cosine_output
+
+    def get_retriever_net_parameter(self):
+        """
+        Returns a dictionary with the parameters to use for inner loop updates.
+        :param params: A dictionary of the network's parameters.
+        :return: A dictionary of the parameters to use for the inner loop optimization process.
+        """
+        params = self.named_parameters()
+        param_dict = dict()
+        for name, param in params:
+            param_dict[name] = param.to(self.device).clone().detach()
+        return param_dict
 
     def pack_input(self, indices):
         dict_size = self.document_emb.weight.shape[0]-1

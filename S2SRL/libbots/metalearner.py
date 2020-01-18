@@ -6,7 +6,7 @@ import torch.optim as optim
 import torch.nn.functional as F
 import random
 import logging
-import numpy as np
+from torch.utils.data.sampler import WeightedRandomSampler
 log = logging.getLogger("MetaLearner")
 
 class MetaLearner(object):
@@ -44,11 +44,12 @@ class MetaLearner(object):
         self.meta_optimizer_lr = meta_optimizer_lr
         # self.meta_optimizer = optim.Adam(self.trainable_parameters(), lr=args.meta_learning_rate, amsgrad=False)
         # self.meta_optimizer = optim.Adam(net.parameters(), lr=meta_optimizer_lr, eps=1e-3)
-        self.meta_optimizer = None if self.net is None else optim.Adam(filter(lambda p: p.requires_grad, net.parameters()), lr=meta_optimizer_lr, eps=1e-3)
+        self.meta_optimizer = None if net is None else optim.Adam(filter(lambda p: p.requires_grad, net.parameters()), lr=meta_optimizer_lr, eps=1e-3)
         # self.inner_optimizer = optim.Adam(net.parameters(), lr=fast_lr, eps=1e-3)
-        self.inner_optimizer = None if self.net is None else optim.Adam(filter(lambda p: p.requires_grad, net.parameters()), lr=fast_lr, eps=1e-3)
+        self.inner_optimizer = None if net is None else optim.Adam(filter(lambda p: p.requires_grad, net.parameters()), lr=fast_lr, eps=1e-3)
         self.dial_shown = dial_shown
         self.retriever = None if (dict is None or dict_weak is None) else retriever.Retriever(dict, dict_weak)
+        self.retriever_optimizer = None if retriever_net is None else adabound.AdaBound(filter(lambda p: p.requires_grad, retriever_net.parameters()), lr=1e-3, final_lr=0.1)
         self.steps = steps
         self.weak_flag = weak_flag
         self.query_embed = query_embed
@@ -233,7 +234,7 @@ class MetaLearner(object):
         return batch
 
     # Return support samples strictly following the ranking.
-    def establish_support_set_by_retriever_argmax(self, task, N=5, weak=False, train_data_support_944K=None, docID_dict=None, rev_docID_dict=None, emb_dict=None, qtype_docs_range=None):
+    def establish_support_set_by_retriever_argmax(self, task, N=5, train_data_support_944K=None, docID_dict=None, rev_docID_dict=None, emb_dict=None, qtype_docs_range=None):
         # Find top-N in train_data_support;
         # get_top_N(train_data, train_data_support, N)
         # Support set is none. Use the training date per se as support set.
@@ -250,14 +251,14 @@ class MetaLearner(object):
                 document_range = (qtype_docs_range[key_weak]['start'], qtype_docs_range[key_weak]['end'])
             else:
                 document_range = (0, len(docID_dict))
-            logsoftmax_output = self.retriever_net(query_tensor, document_range)
+            logsoftmax_output, _, _ = self.retriever_net(query_tensor, document_range)
             orders = torch.topk(logsoftmax_output, N+10)
-            order_temp = self.retriever_net.calculate_rank(logsoftmax_output.tolist())
-            first_index = 0
-            for i, temp in enumerate(order_temp):
-                if temp==1:
-                    first_index = i
-                    break
+            # order_temp = self.retriever_net.calculate_rank(logsoftmax_output.tolist())
+            # first_index = 0
+            # for i, temp in enumerate(order_temp):
+            #     if temp==1:
+            #         first_index = i
+            #         break
             order_list = orders[1].tolist()
             topNIndices = [k+document_range[0] for k in order_list]
             topNList = [rev_docID_dict[k] for k in topNIndices]
@@ -267,6 +268,67 @@ class MetaLearner(object):
                 if len(batch)==N:
                     break
         return batch
+
+    # Return support samples strictly following the probability distribution.
+    def establish_support_set_by_retriever_sampling(self, task, N=5, train_data_support_944K=None, docID_dict=None,
+                                                  rev_docID_dict=None, emb_dict=None, qtype_docs_range=None, number_of_supportsets=5):
+        retriever_total_samples = 0
+        retriever_skip_samples = 0
+        batch_list = list()
+        logprob_list = list()
+        key_name, key_weak, question, qid = self.retriever.AnalyzeQuestion(task[1])
+        if not self.query_embed:
+            query_tensor = torch.tensor(self.retriever_net.pack_input(docID_dict['qid']).tolist(),
+                                        requires_grad=False).cuda()
+        else:
+            query_tensor = data.get_question_embedding(question, emb_dict, self.net)
+        if key_weak in qtype_docs_range:
+            document_range = (qtype_docs_range[key_weak]['start'], qtype_docs_range[key_weak]['end'])
+        else:
+            document_range = (0, len(docID_dict))
+        logsoftmax_output, softmax_output, cos_output = self.retriever_net(query_tensor, document_range)
+        # Get top N+45 samples.
+        orders = torch.topk(cos_output, N+45)
+        order_list = orders[1].tolist()
+        # Get probability of top N+45 samples.
+        order_softmax_output_prob = [softmax_output[x] for x in order_list]
+        qid_lists = list()
+        for i in range(number_of_supportsets):
+            batch = list()
+            logprob_for_samples = list()
+            # Samples elements from [0,..,len(weights)-1] with probability of top 100 samples.
+            # You can also use the keyword replace=False to change the behavior so that sampling is without replacement.
+            draw = list(WeightedRandomSampler(order_softmax_output_prob, N, replacement=False))
+            draw_list = [order_list[j] for j in draw]
+            topNIndices = [k + document_range[0] for k in draw_list]
+            logprobs = [logsoftmax_output[k] for k in draw_list]
+            topNList = [rev_docID_dict[k] for k in topNIndices]
+            qids = list()
+            for qid, logprob in zip(topNList, logprobs):
+                if qid in train_data_support_944K:
+                    batch.append(train_data_support_944K[qid])
+                    logprob_for_samples.append(logprob)
+                    qids.append(qid)
+                if len(batch) == N:
+                    break
+            qids.sort()
+            retriever_total_samples += 1
+            if len(qid_lists) == 0:
+                batch_list.append(batch)
+                logprob_list.append(torch.stack(logprob_for_samples))
+                qid_lists.append(qids)
+            else:
+                identical_flag = False
+                for qids_temp in qid_lists:
+                    if qids_temp == qids:
+                        retriever_skip_samples += 1
+                        identical_flag = True
+                        break
+                if not identical_flag:
+                    qid_lists.append(qids)
+                    batch_list.append(batch)
+                    logprob_list.append(torch.stack(logprob_for_samples))
+        return batch_list, logprob_list, retriever_total_samples, retriever_skip_samples
 
     def reparam_update_params(self, inner_loss, theta, lr=0.1, first_order=False):
         # NOTE: what is meaning of one step here? What is one step?
@@ -664,6 +726,9 @@ class MetaLearner(object):
         # log_prob_v[range(len(net_actions)), actions_t]: for each output, get the output token's log(softmax(logits)).
         # adv_v * log_prob_v[range(len(net_actions)), actions_t]:
         # get Q * logp(T) for all tokens of all decode_chain_sampling samples in size of 1 * N;
+        # Suppose log_prob_v is a two-dimensional tensor, value of which is [[1,2,3],[4,5,6],[7,8,9]];
+        # log_prob_actions_v = log_prob_v[[0,1,2], [0,1,2]]
+        # log_prob_actions_v is: tensor([1, 5, 9], device='cuda:0').
         log_prob_actions_v = adv_v * log_prob_v[range(len(net_actions)), actions_t]
         log_prob_actions_v = log_prob_actions_v.cuda()
         # For the optimizer is Adam (Adaptive Moment Estimation) which is a optimizer used for gradient descent.
@@ -985,8 +1050,9 @@ class MetaLearner(object):
             if random:
                 support_set = self.establish_random_support_set(task=task, N=self.steps, train_data_support_944K=self.train_data_support_944K)
             else:
-                support_set = self.establish_support_set(task, self.steps, self.weak_flag, self.train_data_support_944K)
-                support_set1 = self.establish_support_set_by_retriever_argmax(task, self.steps, docID_dict, rev_docID_dict, emb_dict, qtype_docs_range)
+                # support_set1 = self.establish_support_set(task=task, N=self.steps, weak=self.weak_flag, train_data_support_944K=self.train_data_support_944K)
+                # support_set_sample, logprob_list = self.establish_support_set_by_retriever_sampling(task=task, N=self.steps, train_data_support_944K=self.train_data_support_944K,docID_dict=docID_dict, rev_docID_dict=rev_docID_dict, emb_dict=emb_dict, qtype_docs_range=qtype_docs_range)
+                support_set = self.establish_support_set_by_retriever_argmax(task=task, N=self.steps, train_data_support_944K=self.train_data_support_944K, docID_dict=docID_dict, rev_docID_dict=rev_docID_dict, emb_dict=emb_dict, qtype_docs_range=qtype_docs_range)
 
             for step_sample in support_set:
                 self.inner_optimizer.zero_grad()
@@ -1039,7 +1105,142 @@ class MetaLearner(object):
             true_reward_sample_batch.extend(true_reward_sample_step)
             log.info("Epoch %d, Batch %d, task %s is trained!" % (epoch_count, batch_count, str(task[1]['qid'])))
         meta_losses = torch.sum(torch.stack(task_losses))
-        return meta_losses, running_vars, total_samples, skipped_samples, true_reward_argmax_batch, true_reward_sample_batch,
+        return meta_losses, running_vars, total_samples, skipped_samples, true_reward_argmax_batch, true_reward_sample_batch
+
+    # Train the retriever.
+    def retriever_sample(self, tasks, old_param_dict=None, dial_shown=True, epoch_count=0,
+                       batch_count=0, docID_dict=None, rev_docID_dict=None, emb_dict=None, qtype_docs_range=None, number_of_supportsets=5):
+        """Sample trajectories (before and after the update of the parameters)
+        for all the tasks `tasks`.
+        Here number of tasks is 1.
+        """
+        retriever_true_reward_argmax_batch = []
+        retriever_true_reward_sample_batch = []
+        retriever_net_policies = []
+        retriever_net_advantages = []
+        retriever_total_samples = 0
+        retriever_skipped_samples = 0
+
+        for task in tasks:
+            log.info("Task %s is training..." % (str(task[1]['qid'])))
+
+            # Argmax as baseline.
+            # For each task, the initial parameters are the same, i.e., the value stored in old_param_dict.
+            # temp_param_dict = self.get_net_parameter()
+            if old_param_dict is not None:
+                self.net.insert_new_parameter_to_layers(old_param_dict)
+            # temp_param_dict = self.get_net_parameter()
+            # Try to solve the bug: "UserWarning: RNN module weights are not part of single contiguous chunk of memory".
+            self.net.encoder.flatten_parameters()
+            self.net.decoder.flatten_parameters()
+            self.net.zero_grad()
+
+            support_set = self.establish_support_set_by_retriever_argmax(task=task, N=self.steps, train_data_support_944K=self.train_data_support_944K, docID_dict=docID_dict, rev_docID_dict=rev_docID_dict, emb_dict=emb_dict, qtype_docs_range=qtype_docs_range)
+            for step_sample in support_set:
+                self.inner_optimizer.zero_grad()
+                inner_loss, _, _, _, _ = self.first_order_inner_loss(
+                    step_sample, dial_shown=True)
+                log.info("        Epoch %d, Batch %d, support sample for argmax_reward %s is trained!" % (
+                epoch_count, batch_count, str(step_sample[1]['qid'])))
+                # Inner update.
+                inner_loss.backward()
+                self.inner_optimizer.step()
+                # temp_param_dict = self.get_net_parameter()
+
+            input_seq = self.net.pack_input(task[0], self.net.emb)
+            # enc = net.encode(input_seq)
+            context, enc = self.net.encode_context(input_seq)
+            # # Always use the first token in input sequence, which is '#BEG' as the initial input of decoder.
+            _, actions = self.net.decode_chain_argmax(enc, input_seq.data[0:1],
+                                                     seq_len=data.MAX_TOKENS, context=context[0],
+                                                     stop_at_token=self.end_token)
+            # Show what the output action sequence is.
+            action_tokens = []
+            for temp_idx in actions:
+                if temp_idx in self.rev_emb_dict and self.rev_emb_dict.get(temp_idx) != '#END':
+                    action_tokens.append(str(self.rev_emb_dict.get(temp_idx)).upper())
+            # Get the highest BLEU score as baseline used in self-critic.
+            # If the last parameter is false, it means that the 0-1 reward is used to calculate the accuracy.
+            # Otherwise the adaptive reward is used.
+            retriever_argmax_reward = utils.calc_True_Reward(action_tokens, task[1], self.adaptive)
+            # retriever_argmax_reward = random.random()
+            retriever_true_reward_argmax_batch.append(retriever_argmax_reward)
+
+            # Reward for each sampling support set.
+            # Establish support set.
+            support_sets, logprob_lists, total_samples, skip_samples = self.establish_support_set_by_retriever_sampling(task=task, N=self.steps,
+                                                                         train_data_support_944K=self.train_data_support_944K,
+                                                                         docID_dict=docID_dict,
+                                                                         rev_docID_dict=rev_docID_dict,
+                                                                         emb_dict=emb_dict,
+                                                                         qtype_docs_range=qtype_docs_range,number_of_supportsets=number_of_supportsets)
+
+            retriever_net_policies.append(torch.cat(logprob_lists))
+            retriever_total_samples += total_samples
+            retriever_skipped_samples += skip_samples
+            support_set_count = 0
+            for support_set in support_sets:
+                # For each task, the initial parameters are the same, i.e., the value stored in old_param_dict.
+                # temp_param_dict = self.get_net_parameter()
+                if old_param_dict is not None:
+                    self.net.insert_new_parameter_to_layers(old_param_dict)
+                # temp_param_dict = self.get_net_parameter()
+                # Try to solve the bug: "UserWarning: RNN module weights are not part of single contiguous chunk of memory".
+                self.net.encoder.flatten_parameters()
+                self.net.decoder.flatten_parameters()
+                self.net.zero_grad()
+                for step_sample in support_set:
+                    self.inner_optimizer.zero_grad()
+                    inner_loss, _, _, _, _ = self.first_order_inner_loss(
+                        step_sample, dial_shown=True)
+                    log.info("        Epoch %d, Batch %d, support sets %d, sample for sample_reward %s is trained!" % (
+                        epoch_count, batch_count, support_set_count, str(step_sample[1]['qid'])))
+                    # Inner update.
+                    inner_loss.backward()
+                    # To conduct a gradient ascent to minimize the loss (which is to maximize the reward).
+                    # optimizer.step updates the value of x using the gradient x.grad.
+                    # For example, the SGD optimizer performs:
+                    # x += -lr * x.grad
+                    self.inner_optimizer.step()
+                    # temp_param_dict = self.get_net_parameter()
+                support_set_count += 1
+
+                input_seq = self.net.pack_input(task[0], self.net.emb)
+                # enc = net.encode(input_seq)
+                context, enc = self.net.encode_context(input_seq)
+                # # Always use the first token in input sequence, which is '#BEG' as the initial input of decoder.
+                _, actions = self.net.decode_chain_argmax(enc, input_seq.data[0:1],
+                                                         seq_len=data.MAX_TOKENS, context=context[0],
+                                                         stop_at_token=self.end_token)
+                # Show what the output action sequence is.
+                action_tokens = []
+                for temp_idx in actions:
+                    if temp_idx in self.rev_emb_dict and self.rev_emb_dict.get(temp_idx) != '#END':
+                        action_tokens.append(str(self.rev_emb_dict.get(temp_idx)).upper())
+                # Get the highest BLEU score as baseline used in self-critic.
+                # If the last parameter is false, it means that the 0-1 reward is used to calculate the accuracy.
+                # Otherwise the adaptive reward is used.
+                retriever_sample_reward = utils.calc_True_Reward(action_tokens, task[1], self.adaptive)
+                # retriever_sample_reward = random.random()
+                retriever_true_reward_sample_batch.append(retriever_sample_reward)
+                retriever_net_advantages.extend([retriever_sample_reward - retriever_argmax_reward] * len(support_set))
+
+            log.info("Epoch %d, Batch %d, task %s is trained!" % (epoch_count, batch_count, str(task[1]['qid'])))
+
+        log_prob_v = torch.cat(retriever_net_policies)
+        log_prob_v = log_prob_v.cuda()
+
+        adv_v = torch.FloatTensor(retriever_net_advantages)
+        adv_v = adv_v.cuda()
+
+        log_prob_actions_v = log_prob_v * adv_v
+        log_prob_actions_v = log_prob_actions_v.cuda()
+
+        loss_policy_v = -log_prob_actions_v.mean()
+        loss_policy_v = loss_policy_v.cuda()
+
+        loss_v = loss_policy_v
+        return loss_v, retriever_true_reward_argmax_batch, retriever_true_reward_sample_batch, retriever_total_samples, retriever_skipped_samples
 
     # Using reparam class to accomplish 2nd derivative for MAML.
     def reparam_sample(self, tasks, first_order=False, dial_shown=True, epoch_count=0, batch_count=0):
@@ -1204,3 +1405,59 @@ class MetaLearner(object):
         token_string = token_string.strip()
 
         return token_string
+
+    def maml_retriever_sampleForTest(self, task, old_param_dict = None, docID_dict=None, rev_docID_dict=None, emb_dict=None, qtype_docs_range=None, steps=5):
+        """Sample trajectories (before and after the update of the parameters)
+        for all the tasks `tasks`.
+        Here number of tasks is 1.
+        """
+        # For each task, the initial parameters are the same, i.e., the value stored in old_param_dict.
+        # temp_param_dict = self.get_net_parameter()
+        if old_param_dict is not None:
+            self.net.insert_new_parameter_to_layers(old_param_dict)
+        # temp_param_dict = self.get_net_parameter()
+        # Try to solve the bug: "UserWarning: RNN module weights are not part of single contiguous chunk of memory".
+        self.net.encoder.flatten_parameters()
+        self.net.decoder.flatten_parameters()
+        self.net.zero_grad()
+        log.info("Task %s is testing..." % (str(task[1]['qid'])))
+
+        true_reward_argmax_batch = []
+        true_reward_sample_batch = []
+        total_samples = 0
+        skipped_samples = 0
+
+        # Establish support set.
+        support_set = self.establish_support_set_by_retriever_argmax(task=task, N=steps, train_data_support_944K=self.train_data_support_944K, docID_dict=docID_dict, rev_docID_dict=rev_docID_dict, emb_dict=emb_dict, qtype_docs_range=qtype_docs_range)
+
+        for step_sample in support_set:
+            self.inner_optimizer.zero_grad()
+            inner_loss, inner_total_samples, inner_skipped_samples, true_reward_argmax_step, true_reward_sample_step = self.first_order_inner_loss(step_sample, dial_shown=True)
+            total_samples += inner_total_samples
+            skipped_samples += inner_skipped_samples
+            true_reward_argmax_batch.extend(true_reward_argmax_step)
+            true_reward_sample_batch.extend(true_reward_sample_step)
+            # Inner update.
+            inner_loss.backward()
+            self.inner_optimizer.step()
+            # temp_param_dict = self.get_net_parameter()
+
+        input_seq = self.net.pack_input(task[0], self.net.emb)
+        # enc = net.encode(input_seq)
+        context, enc = self.net.encode_context(input_seq)
+        # # Always use the first token in input sequence, which is '#BEG' as the initial input of decoder.
+        _, tokens = self.net.decode_chain_argmax(enc, input_seq.data[0:1],
+                                            seq_len=data.MAX_TOKENS, context=context[0], stop_at_token=self.end_token)
+        token_string = ''
+        for token in tokens:
+            if token in self.rev_emb_dict and self.rev_emb_dict.get(token) != '#END':
+                token_string += str(self.rev_emb_dict.get(token)).upper() + ' '
+        token_string = token_string.strip()
+
+        # Show what the output action sequence is.
+        action_tokens = []
+        for temp_idx in tokens:
+            if temp_idx in self.rev_emb_dict and self.rev_emb_dict.get(temp_idx) != '#END':
+                action_tokens.append(str(self.rev_emb_dict.get(temp_idx)).upper())
+
+        return token_string, action_tokens
