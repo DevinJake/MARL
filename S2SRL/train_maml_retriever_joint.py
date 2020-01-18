@@ -27,47 +27,23 @@ TRAIN_944K_QUESTION_ANSWER_PATH = '../data/auto_QA_data/CSQA_DENOTATIONS_full_94
 DICT_944K = '../data/auto_QA_data/CSQA_result_question_type_944K.json'
 DICT_944K_WEAK = '../data/auto_QA_data/CSQA_result_question_type_count944K.json'
 ORDERED_QID_QUESTION_DICT = '../data/auto_QA_data/CSQA_result_question_type_count944k_orderlist.json'
-RETRIEVER_PARAM = '../data/saves/retriever/AdaBound_DocEmbed_QueryEmbed_epoch_140_4.306.dat'
 QTYPE_DOC_RANGE = '../data/auto_QA_data/944k_rangeDict.json'
 log = logging.getLogger("train")
-
-# Calculate 0-1 sparse reward for samples in test dataset to judge the performance of the model.
-def run_test(test_data, net, rev_emb_dict, end_token, device="cuda"):
-    argmax_reward_sum = 0.0
-    argmax_reward_count = 0.0
-    # p1 is one sentence, p2 is sentence list.
-    for p1, p2 in test_data:
-        # Transform sentence to padded embeddings.
-        input_seq = net.pack_input(p1, net.emb, device)
-        # Get hidden states from encoder.
-        # enc = net.encode(input_seq)
-        context, enc = net.encode_context(input_seq)
-        # Decode sequence by feeding predicted token to the net again. Act greedily.
-        # Return N*outputvocab, N output token indices.
-        _, tokens = net.decode_chain_argmax(enc, net.emb(beg_token), seq_len=data.MAX_TOKENS, context = context[0], stop_at_token=end_token)
-        # Show what the output action sequence is.
-        action_tokens = []
-        for temp_idx in tokens:
-            if temp_idx in rev_emb_dict and rev_emb_dict.get(temp_idx) != '#END':
-                action_tokens.append(str(rev_emb_dict.get(temp_idx)).upper())
-        # Using 0-1 reward to compute accuracy.
-        argmax_reward_sum += float(utils.calc_True_Reward(action_tokens, p2, False))
-        # argmax_reward_sum += random.random()
-        argmax_reward_count += 1
-    return float(argmax_reward_sum) / float(argmax_reward_count)
 
 if __name__ == "__main__":
     logging.basicConfig(format="%(asctime)-15s %(levelname)s %(message)s", level=logging.INFO)
     # # command line parameters
     # # -a=True means using adaptive reward to train the model. -a=False is using 0-1 reward.
     # sys.argv = ['train_maml_true_reward.py', '--cuda', '-l=../data/saves/rl_even_TR_batch8_1%/truereward_0.739_29.dat', '-n=maml_1%_batch8_att=0_test', '-s=5', '-a=0', '--att=0', '--lstm=1', '--fast-lr=0.1', '--meta-lr=1e-4', '--steps=5', '--batches=1', '--weak=1']
-    sys.argv = ['train_reptile_maml_true_reward.py', '-l=../data/saves/rl_even_TR_batch8_1%/truereward_0.739_29.dat',
-                '-n=maml_att=0_newdata2k_reptile', '--cuda', '-s=5', '-a=0', '--att=0', '--lstm=1', '--fast-lr=1e-4',
-                '--meta-lr=1e-4', '--steps=5', '--batches=1', '--weak=1', '--embed-grad', '--beta=0.1']
+    sys.argv = ['train_maml_retriever_joint.py', '-l=../data/saves/maml_att=0_newdata2k_reptile_1task/epoch_020_0.784_0.741.dat',
+                '-n=maml_att=0_newdata2k_reptile_retriever_joint', '--cuda', '-s=5', '-a=0', '--att=0', '--lstm=1', '--fast-lr=1e-4',
+                '--meta-lr=1e-4', '--steps=5', '--batches=1', '--weak=1', '--embed-grad', '--beta=0.1', '--supportsets=5', '-retrieverl=../data/saves/retriever/AdaBound_DocEmbed_QueryEmbed_epoch_140_4.306.dat']
     parser = argparse.ArgumentParser()
     parser.add_argument("--cuda", action='store_true', default=False, help="Enable cuda")
     parser.add_argument("-n", "--name", required=True, help="Name of the run")
     parser.add_argument("-l", "--load", required=True, help="Load the pre-trained model whereby continue training the RL mode")
+    parser.add_argument("-retrieverl", "--retrieverload", required=True,
+                        help="Load the pre-trained model whereby continue training the retriever mode")
     # Number of decoding samples.
     parser.add_argument("-s", "--samples", type=int, default=4, help="Count of samples in prob mode")
     # Choose the function to compute reward (0-1 or adaptive reward).
@@ -99,6 +75,7 @@ if __name__ == "__main__":
     parser.add_argument('--steps', type=int, default=5, help='steps in inner loop of MAML')
     parser.add_argument('--batches', type=int, default=5, help='tasks of a batch in outer loop of MAML')
     # If weak is true, it means when searching for support set, the questions with same number of E/R/T nut different relation will be retrieved if the questions in this pattern is less than the number of steps.
+    parser.add_argument('--supportsets', type=int, default=5, help='number of the support sets')
     parser.add_argument("--weak", type=lambda x: (str(x).lower() in ['true', '1', 'yes']),
                         help="Using weak mode to search for support set")
     parser.add_argument('--retriever-random', action='store_true', help='randomly get support set for the retriever')
@@ -137,6 +114,7 @@ if __name__ == "__main__":
     log.info("Training data converted, got %d samples", len(train_data))
     log.info("Train set has %d phrases, test %d", len(train_data), len(test_data))
     log.info("Batch size is %d", args.batches)
+    log.info("Number of the support sets %d", args.supportsets)
     if (args.att):
         log.info("Using attention mechanism to train the SEQ2SEQ model...")
     else:
@@ -171,7 +149,7 @@ if __name__ == "__main__":
     # print("Pre-trained network params")
     # for name, param in net.named_parameters():
     #     print(name, param.shape)
-    log.info("Model loaded from %s, continue training in RL mode...", args.load)
+    log.info("Model loaded from %s, continue training in MAML-Reptile mode...", args.load)
     if (args.adaptive):
         log.info("Using adaptive reward to train the REINFORCE model...")
     else:
@@ -187,8 +165,8 @@ if __name__ == "__main__":
                          device=device).to(device)
     retriever_net.cuda()
     log.info("Retriever model: %s", retriever_net)
-    retriever_net.load_state_dict(torch.load(RETRIEVER_PARAM))
-    log.info("Retriever model loaded from %s, continue training in RL mode...", str(RETRIEVER_PARAM))
+    retriever_net.load_state_dict(torch.load(args.retrieverload))
+    log.info("Retriever model loaded from %s, continue training in RL mode...", args.retrieverload)
 
     writer = SummaryWriter(comment="-" + args.name)
     # BEGIN token
@@ -203,8 +181,10 @@ if __name__ == "__main__":
     # TBMeanTracker (TensorBoard value tracker):
     # allows to batch fixed amount of historical values and write their mean into TB
     with ptan.common.utils.TBMeanTracker(writer, batch_size=100) as tb_tracker:
-        batch_idx = 0
-        batch_count = 0
+        maml_batch_idx = 0
+        maml_batch_count = 0
+        retriever_batch_idx = 0
+        retriever_batch_count = 0
         best_true_reward = None
         time_start = time.time()
 
@@ -217,17 +197,18 @@ if __name__ == "__main__":
             true_reward_argmax = []
             true_reward_sample = []
 
+            # Stage1
             for batch in data.iterate_batches(train_data, args.batches):
                 # The dict stores the initial parameters in the modules.
                 old_param_dict = metaLearner.get_net_named_parameter()
                 # temp_param_dict = metaLearner.get_net_parameter()
-                batch_idx += 1
+                maml_batch_idx += 1
                 # Each batch conduct one gradient upweight.
-                batch_count += 1
+                maml_batch_count += 1
 
                 # Batch is represented for a batch of tasks in MAML.
                 # In each task, a minibatch of support set is established.
-                meta_losses, running_vars, meta_total_samples, meta_skipped_samples, true_reward_argmax_batch, true_reward_sample_batch = metaLearner.reptile_sample(batch, old_param_dict = old_param_dict, dial_shown=dial_shown, epoch_count=epoch, batch_count=batch_count, docID_dict=docID_dict, rev_docID_dict=rev_docID_dict, emb_dict=emb_dict, qtype_docs_range=qtype_docs_range, random=args.retriever_random)
+                meta_losses, running_vars, meta_total_samples, meta_skipped_samples, true_reward_argmax_batch, true_reward_sample_batch = metaLearner.reptile_sample(batch, old_param_dict = old_param_dict, dial_shown=dial_shown, epoch_count=epoch, batch_count=maml_batch_count, docID_dict=docID_dict, rev_docID_dict=rev_docID_dict, emb_dict=emb_dict, qtype_docs_range=qtype_docs_range, random=args.retriever_random)
                 total_samples += meta_total_samples
                 skipped_samples += meta_skipped_samples
                 true_reward_argmax.extend(true_reward_argmax_batch)
@@ -236,28 +217,97 @@ if __name__ == "__main__":
                 metaLearner.net.zero_grad()
                 temp_param_dict = metaLearner.get_net_parameter()
                 dial_shown = True
-                tb_tracker.track("meta_losses", (float)(meta_losses.cpu().detach().numpy()), batch_idx)
+                tb_tracker.track("meta_losses", (float)(meta_losses.cpu().detach().numpy()), maml_batch_idx)
 
-            # After one epoch, compute the bleus for samples in test dataset.
-            true_reward_test = run_test(test_data, net, rev_emb_dict, end_token, device)
             # After one epoch, get the average of the decode_chain_argmax bleus for samples in training dataset.
-            true_reward_armax = np.mean(true_reward_argmax)
-            writer.add_scalar("true_reward_test", true_reward_test, batch_idx)
-            writer.add_scalar("true_reward_armax", true_reward_armax, batch_idx)
+            maml_true_reward_armax = np.mean(true_reward_argmax)
+            writer.add_scalar("maml_true_reward_armax", maml_true_reward_armax, maml_batch_idx)
             # After one epoch, get the average of the decode_chain_sampling bleus for samples in training dataset.
-            writer.add_scalar("true_reward_sample", np.mean(true_reward_sample), batch_idx)
+            writer.add_scalar("maml_true_reward_sample", np.mean(true_reward_sample), maml_batch_idx)
             writer.add_scalar("skipped_samples", skipped_samples / total_samples if total_samples != 0 else 0,
-                              batch_idx)
-            log.info("Batch %d, skipped_samples: %d, total_samples: %d", batch_idx, skipped_samples, total_samples)
-            writer.add_scalar("epoch", batch_idx, epoch)
-            log.info("Epoch %d, test reward: %.3f", epoch, true_reward_test)
+                              maml_batch_idx)
+            log.info("MAML epoch %d, skipped_samples: %d, total_samples: %d", epoch, skipped_samples, total_samples)
+            writer.add_scalar("epoch", maml_batch_idx, epoch)
+
+            # The dict stores the initial parameters in the modules.
+            stage1_old_param_dict = metaLearner.get_net_named_parameter()
+
+            log.info("---------------------------")
+            log.info("MAML epoch %d, Stage 1 training is over...", epoch)
+            log.info("---------------------------")
+
+            retriever_total_samples = 0
+            retriever_skipped_samples = 0
+            retriever_true_reward_argmax = []
+            retriever_true_reward_sample = []
+
+            # Stage 2
+            for batch in data.iterate_batches(train_data, args.batches):
+                # temp_param_dict = metaLearner.get_net_parameter()
+                retriever_batch_idx += 1
+                # Each batch conduct one gradient upweight.
+                retriever_batch_count += 1
+
+                # Batch is represented for a batch of tasks in MAML.
+                # In each task, a minibatch of support set is established.
+                metaLearner.retriever_optimizer.zero_grad()
+                metaLearner.retriever_net.zero_grad()
+
+                retriever_losses, retriever_true_reward_argmax_batch, retriever_true_reward_sample_batch, retriever_total_sample, retriever_skipped_sample = metaLearner.retriever_sample(batch, old_param_dict = stage1_old_param_dict, dial_shown=dial_shown, epoch_count=epoch, batch_count=retriever_batch_count, docID_dict=docID_dict, rev_docID_dict=rev_docID_dict, emb_dict=emb_dict, qtype_docs_range=qtype_docs_range, number_of_supportsets=args.supportsets)
+                retriever_total_samples += retriever_total_sample
+                retriever_skipped_samples += retriever_skipped_sample
+                retriever_true_reward_argmax.extend(retriever_true_reward_argmax_batch)
+                retriever_true_reward_sample.extend(retriever_true_reward_sample_batch)
+
+                # temp_param_dict = metaLearner.retriever_net.get_retriever_net_parameter()
+                metaLearner.retriever_optimizer.zero_grad()
+                metaLearner.retriever_net.zero_grad()
+                retriever_losses.backward()
+                metaLearner.retriever_optimizer.step()
+                # temp_param_dict = metaLearner.retriever_net.get_retriever_net_parameter()
+                dial_shown = True
+                tb_tracker.track("retriever_losses", (float)(retriever_losses.cpu().detach().numpy()), retriever_batch_idx)
+
+            # After one epoch, get the average of the decode_chain_argmax bleus for samples in training dataset.
+            retriever_true_reward_argmax = np.mean(retriever_true_reward_argmax)
+            retriever_true_reward_sample = np.mean(retriever_true_reward_sample)
+            writer.add_scalar("retriever_true_reward_argmax", retriever_true_reward_argmax, retriever_batch_idx)
+            # After one epoch, get the average of the decode_chain_sampling bleus for samples in training dataset.
+            writer.add_scalar("retriever_true_reward_sample", np.mean(retriever_true_reward_sample), retriever_batch_idx)
+            writer.add_scalar("skipped_samples", retriever_skipped_samples / retriever_total_samples if retriever_total_samples != 0 else 0,
+                              retriever_batch_idx)
+            log.info("Retriever epoch %d, retriever_skipped_samples: %d, retriever_total_samples: %d", epoch, retriever_skipped_samples, retriever_total_samples)
+            writer.add_scalar("epoch", retriever_batch_idx, epoch)
+            log.info("---------------------------")
+            log.info("Retriever epoch %d, Stage 2 training is over...", epoch)
+            log.info("---------------------------")
+
+            argmax_reward_sum = 0.0
+            argmax_reward_count = 0.0
+            # test
+            # p1 is one sentence, p2 is sentence list.
+            for test_task in test_data:
+                _, action_tokens = metaLearner.maml_retriever_sampleForTest(task=test_task, old_param_dict=stage1_old_param_dict, docID_dict=docID_dict, rev_docID_dict=rev_docID_dict, emb_dict=emb_dict, qtype_docs_range=qtype_docs_range, steps=args.steps)
+                # Using 0-1 reward to compute accuracy.
+                argmax_reward_sum += float(utils.calc_True_Reward(action_tokens, test_task[1], False))
+                # argmax_reward_sum += random.random()
+                argmax_reward_count += 1
+            true_reward_test =  float(argmax_reward_sum) / float(argmax_reward_count)
+
+            # # The parameters are stored after each epoch.
             if best_true_reward is None or best_true_reward < true_reward_test:
                 best_true_reward = true_reward_test
                 log.info("Best true reward updated: %.4f", true_reward_test)
                 # Save the updated seq2seq parameters trained by RL.
-                torch.save(net.state_dict(), os.path.join(saves_path, "truereward_%.3f_%02d.dat" % (true_reward_test, epoch)))
+                torch.save(net.state_dict(), os.path.join(saves_path, "net_truereward_%.3f_%02d.dat" % (true_reward_test, epoch)))
+                torch.save(retriever_net.state_dict(), os.path.join(saves_path, "retriever_truereward_%.3f_%02d.dat" % (true_reward_test, epoch)))
             # # The parameters are stored after each epoch.
-            torch.save(net.state_dict(), os.path.join(saves_path, "epoch_%03d_%.3f_%.3f.dat" % (epoch, float(true_reward_armax), true_reward_test)))
+            torch.save(net.state_dict(), os.path.join(saves_path, "net_epoch_%03d_%.3f_%.3f.dat" % (epoch, float(maml_true_reward_armax), true_reward_test)))
+            torch.save(retriever_net.state_dict(), os.path.join(saves_path, "retriever_epoch_%03d_%.3f_%.3f.dat" % (epoch, float(retriever_true_reward_argmax), float(true_reward_test))))
+            log.info("---------------------------")
+            log.info("Epoch %d, testing is over, test reward: %.3f", epoch, true_reward_test)
+            log.info("---------------------------")
+
         time_end = time.time()
         log.info("Training time is %.3fs." % (time_end - time_start))
         print("Training time is %.3fs." % (time_end - time_start))

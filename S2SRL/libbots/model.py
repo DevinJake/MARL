@@ -160,7 +160,7 @@ class PhraseModel(nn.Module):
         out, new_hid = self.decoder(input_x.unsqueeze(0), hid)
         if (self.attention_flag):
             out, attn = self.attention(out, context)
-        # Self.output(out) using nn.Linear(hid_size, dict_size) to transform logits to distribution over output vocab.
+        # Self.output(out) using nn.Linear(hid_size, dict_size) to transform hidden states into logits over output vocab.
         out = self.output(out)
         # squeeze: Returns a tensor with all the dimensions of :attr:`input` of size `1` removed.
         return out.squeeze(dim=0), new_hid

@@ -23,18 +23,6 @@ POSITIVE_Q_DOCS = '../data/auto_QA_data/retriever_question_documents_pair.json'
 QTYPE_DOC_RANGE = '../data/auto_QA_data/944k_rangeDict.json'
 TRAINING_SAMPLE_DICT = '../data/auto_QA_data/retriever_training_samples.json'
 
-def get_net_parameter(net):
-    """
-    Returns a dictionary with the parameters to use for inner loop updates.
-    :param params: A dictionary of the network's parameters.
-    :return: A dictionary of the parameters to use for the inner loop optimization process.
-    """
-    params = net.named_parameters()
-    param_dict = dict()
-    for name, param in params:
-        param_dict[name] = param.to('cuda').clone().detach()
-    return param_dict
-
 def get_document_embedding(doc_list, emb_dict, net):
     d_embed_list = []
     for i, doc in enumerate(doc_list):
