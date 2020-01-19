@@ -140,7 +140,7 @@ if __name__ == "__main__":
         test_dataset_count += 1
         # log.info("%d PREDICT: %s", test_dataset_count, token_string)
         token_string_list.append(str(test_task[1]['qid']) + ': ' + token_string+'\n')
-        if test_dataset_count % 1000 == 0:
+        if test_dataset_count % 100 == 0:
             print (test_dataset_count)
 
     fwPredict.writelines(token_string_list)
