@@ -1063,8 +1063,7 @@ class MetaLearner(object):
                 skipped_samples += inner_skipped_samples
                 true_reward_argmax_batch.extend(true_reward_argmax_step)
                 true_reward_sample_batch.extend(true_reward_sample_step)
-                log.info("        Epoch %d, Batch %d, support sample %s is trained!" % (
-                epoch_count, batch_count, str(step_sample[1]['qid'])))
+                # log.info("        Epoch %d, Batch %d, support sample %s is trained!" % (epoch_count, batch_count, str(step_sample[1]['qid'])))
                 # Inner update.
                 inner_loss.backward()
                 # To conduct a gradient ascent to minimize the loss (which is to maximize the reward).
@@ -1079,8 +1078,7 @@ class MetaLearner(object):
             # otherwise you’ll accumulate the gradients from multiple passes.
             self.inner_optimizer.zero_grad()
             self.net.zero_grad()
-            meta_loss, outer_total_samples, outer_skipped_samples, true_reward_argmax_step, true_reward_sample_step = self.first_order_inner_loss(
-                task, dial_shown=dial_shown)
+            meta_loss, outer_total_samples, outer_skipped_samples, true_reward_argmax_step, true_reward_sample_step = self.first_order_inner_loss(task, dial_shown=dial_shown)
             task_losses.append(meta_loss)
 
             meta_loss.backward()
@@ -1141,8 +1139,7 @@ class MetaLearner(object):
                 self.inner_optimizer.zero_grad()
                 inner_loss, _, _, _, _ = self.first_order_inner_loss(
                     step_sample, dial_shown=True)
-                log.info("        Epoch %d, Batch %d, support sample for argmax_reward %s is trained!" % (
-                epoch_count, batch_count, str(step_sample[1]['qid'])))
+                # log.info("        Epoch %d, Batch %d, support sample for argmax_reward %s is trained!" % (epoch_count, batch_count, str(step_sample[1]['qid'])))
                 # Inner update.
                 inner_loss.backward()
                 self.inner_optimizer.step()
@@ -1194,8 +1191,7 @@ class MetaLearner(object):
                     self.inner_optimizer.zero_grad()
                     inner_loss, _, _, _, _ = self.first_order_inner_loss(
                         step_sample, dial_shown=True)
-                    log.info("        Epoch %d, Batch %d, support sets %d, sample for sample_reward %s is trained!" % (
-                        epoch_count, batch_count, support_set_count, str(step_sample[1]['qid'])))
+                    # log.info("        Epoch %d, Batch %d, support sets %d, sample for sample_reward %s is trained!" % (epoch_count, batch_count, support_set_count, str(step_sample[1]['qid'])))
                     # Inner update.
                     inner_loss.backward()
                     # To conduct a gradient ascent to minimize the loss (which is to maximize the reward).
@@ -1356,7 +1352,7 @@ class MetaLearner(object):
 
         return token_string
 
-    def first_order_sampleForTest(self, task, old_param_dict = None, first_order=False, dial_shown=True, epoch_count=0, batch_count=0):
+    def first_order_sampleForTest(self, task, old_param_dict = None, first_order=False, dial_shown=True, epoch_count=0, batch_count=0,random=False):
         """Sample trajectories (before and after the update of the parameters)
         for all the tasks `tasks`.
         Here number of tasks is 1.
@@ -1378,7 +1374,11 @@ class MetaLearner(object):
         skipped_samples = 0
 
         # Establish support set.
-        support_set = self.establish_support_set(task, self.steps, self.weak_flag, self.train_data_support_944K)
+        if not random:
+            support_set = self.establish_support_set(task, self.steps, self.weak_flag, self.train_data_support_944K)
+        else:
+            # log.info("Using random support set...")
+            support_set = self.establish_random_support_set(task=task, N=self.steps, train_data_support_944K=self.train_data_support_944K)
 
         for step_sample in support_set:
             self.inner_optimizer.zero_grad()
@@ -1387,7 +1387,7 @@ class MetaLearner(object):
             skipped_samples += inner_skipped_samples
             true_reward_argmax_batch.extend(true_reward_argmax_step)
             true_reward_sample_batch.extend(true_reward_sample_step)
-            log.info("        Epoch %d, Batch %d, support sample %s is trained!" % (epoch_count, batch_count, str(step_sample[1]['qid'])))
+            # log.info("        Support sample %s is trained!" % (str(step_sample[1]['qid'])))
             # Inner update.
             inner_loss.backward()
             self.inner_optimizer.step()
@@ -1442,6 +1442,7 @@ class MetaLearner(object):
             inner_loss.backward()
             self.inner_optimizer.step()
             # temp_param_dict = self.get_net_parameter()
+            # log.info("        Support sample %s is trained!" % (str(step_sample[1]['qid'])))
 
         input_seq = self.net.pack_input(task[0], self.net.emb)
         # enc = net.encode(input_seq)
