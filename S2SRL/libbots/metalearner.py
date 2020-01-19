@@ -238,6 +238,7 @@ class MetaLearner(object):
         # Find top-N in train_data_support;
         # get_top_N(train_data, train_data_support, N)
         # Support set is none. Use the training date per se as support set.
+        # temp_dict = self.retriever_net.get_retriever_net_parameter()
         batch = list()
         if N==0:
             batch.append(task)
