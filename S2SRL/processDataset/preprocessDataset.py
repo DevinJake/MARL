@@ -269,6 +269,129 @@ def getAllQustionsAndAnswersFor944K():
     fwQuestionDic.close()
     print("Writing CSQA_DENOTATIONS_full_944k.JSON is done!")
 
+# Get all questions and answers in CQA-full data-set for REINFORCEMENT learning by using denotations.
+# Also treat the JSON as the file of training set used for REINFORCEMENT learning with denotations.
+def getAllQustionsAndAnswersForWebqsp():
+    fw = open('../../data/webqsp_data/CSQA_DENOTATIONS_full_944K.json', 'w', encoding="UTF-8")
+    qa_set = load_qadata("../../data/official_downloaded_data/944k/train")
+    qa_map = getQA_by_state_py3(qa_set)
+    load_dict = getEntitiyID2Label()
+    question_dict = {}
+    totality = 0
+    fwQuestionDic = open('../../data/webqsp_data/mask/dic_rl_tr.question', 'w', encoding="UTF-8")
+    questionSet = set()
+    for qafile_key, qafile_value in qa_map.items():
+        id_prefix = qafile_key
+        count = 0
+        for qa in qafile_value:
+            # context = qa['context'].replace("\n", "").strip()
+            context_utterance = qa['context_utterance'].replace("\n", "").strip()
+            if(len(context_utterance)==0):
+                continue
+            count += 1
+            id = id_prefix.replace("\n", "").strip() + '_' + str(count)
+            context_entities = [] if(len(qa['context_entities'].replace("\n", "").strip())==0) else qa['context_entities'].replace("\n", "").strip().split("|")
+            context_relations = [] if(len(qa['context_relations'].replace("\n", "").strip())==0) else qa['context_relations'].replace("\n", "").strip().split("|")
+            context_types = [] if (len(qa['context_types'].replace("\n", "").strip())==0) else qa['context_types'].replace("\n", "").strip().split("|")
+            context_ints = qa['context_ints'].replace("\n", "").strip()
+            # Get reverse relation: has_child and -has_child.
+            # context_relations.extend(['-' + r for r in context_relations])
+            response_entities = []  if (len(qa['response_entities'].replace("\n", "").strip())==0) else qa['response_entities'].replace("\n", "").strip().split("|")
+            orig_response = qa['orig_response'].replace("\n", "").strip()
+            response_bools = [] if (len(qa['response_bools'].replace("\n", "").strip())==0) else qa['response_bools'].replace("\n", "").strip().split("|")
+            # response_ints = qa['response_ints'].replace("\n", "").split("|")
+            question_info = {}
+            question_info.update({'question': context_utterance,
+                                  'entity': context_entities, 'relation': context_relations,
+                                  'type': context_types,'context_ints': context_ints,
+                                  'response_entities': response_entities,'orig_response': orig_response,
+                                  'response_bools': response_bools})
+            # Get masked entity.
+            entity_maskID = {}
+            if len(context_entities)!=0:
+                context_utterance_low = context_utterance.lower()
+                entity_index_dict = {}
+                for entity in context_entities:
+                    if(entity in load_dict):
+                        entity_name = load_dict.get(entity).lower()
+                        entity_index_dict[entity] = entity_name
+                    else:
+                        entity_index_dict[entity] = entity
+                for key, value in entity_index_dict.items():
+                    if(value in context_utterance_low):
+                        entity_index_dict[key] = context_utterance_low.index(value)
+                    else:
+                        entity_index_dict[key] = LINE_SIZE
+                temp_count = 0
+                # To sort a dict by value.
+                for key, value in sorted(entity_index_dict.items(), key=lambda item: item[1]):
+                    entity_maskID[key] = 'ENTITY' + str(temp_count + 1)
+                    temp_count+=1
+            question_info['entity_mask'] = entity_maskID
+
+            # Get masked relation.
+            relation_maskID = {}
+            if len(context_relations) != 0:
+                relation_index = 0
+                for relation in context_relations:
+                    relation = relation.replace('-', '')
+                    if relation not in relation_maskID:
+                        relation_index += 1
+                        relation_maskID[relation] = 'RELATION' + str(relation_index)
+            question_info['relation_mask'] = relation_maskID
+
+            # Get masked type.
+            type_maskID = {}
+            if len(context_types) != 0:
+                for i, type in enumerate(context_types):
+                    type_maskID[type] = 'TYPE' + str(i + 1)
+            question_info['type_mask'] = type_maskID
+
+            question_string = '<E> '
+            if len(entity_maskID) > 0:
+                for entity_key, entity_value in entity_maskID.items():
+                    if str(entity_value) != '':
+                        question_string += str(entity_value) + ' '
+            question_string += '</E> <R> '
+            if len(relation_maskID) > 0:
+                for relation_key, relation_value in relation_maskID.items():
+                    if str(relation_value) != '':
+                        question_string += str(relation_value) + ' '
+            question_string += '</R> <T> '
+            if len(type_maskID) > 0:
+                for type_key, type_value in type_maskID.items():
+                    if str(type_value) != '':
+                        question_string += str(type_value) + ' '
+            question_string += '</T> '
+
+            question_token = str(context_utterance).lower().replace('?', '')
+            question_token = question_token.replace(',', ' ')
+            question_token = question_token.replace(':', ' ')
+            question_token = question_token.replace('(', ' ')
+            question_token = question_token.replace(')', ' ')
+            question_token = question_token.replace('"', ' ')
+            question_token = question_token.strip()
+            question_string += question_token
+            question_string = question_string.strip()
+            question_tokens = question_string.strip().split(' ')
+            question_tokens_set = set(question_tokens)
+            questionSet = questionSet.union(question_tokens_set)
+            question_info['input'] = question_string
+            question_dict[id] = question_info
+            totality += 1
+            if(totality%1000==0):
+                print(totality)
+    fw.writelines(json.dumps(question_dict, indent=1, ensure_ascii=False))
+    fw.close()
+    questionList = list()
+    for item in questionSet:
+        temp = str(item) + '\n'
+        if temp != '\n':
+            questionList.append(temp)
+    fwQuestionDic.writelines(questionList)
+    fwQuestionDic.close()
+    print("Writing WEBQSP_DENOTATIONS_full.JSON is done!")
+
 def getAllQuestionsAndActions():
     fw = open('../../data/auto_QA_data/CSQA_ANNOTATIONS_full.json', 'w', encoding="UTF-8")
     '''dictMerged2 = dict( dict1, **dict2 ) is :
@@ -762,6 +885,82 @@ def getShareVocabulary():
     for i in range(len(share_vocab_list)):
         share_vocab_list[i] = share_vocab_list[i] + '\n'
     fw = open('../../data/auto_QA_data/share.question', 'w', encoding="UTF-8")
+    fw.writelines(share_vocab_list)
+    fw.close()
+    print("Writing SHARE VOCAB is done!")
+    return action_size
+
+def getShareVocabularyForWebQSP():
+    questionVocab = set()
+    actionVocab = set()
+    actionVocab_list = list()
+    with open('../../data/webqsp_data/mask/dic_py.question', 'r', encoding="UTF-8") as infile1, open('../../data/webqsp_data/mask/dic_rl.question', 'r', encoding="UTF-8") as infile2, open('../../data/webqsp_data/mask/dic_rl_tr.question', 'r', encoding="UTF-8") as infile3:
+        count = 0
+        while True:
+            lines_gen = list(islice(infile1, LINE_SIZE))
+            if not lines_gen:
+                break
+            for line in lines_gen:
+                token = line.strip()
+                questionVocab.add(token)
+            count = count + 1
+            print(count)
+        count = 0
+        while True:
+            lines_gen = list(islice(infile2, LINE_SIZE))
+            if not lines_gen:
+                break
+            for line in lines_gen:
+                token = line.strip()
+                questionVocab.add(token)
+            count = count + 1
+            print(count)
+        count = 0
+        while True:
+            lines_gen = list(islice(infile3, LINE_SIZE))
+            if not lines_gen:
+                break
+            for line in lines_gen:
+                token = line.strip()
+                questionVocab.add(token)
+            count = count + 1
+            print(count)
+    with open('../../data/webqsp_data/mask/dic_py.action', 'r', encoding="UTF-8") as infile1, open('../../data/webqsp_data/mask/dic_rl.action', 'r', encoding="UTF-8") as infile2:
+        count = 0
+        while True:
+            lines_gen = list(islice(infile1, LINE_SIZE))
+            if not lines_gen:
+                break
+            for line in lines_gen:
+                token = line.strip()
+                actionVocab.add(token)
+            count = count + 1
+            print(count)
+        count = 0
+        while True:
+            lines_gen = list(islice(infile2, LINE_SIZE))
+            if not lines_gen:
+                break
+            for line in lines_gen:
+                token = line.strip()
+                actionVocab.add(token)
+            count = count + 1
+            print(count)
+    action_size = 0
+    for word in actionVocab:
+        if word not in questionVocab and word not in special_characters:
+            actionVocab_list.append(word)
+            action_size += 1
+        elif word in special_characters:
+            actionVocab_list.append(word)
+            action_size += 1
+            if word in questionVocab:
+                questionVocab.remove(word)
+    questionVocab_list = list(questionVocab)
+    share_vocab_list = actionVocab_list + questionVocab_list
+    for i in range(len(share_vocab_list)):
+        share_vocab_list[i] = share_vocab_list[i] + '\n'
+    fw = open('../../data/webqsp_data/share.webqsp.question', 'w', encoding="UTF-8")
     fw.writelines(share_vocab_list)
     fw.close()
     print("Writing SHARE VOCAB is done!")
