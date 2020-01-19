@@ -1045,7 +1045,7 @@ class MetaLearner(object):
             self.net.encoder.flatten_parameters()
             self.net.decoder.flatten_parameters()
             self.net.zero_grad()
-            log.info("Task %s is training..." % (str(task[1]['qid'])))
+            log.info("Task %s for reptile is training..." % (str(task[1]['qid'])))
             # Establish support set.
             # If random_flag==True, randomly select support samples in the same question category.
             if random:
@@ -1102,7 +1102,7 @@ class MetaLearner(object):
             skipped_samples += outer_skipped_samples
             true_reward_argmax_batch.extend(true_reward_argmax_step)
             true_reward_sample_batch.extend(true_reward_sample_step)
-            log.info("Epoch %d, Batch %d, task %s is trained!" % (epoch_count, batch_count, str(task[1]['qid'])))
+            # log.info("Epoch %d, Batch %d, task %s is trained!" % (epoch_count, batch_count, str(task[1]['qid'])))
         meta_losses = torch.sum(torch.stack(task_losses))
         return meta_losses, running_vars, total_samples, skipped_samples, true_reward_argmax_batch, true_reward_sample_batch
 
@@ -1121,7 +1121,7 @@ class MetaLearner(object):
         retriever_skipped_samples = 0
 
         for task in tasks:
-            log.info("Task %s is training..." % (str(task[1]['qid'])))
+            log.info("Task %s for retriever is training..." % (str(task[1]['qid'])))
 
             # Argmax as baseline.
             # For each task, the initial parameters are the same, i.e., the value stored in old_param_dict.
@@ -1222,7 +1222,7 @@ class MetaLearner(object):
                 retriever_true_reward_sample_batch.append(retriever_sample_reward)
                 retriever_net_advantages.extend([retriever_sample_reward - retriever_argmax_reward] * len(support_set))
 
-            log.info("Epoch %d, Batch %d, task %s is trained!" % (epoch_count, batch_count, str(task[1]['qid'])))
+            # log.info("Epoch %d, Batch %d, task %s is trained!" % (epoch_count, batch_count, str(task[1]['qid'])))
 
         log_prob_v = torch.cat(retriever_net_policies)
         log_prob_v = log_prob_v.cuda()
@@ -1404,7 +1404,6 @@ class MetaLearner(object):
             if token in self.rev_emb_dict and self.rev_emb_dict.get(token) != '#END':
                 token_string += str(self.rev_emb_dict.get(token)).upper() + ' '
         token_string = token_string.strip()
-
         return token_string
 
     def maml_retriever_sampleForTest(self, task, old_param_dict = None, docID_dict=None, rev_docID_dict=None, emb_dict=None, qtype_docs_range=None, steps=5):
