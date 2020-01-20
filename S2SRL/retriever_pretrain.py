@@ -7,7 +7,7 @@ import torch.optim as optim
 import random
 from datetime import datetime
 from statistics import mean
-from libbots import adabound, data, model, metalearner
+from libbots import adabound, data, model, metalearner, retriever_module
 
 MAX_TOKENS = 40
 MAX_MAP = 1000000
@@ -22,105 +22,6 @@ DICT_944K_WEAK = '../data/auto_QA_data/CSQA_result_question_type_count944K.json'
 POSITIVE_Q_DOCS = '../data/auto_QA_data/retriever_question_documents_pair.json'
 QTYPE_DOC_RANGE = '../data/auto_QA_data/944k_rangeDict.json'
 TRAINING_SAMPLE_DICT = '../data/auto_QA_data/retriever_training_samples.json'
-
-class RetrieverModel(nn.Module):
-    def __init__(self, emb_size, dict_size, EMBED_FLAG=False, hid1_size = 300, hid2_size = 200, output_size = 128, device='cpu'):
-        # Call __init__ function of PhraseModel's parent class (nn.Module).
-        super(RetrieverModel, self).__init__()
-        # With :attr:`padding_idx` set, the embedding vector at
-        #         :attr:`padding_idx` is initialized to all zeros. However, notice that this
-        #         vector can be modified afterwards, e.g., using a customized
-        #         initialization method, and thus changing the vector used to pad the
-        #         output. The gradient for this vector from :class:`~torch.nn.Embedding`
-        #         is always zero.
-        self.document_emb = nn.Embedding(num_embeddings=dict_size+1, embedding_dim=emb_size, padding_idx=dict_size)
-        if not EMBED_FLAG:
-            for p in self.parameters():
-                p.requires_grad = False
-        self.hid_layer1 = nn.Linear(emb_size, hid1_size)
-        self.hid_layer2 = nn.Linear(hid1_size, hid2_size)
-        self.output_layer = nn.Linear(hid2_size, output_size)
-        self.device = device
-
-    def forward(self, query_tensor, range):
-        documents = self.pack_input(range)
-        query_tensor = self.hid_layer1(query_tensor)
-        query_tensor = self.hid_layer2(query_tensor)
-        query_tensor = self.output_layer(query_tensor)
-        documents = self.hid_layer1(documents)
-        documents = self.hid_layer2(documents)
-        documents = self.output_layer(documents)
-        cosine_output = torch.cosine_similarity(query_tensor, documents, dim=1)
-        logsoftmax_output = F.log_softmax(cosine_output, dim=0)
-        return logsoftmax_output
-
-    def pack_input(self, indices):
-        dict_size = self.document_emb.weight.shape[0]-1
-        if not isinstance(indices, tuple):
-            index = indices
-            if index >= dict_size or index < 0:
-                index = dict_size
-            input_v = torch.LongTensor([index]).to(self.device)
-            input_v = input_v.cuda()
-            r = self.document_emb(input_v)
-            return r
-        else:
-            list = [dict_size if (i >= dict_size or i < 0) else i for i in range(indices[0], indices[1])]
-            input_v = torch.LongTensor(list).to(self.device)
-            input_v = input_v.cuda()
-            r = self.document_emb(input_v)
-            return r
-
-    @classmethod
-    def calculate_rank(self, vector):
-        rank = 1
-        order_list = {}
-        if isinstance(vector, list):
-            for value in sorted(vector, reverse=True):
-                if value not in order_list:
-                    order_list[value] = rank
-                rank += 1
-            order = [order_list[i] for i in vector]
-            return order
-        else:
-            return []
-
-def get_ordered_docID_document(filepath):
-    with open(filepath, 'r', encoding="UTF-8") as load_f:
-        return(json.load(load_f))
-
-def get_net_parameter(net):
-    """
-    Returns a dictionary with the parameters to use for inner loop updates.
-    :param params: A dictionary of the network's parameters.
-    :return: A dictionary of the parameters to use for the inner loop optimization process.
-    """
-    params = net.named_parameters()
-    param_dict = dict()
-    for name, param in params:
-        param_dict[name] = param.to('cuda').clone().detach()
-    return param_dict
-
-def get_docID_indices(order_list):
-    did_indices = {}
-    d_list = []
-    next_id = 0
-    for w in order_list:
-        if not len(w)<1:
-            docID, document = list(w.items())[0]
-            if docID not in did_indices:
-                did_indices[docID] = next_id
-                d_list.append(document)
-                next_id += 1
-    return did_indices, d_list
-
-def get_qid_question_pairs(filepath):
-    pair = {}
-    pair_list = get_ordered_docID_document(filepath)
-    for temp in pair_list:
-        docID, document = list(temp.items())[0]
-        pair[docID] = document
-    return pair
 
 def get_document_embedding(doc_list, emb_dict, net):
     d_embed_list = []
@@ -145,12 +46,12 @@ def initialize_document_embedding():
     device = 'cuda'
     # Dict: word token -> ID.
     emb_dict = data.load_dict(DIC_PATH=DIC_PATH)
-    ordered_docID_doc_list = get_ordered_docID_document(ORDERED_QID_QUESTION_DICT)
-    docID_dict, doc_list = get_docID_indices(ordered_docID_doc_list)
+    ordered_docID_doc_list = data.get_ordered_docID_document(ORDERED_QID_QUESTION_DICT)
+    docID_dict, doc_list = data.get_docID_indices(ordered_docID_doc_list)
     # Index -> qid.
     rev_docID_dict = {id: doc for doc, id in docID_dict.items()}
 
-    net = RetrieverModel(emb_size=50, dict_size=len(docID_dict), EMBED_FLAG=False,
+    net = retriever_module.RetrieverModel(emb_size=50, dict_size=len(docID_dict), EMBED_FLAG=False,
                          device='cuda').to('cuda')
     net.cuda()
     net.zero_grad()
@@ -176,7 +77,7 @@ def initialize_document_embedding():
 
 def establish_positive_question_documents_pair(MAX_TOKENS):
     # Dict: word token -> ID.
-    docID_dict, _ = get_docID_indices(get_ordered_docID_document(ORDERED_QID_QUESTION_DICT))
+    docID_dict, _ = data.get_docID_indices(data.get_ordered_docID_document(ORDERED_QID_QUESTION_DICT))
     # Index -> qid.
     rev_docID_dict = {id: doc for doc, id in docID_dict.items()}
     # # List of (question, {question information and answer}) pairs, the training pairs are in format of 1:1.
@@ -230,11 +131,6 @@ def establish_positive_question_documents_pair(MAX_TOKENS):
     fw.close()
     print('Writing retriever_question_documents_pair.json is done!')
 
-def load_json(QUESTION_PATH):
-    with open(QUESTION_PATH, 'r', encoding="UTF-8") as load_f:
-        load_dict = json.load(load_f)
-        return load_dict
-
 def AnalyzeQuestion(question_info):
     typelist = ['Simple Question (Direct)_',
                 'Verification (Boolean) (All)_',
@@ -278,9 +174,9 @@ def AnalyzeQuestion(question_info):
 
 def generate_training_samples():
     training_sample_dict = {}
-    docID_dict, _ = get_docID_indices(get_ordered_docID_document(ORDERED_QID_QUESTION_DICT))
-    positive_q_docs_pair = load_json(POSITIVE_Q_DOCS)
-    qtype_docs_range = load_json(QTYPE_DOC_RANGE)
+    docID_dict, _ = data.get_docID_indices(data.get_ordered_docID_document(ORDERED_QID_QUESTION_DICT))
+    positive_q_docs_pair = data.load_json(POSITIVE_Q_DOCS)
+    qtype_docs_range = data.load_json(QTYPE_DOC_RANGE)
     phrase_pairs, _ = data.load_data_MAML(TRAIN_QUESTION_ANSWER_PATH, DIC_PATH, MAX_TOKENS)
     print("Obtained %d phrase pairs from %s." % (len(phrase_pairs), TRAIN_QUESTION_ANSWER_PATH))
     for question in phrase_pairs:
@@ -297,20 +193,6 @@ def generate_training_samples():
     fw.writelines(json.dumps(training_sample_dict, indent=1, ensure_ascii=False))
     fw.close()
     print('Writing retriever_training_samples.json is done!')
-
-def get_question_embedding(question, emb_dict, net):
-    question_token = question.lower().replace('?', '')
-    question_token = question_token.replace(',', ' ')
-    question_token = question_token.replace(':', ' ')
-    question_token = question_token.replace('(', ' ')
-    question_token = question_token.replace(')', ' ')
-    question_token = question_token.replace('"', ' ')
-    question_token = question_token.strip().split()
-    question_token_indices = [emb_dict['#UNK'] if token not in emb_dict else emb_dict[token] for token in question_token]
-    question_token_embeddings = net.emb(torch.tensor(question_token_indices, requires_grad=False).cuda())
-    question_embeddings = torch.mean(question_token_embeddings, 0).view(1,-1)
-    question_embeddings = torch.tensor(question_embeddings.tolist(), requires_grad=False).cuda()
-    return question_embeddings
 
 def retriever_training(epoches, RETRIEVER_EMBED_FLAG=True, query_embedding=True):
     ''' One instance of the retriever training samples:
@@ -332,12 +214,12 @@ def retriever_training(epoches, RETRIEVER_EMBED_FLAG=True, query_embedding=True)
     retriever_path = '../data/saves/retriever/initial_epoch_000_1.000.dat'
     device = 'cuda'
     learning_rate = 0.01
-    docID_dict, _ = get_docID_indices(get_ordered_docID_document(ORDERED_QID_QUESTION_DICT))
+    docID_dict, _ = data.get_docID_indices(data.get_ordered_docID_document(ORDERED_QID_QUESTION_DICT))
     # Index -> qid.
     rev_docID_dict = {id: doc for doc, id in docID_dict.items()}
-    training_samples = load_json(TRAINING_SAMPLE_DICT)
+    training_samples = data.load_json(TRAINING_SAMPLE_DICT)
 
-    net = RetrieverModel(emb_size=50, dict_size=len(docID_dict), EMBED_FLAG=RETRIEVER_EMBED_FLAG,
+    net = retriever_module.RetrieverModel(emb_size=50, dict_size=len(docID_dict), EMBED_FLAG=RETRIEVER_EMBED_FLAG,
                          device=device).to(device)
     net.load_state_dict(torch.load(retriever_path))
     net.zero_grad()
@@ -358,7 +240,7 @@ def retriever_training(epoches, RETRIEVER_EMBED_FLAG=True, query_embedding=True)
                                  hid_size=model.HIDDEN_STATE_SIZE,
                                  LSTM_FLAG=True, ATT_FLAG=False, EMBED_FLAG=False).to(device)
         net1.load_state_dict(torch.load(path))
-        qid_question_pair = get_qid_question_pairs(ORDERED_QID_QUESTION_DICT)
+        qid_question_pair = data.get_qid_question_pairs(ORDERED_QID_QUESTION_DICT)
 
     max_value = MAX_MAP
     MAP_for_queries = MAX_MAP
@@ -375,7 +257,7 @@ def retriever_training(epoches, RETRIEVER_EMBED_FLAG=True, query_embedding=True)
                 else:
                     print("ERROR! NO SUCH QUESTION: %s!" %(str(key)))
                     continue
-                query_tensor = get_question_embedding(question_tokens, emb_dict, net1)
+                query_tensor = data.get_question_embedding(question_tokens, emb_dict, net1)
             else:
                 query_tensor = torch.tensor(net.pack_input(value['query_index']).tolist(), requires_grad=False).cuda()
             document_range = (value['document_range'][0], value['document_range'][1])
@@ -400,7 +282,7 @@ def retriever_training(epoches, RETRIEVER_EMBED_FLAG=True, query_embedding=True)
                 key, value = random.choice(list(training_samples.items()))
                 if query_embedding:
                     question_tokens = qid_question_pair[key]
-                    query_tensor = get_question_embedding(question_tokens, emb_dict, net1)
+                    query_tensor = data.get_question_embedding(question_tokens, emb_dict, net1)
                 else:
                     query_tensor = torch.tensor(net.pack_input(value['query_index']).tolist(), requires_grad=False).cuda()
                 document_range = (value['document_range'][0], value['document_range'][1])
@@ -428,6 +310,8 @@ if __name__ == "__main__":
     # generate_training_samples()
     epoches = 300
     # If query_embedding is true, using the sum of word embedding to represent the questions.
-    # If query_embedding is false, using the query embedding,
-    # which is stored in the retriever model, to represent the questions.
+    # If query_embedding is false, using the document_emb, which is stored in the retriever model,
+    # to represent the questions.
+    # If RETRIEVER_EMBED_FLAG is true, optimizing document_emb when training the retriever.
+    # If RETRIEVER_EMBED_FLAG is false, document_emb is fixed when training.
     retriever_training(epoches, RETRIEVER_EMBED_FLAG=True, query_embedding=True)

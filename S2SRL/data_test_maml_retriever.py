@@ -4,7 +4,7 @@ import argparse
 import logging
 import sys
 
-from libbots import data, model, utils, metalearner
+from libbots import data, model, utils, metalearner, retriever_module
 
 import torch
 log = logging.getLogger("data_test")
@@ -13,6 +13,8 @@ DIC_PATH = '../data/auto_QA_data/share.question'
 TRAIN_944K_QUESTION_ANSWER_PATH = '../data/auto_QA_data/CSQA_DENOTATIONS_full_944K.json'
 DICT_944K = '../data/auto_QA_data/CSQA_result_question_type_944K.json'
 DICT_944K_WEAK = '../data/auto_QA_data/CSQA_result_question_type_count944K.json'
+ORDERED_QID_QUESTION_DICT = '../data/auto_QA_data/CSQA_result_question_type_count944k_orderlist.json'
+QTYPE_DOC_RANGE = '../data/auto_QA_data/944k_rangeDict.json'
 MAX_TOKENS = 40
 
 if __name__ == "__main__":
@@ -21,7 +23,12 @@ if __name__ == "__main__":
     # # command line parameters for final test
     # sys.argv = ['data_test.py', '-m=bleu_0.984_09.dat', '-p=final', '--n=rl_even']
     # command line parameters for final test (subset data)
-    sys.argv = ['data_test_maml_1st.py', '-m=epoch_009_0.398_0.796.dat', '-p=sample_final_maml', '--n=maml_batch8_att=0_newdata2k_1storder_1task', '--cuda', '-s=5', '-a=0', '--att=0', '--lstm=1', '--fast-lr=0.1', '--meta-lr=1e-4', '--steps=5', '--batches=1', '--weak=1', '--embed-grad']
+    # Args for 1st-order maml.
+    # sys.argv = ['data_test_maml.py', '-m=epoch_009_0.398_0.796.dat', '-p=sample_final_maml', '--n=maml_batch8_att=0_newdata2k_1storder_1task', '--cuda', '-s=5', '-a=0', '--att=0', '--lstm=1', '--fast-lr=0.1', '--meta-lr=1e-4', '--steps=5', '--batches=1', '--weak=1', '--embed-grad']
+    # Args for reptile.
+    sys.argv = ['data_test_maml_retriever.py', '-m=reptile_epoch_020_0.784_0.741.dat', '-p=sample_final_maml',
+                '--n=maml_att=0_newdata2k_reptile_retriever_joint', '--cuda', '-s=5', '-a=0', '--att=0', '--lstm=1',
+                '--fast-lr=1e-4', '--meta-lr=1e-4', '--steps=5', '--batches=1', '--weak=1', '--embed-grad',  '--beta=0.1', '--supportsets=5', '-retrieverl=../data/saves/retriever/AdaBound_DocEmbed_QueryEmbed_epoch_140_4.306.dat', '--docembed-grad']
     parser = argparse.ArgumentParser()
     # parser.add_argument("--data", required=True,
     #                     help="Category to use for training. Empty string to train on full processDataset")
@@ -46,6 +53,9 @@ if __name__ == "__main__":
                         help='learning rate for the 1-step gradient update of MAML')
     parser.add_argument('--meta-lr', type=float, default=0.0001,
                         help='learning rate for the meta optimization')
+    parser.add_argument('--beta', type=float, default=0.1,
+                        help='learning rate for reptile')
+    parser.add_argument('--supportsets', type=int, default=5, help='number of the support sets')
     parser.add_argument('--steps', type=int, default=5, help='steps in inner loop of MAML')
     parser.add_argument('--batches', type=int, default=5, help='tasks of a batch in outer loop of MAML')
     # If weak is true, it means when searching for support set, the questions with same number of E/R/T nut different relation will be retrieved if the questions in this pattern is less than the number of steps.
@@ -56,6 +66,12 @@ if __name__ == "__main__":
                         help="0-1 or adaptive reward")
     # If false, the embedding tensors in the model do not need to be trained.
     parser.add_argument('--embed-grad', action='store_false', help='fix embeddings when training')
+    parser.add_argument('--docembed-grad', action='store_false', help='fix doc embeddings when training')
+    parser.add_argument('--query-embed', action='store_false',
+                        help='using the sum of word embedding to represent the questions')
+    parser.add_argument("-retrieverl", "--retrieverload", required=True,
+                        help="Load the pre-trained model whereby continue training the retriever mode")
+    parser.add_argument('--retriever-random', action='store_true', help='randomly get support set for the retriever')
     args = parser.parse_args()
 
     device = torch.device("cuda" if args.cuda else "cpu")
@@ -99,12 +115,27 @@ if __name__ == "__main__":
     beg_token = torch.LongTensor([emb_dict[data.BEGIN_TOKEN]]).to(device)
     beg_token = beg_token.cuda()
 
-    metaLearner = metalearner.MetaLearner(net, device=device, beg_token=beg_token, end_token=end_token,
-                                          adaptive=args.adaptive, samples=args.samples,
+    docID_dict, _ = data.get_docID_indices(data.get_ordered_docID_document(ORDERED_QID_QUESTION_DICT))
+    # Index -> qid.
+    rev_docID_dict = {id: doc for doc, id in docID_dict.items()}
+
+    qtype_docs_range = data.load_json(QTYPE_DOC_RANGE)
+
+    retriever_net = retriever_module.RetrieverModel(emb_size=50, dict_size=len(docID_dict),
+                                                    EMBED_FLAG=args.docembed_grad,
+                                                    device=device).to(device)
+    retriever_net.cuda()
+    log.info("Retriever model: %s", retriever_net)
+    retriever_net.load_state_dict(torch.load(args.retrieverload))
+    log.info("Retriever model loaded from %s, continue training in RL mode...", args.retrieverload)
+
+    metaLearner = metalearner.MetaLearner(net=net, retriever_net=retriever_net, device=device, beg_token=beg_token,
+                                          end_token=end_token, adaptive=args.adaptive, samples=args.samples,
                                           train_data_support_944K=train_data_944K, rev_emb_dict=rev_emb_dict,
                                           first_order=args.first_order, fast_lr=args.fast_lr,
                                           meta_optimizer_lr=args.meta_lr, dial_shown=False, dict=dict944k,
-                                          dict_weak=dict944k_weak, steps=args.steps, weak_flag=args.weak)
+                                          dict_weak=dict944k_weak, steps=args.steps, weak_flag=args.weak,
+                                          query_embed=args.query_embed)
     log.info("Meta-learner: %d inner steps, %f inner learning rate, "
              "%d outer steps, %f outer learning rate, using weak mode:%s"
              % (args.steps, args.fast_lr, args.batches, args.meta_lr, str(args.weak)))
@@ -126,12 +157,12 @@ if __name__ == "__main__":
         batch_count += 1
         # Batch is represented for a batch of tasks in MAML.
         # In each task, a batch of support set is established.
-        token_string = metaLearner.first_order_sampleForTest(test_task, old_param_dict=old_param_dict, first_order=args.first_order, epoch_count=0, batch_count=batch_count)
+        token_string, _ = metaLearner.maml_retriever_sampleForTest(task=test_task, old_param_dict=old_param_dict, docID_dict=docID_dict, rev_docID_dict=rev_docID_dict, emb_dict=emb_dict, qtype_docs_range=qtype_docs_range, steps=args.steps)
 
         test_dataset_count += 1
         # log.info("%d PREDICT: %s", test_dataset_count, token_string)
         token_string_list.append(str(test_task[1]['qid']) + ': ' + token_string+'\n')
-        if test_dataset_count % 1000 == 0:
+        if test_dataset_count % 100 == 0:
             print (test_dataset_count)
 
     fwPredict.writelines(token_string_list)
