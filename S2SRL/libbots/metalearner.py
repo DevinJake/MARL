@@ -974,7 +974,7 @@ class MetaLearner(object):
             self.net.encoder.flatten_parameters()
             self.net.decoder.flatten_parameters()
             self.net.zero_grad()
-            log.info("Task %s is training..." % (str(task[1]['qid'])))
+            # log.info("Task %s is training..." % (str(task[1]['qid'])))
             # Establish support set.
             support_set = self.establish_support_set(task, self.steps, self.weak_flag, self.train_data_support_944K)
 
@@ -1017,7 +1017,7 @@ class MetaLearner(object):
             skipped_samples += outer_skipped_samples
             true_reward_argmax_batch.extend(true_reward_argmax_step)
             true_reward_sample_batch.extend(true_reward_sample_step)
-            # log.info("Epoch %d, Batch %d, task %s is trained!" % (epoch_count, batch_count, str(task[1]['qid'])))
+            log.info("Epoch %d, Batch %d, task %s is trained!" % (epoch_count, batch_count, str(task[1]['qid'])))
         meta_losses = torch.sum(torch.stack(task_losses))
         return meta_losses, grads_list, total_samples, skipped_samples, true_reward_argmax_batch, true_reward_sample_batch
 
@@ -1045,7 +1045,7 @@ class MetaLearner(object):
             self.net.encoder.flatten_parameters()
             self.net.decoder.flatten_parameters()
             self.net.zero_grad()
-            log.info("Task %s for reptile is training..." % (str(task[1]['qid'])))
+            # log.info("Task %s for reptile is training..." % (str(task[1]['qid'])))
             # Establish support set.
             # If random_flag==True, randomly select support samples in the same question category.
             if random:
@@ -1102,7 +1102,7 @@ class MetaLearner(object):
             skipped_samples += outer_skipped_samples
             true_reward_argmax_batch.extend(true_reward_argmax_step)
             true_reward_sample_batch.extend(true_reward_sample_step)
-            # log.info("Epoch %d, Batch %d, task %s is trained!" % (epoch_count, batch_count, str(task[1]['qid'])))
+            log.info("Epoch %d, Batch %d, task %s is trained!" % (epoch_count, batch_count, str(task[1]['qid'])))
         meta_losses = torch.sum(torch.stack(task_losses))
         return meta_losses, running_vars, total_samples, skipped_samples, true_reward_argmax_batch, true_reward_sample_batch
 
