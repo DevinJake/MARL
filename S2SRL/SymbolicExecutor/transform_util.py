@@ -69,7 +69,7 @@ def list2dict(list):
     if len(set_temp) == 1:
         for action, parameter_temp in zip(action_list, temp_list):
             final_list.append({action: parameter_temp})
-    print("final_list", final_list)
+    # print("final_list", final_list)
     return final_list
 
 def list2dict_webqsp(list):
