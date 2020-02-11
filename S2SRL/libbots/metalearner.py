@@ -953,8 +953,8 @@ class MetaLearner(object):
 
     # Using first-order to approximate the result of 2nd order MAML.
     def first_order_sample(self, tasks, old_param_dict = None, first_order=False, dial_shown=True, epoch_count=0, batch_count=0):
-        """Sample trajectories (before and after the update of the parameters)
-        for all the tasks `tasks`.
+        """
+        Sample trajectories (before and after the update of the parameters) for all the tasks `tasks`.
         Here number of tasks is 1.
         """
         task_losses = []
@@ -985,7 +985,7 @@ class MetaLearner(object):
                 skipped_samples += inner_skipped_samples
                 true_reward_argmax_batch.extend(true_reward_argmax_step)
                 true_reward_sample_batch.extend(true_reward_sample_step)
-                log.info("        Epoch %d, Batch %d, support sample %s is trained!" % (epoch_count, batch_count, str(step_sample[1]['qid'])))
+                # log.info("        Epoch %d, Batch %d, support sample %s is trained!" % (epoch_count, batch_count, str(step_sample[1]['qid'])))
                 # Inner update.
                 inner_loss.backward()
                 # To conduct a gradient ascent to minimize the loss (which is to maximize the reward).
@@ -1017,7 +1017,7 @@ class MetaLearner(object):
             skipped_samples += outer_skipped_samples
             true_reward_argmax_batch.extend(true_reward_argmax_step)
             true_reward_sample_batch.extend(true_reward_sample_step)
-            log.info("Epoch %d, Batch %d, task %s is trained!" % (epoch_count, batch_count, str(task[1]['qid'])))
+            # log.info("Epoch %d, Batch %d, task %s is trained!" % (epoch_count, batch_count, str(task[1]['qid'])))
         meta_losses = torch.sum(torch.stack(task_losses))
         return meta_losses, grads_list, total_samples, skipped_samples, true_reward_argmax_batch, true_reward_sample_batch
 
@@ -1320,7 +1320,7 @@ class MetaLearner(object):
             skipped_samples += inner_skipped_samples
             true_reward_argmax_batch.extend(true_reward_argmax_step)
             true_reward_sample_batch.extend(true_reward_sample_step)
-            log.info("        Epoch %d, Batch %d, support sample %s is trained!" % (epoch_count, batch_count, str(step_sample[1]['qid'])))
+            # log.info("        Epoch %d, Batch %d, support sample %s is trained!" % (epoch_count, batch_count, str(step_sample[1]['qid'])))
 
             # Get the new parameters after a one-step gradient update
             # Each module parameter is computed as parameter = parameter - step_size * grad.
