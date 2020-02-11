@@ -634,8 +634,8 @@ class MetaLearner(object):
             # Get the highest BLEU score as baseline used in self-critic.
             # If the last parameter is false, it means that the 0-1 reward is used to calculate the accuracy.
             # Otherwise the adaptive reward is used.
-            # argmax_reward = utils.calc_True_Reward(action_tokens, qa_info, self.adaptive)
-            argmax_reward = random.random()
+            argmax_reward = utils.calc_True_Reward(action_tokens, qa_info, self.adaptive)
+            # argmax_reward = random.random()
             true_reward_argmax_step.append(argmax_reward)
 
             # # In this case, the BLEU score is so high that it is not needed to train such case with RL.
@@ -680,8 +680,8 @@ class MetaLearner(object):
 
                 # If the last parameter is false, it means that the 0-1 reward is used to calculate the accuracy.
                 # Otherwise the adaptive reward is used.
-                # sample_reward = utils.calc_True_Reward(action_tokens, qa_info, self.adaptive)
-                sample_reward = random.random()
+                sample_reward = utils.calc_True_Reward(action_tokens, qa_info, self.adaptive)
+                # sample_reward = random.random()
                 true_reward_sample_step.append(sample_reward)
 
                 if not dial_shown:

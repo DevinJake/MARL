@@ -35,8 +35,8 @@ if __name__ == "__main__":
     # # command line parameters
     # # -a=True means using adaptive reward to train the model. -a=False is using 0-1 reward.
     # sys.argv = ['train_maml_true_reward.py', '--cuda', '-l=../data/saves/rl_even_TR_batch8_1%/truereward_0.739_29.dat', '-n=maml_1%_batch8_att=0_test', '-s=5', '-a=0', '--att=0', '--lstm=1', '--fast-lr=0.1', '--meta-lr=1e-4', '--steps=5', '--batches=1', '--weak=1']
-    sys.argv = ['train_maml_retriever_joint.py', '-l=../data/saves/maml_att=0_newdata2k_reptile_1task/epoch_020_0.784_0.741.dat',
-                '-n=maml_att=0_newdata2k_reptile_retriever_joint', '--cuda', '-s=5', '-a=0', '--att=0', '--lstm=1', '--fast-lr=1e-4',
+    sys.argv = ['train_maml_retriever_joint.py', '-l=../data/saves/rl_even_TR_batch8_1%/truereward_0.739_29.dat',
+                '-n=maml_newdata2k_reptile_retriever_joint', '--cuda', '-s=5', '-a=0', '--att=0', '--lstm=1', '--fast-lr=1e-4',
                 '--meta-lr=1e-4', '--steps=5', '--batches=1', '--weak=1', '--embed-grad', '--beta=0.1', '--supportsets=5', '-retrieverl=../data/saves/retriever/AdaBound_DocEmbed_QueryEmbed_epoch_140_4.306.dat']
     parser = argparse.ArgumentParser()
     parser.add_argument("--cuda", action='store_true', default=False, help="Enable cuda")
@@ -292,7 +292,7 @@ if __name__ == "__main__":
                 argmax_reward_sum += float(utils.calc_True_Reward(action_tokens, test_task[1], False))
                 # argmax_reward_sum += random.random()
                 argmax_reward_count += 1
-            true_reward_test =  float(argmax_reward_sum) / float(argmax_reward_count)
+            true_reward_test = float(argmax_reward_sum) / float(argmax_reward_count)
 
             # # The parameters are stored after each epoch.
             if best_true_reward is None or best_true_reward < true_reward_test:
