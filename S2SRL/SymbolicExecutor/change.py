@@ -157,6 +157,44 @@ def list2dict(list):
 
     return final_list
 
+def list2dict_webqsp(list):
+    final_list = []
+    temp_list = []
+    new_list = []
+    for a in list:
+        if (a == "("):
+            new_list = []
+            continue
+        if (a == ")"):
+            if ("-" in new_list):
+                new_list[new_list.index("-") + 1] = "-" + new_list[new_list.index("-") + 1]
+                new_list.remove("-")
+            if (new_list == []):
+                new_list = ["", "", ""]
+            if (len(new_list) == 1):
+                new_list = [new_list[0], "", ""]
+            if ("&" in new_list):
+                new_list = ["&", "", ""]
+            if ("-" in new_list):
+                new_list = ["-", "", ""]
+            if ("|" in new_list):
+                new_list = ["|", "", ""]
+            temp_list.append(new_list)
+            continue
+        if not a.startswith("A"):
+            # if a.startswith("E"):  a = "Q17"
+            # if a.startswith("T"):  a = "Q17"
+            new_list.append(a)
+
+    i = 0
+    for a in list:
+        if (a.startswith("A")):
+            final_list.append({a: temp_list[i]})
+            # temp_dict[a] = temp_list[i]
+            i += 1
+
+    return final_list
+
 
 if __name__ == "__main__":
     # QuantitativeReasoning(Count)(All)

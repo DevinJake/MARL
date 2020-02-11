@@ -11,7 +11,7 @@ def get_id(idx):
 from flask import Flask, request, jsonify
 app = Flask(__name__)
 # Remote Server
-# post_url = "http://10.201.34.3:5001/post"
+# post_url = "http://10.201.34.3:5002/post"
 # # local server
 post_url = "http://127.0.0.1:5001/post"
 
@@ -123,7 +123,7 @@ class Symbolics_WebQSP():
                         self.answer = temp_result
                         self.temp_bool_dict = temp_result
                     except:
-                        print('ERROR! The action is Select(%s,%s,%s).' %(e,r,t))
+                        print('ERROR! The action is Select_e(%s,%s,%s).' %(e,r,t))
                     finally:
                         self.print_answer()
                 # A3: filter answer
@@ -151,31 +151,31 @@ class Symbolics_WebQSP():
                         print('ERROR! The action is filter_not_equal(%s,%s,%s).' % (e, r, t))
                     finally:
                         self.print_answer()
-                # # A6: GreaterThan(e)
-                # elif ("A6" in symbolic):
-                #     try:
-                #         self.answer = self.greater_than(e,r,t)
-                #     except:
-                #         print('ERROR! The action is GreaterThan(%s,%s,%s).' % (e,r,t))
-                #     finally:
-                #         self.print_answer()
-                # # A7: LessThan(e)
-                # elif ("A7" in symbolic):
-                #     try:
-                #         self.answer = self.less_than(e,r,t)
-                #     except:
-                #         print('ERROR! The action is LessThan(%s,%s,%s).' % (e,r,t))
-                #     finally:
-                #         self.print_answer()
-                # # A9: Union(e，r，t)
-                # elif ("A9" in symbolic):
-                #     try:
-                #         self.answer = self.union(e, r, t)
-                #     except:
-                #         print('ERROR! The action is Union(%s,%s,%s).' % (e,r,t))
-                #     finally:
-                #         self.print_answer()
-                # # A8: Inter(e，r，t)
+                # A6: GreaterThan(e)
+                elif ("A6" in symbolic):
+                    try:
+                        self.answer = self.greater_than(e, r, t)
+                    except:
+                        print('ERROR! The action is GreaterThan(%s,%s,%s).' % (e,r,t))
+                    finally:
+                        self.print_answer()
+                # A7: LessThan(e)
+                elif ("A7" in symbolic):
+                    try:
+                        self.answer = self.less_than(e, r, t)
+                    except:
+                        print('ERROR! The action is LessThan(%s,%s,%s).' % (e,r,t))
+                    finally:
+                        self.print_answer()
+                # A8: Union(e，r，t)
+                elif ("A8" in symbolic):
+                    try:
+                        self.answer = self.union(e, r, t)
+                    except:
+                        print('ERROR! The action is Union(%s,%s,%s).' % (e,r,t))
+                    finally:
+                        self.print_answer()
+                # # A9: Inter(e，r，t)
                 # elif ("A8" in symbolic):
                 #     try:
                 #         self.answer = self.inter(e, r, t)
@@ -353,6 +353,7 @@ class Symbolics_WebQSP():
                 jsonpost = json.dumps(json_pack)
                 # result_content = requests.post(post_url,json=json_pack)
                 # print(result_content)
+                #print(jsonpost)
                 content, content_result = requests.post(post_url, json=jsonpost).json()['content']
                 if content is not None and content_result == 0:
                     content = set(content)
@@ -395,7 +396,7 @@ class Symbolics_WebQSP():
 
 
     def select_max_as(self, e, r, t):
-        if e == "" or t == "" or r != "":
+        if e == "" or t == "" or r != "" or e not in self.answer:
             return {}
         max = -1
         for item in self.answer[e]:
@@ -463,7 +464,10 @@ class Symbolics_WebQSP():
                 if '?' in e and t != '?x':
                     json_pack = dict()
                     json_pack['op'] = "joint"
-                    json_pack['e'] = list(self.answer[e])
+                    if e in self.answer:
+                        json_pack['e'] = list(self.answer[e])
+                    else:
+                        json_pack['e'] = []
                     json_pack['r'] = r
                     json_pack['t'] = t
                     jsonpost = json.dumps(json_pack)
@@ -479,7 +483,10 @@ class Symbolics_WebQSP():
                     # print(e, self.answer[e])
                     json_pack = dict()
                     json_pack['op'] = "get_joint_answer"
-                    json_pack['e'] = list(self.answer[e])
+                    if e in self.answer:
+                        json_pack['e'] = list(self.answer[e])
+                    else:
+                        json_pack['e'] = []
                     json_pack['r'] = r
                     jsonpost = json.dumps(json_pack)
                     # result_content = requests.post(post_url,json=json_pack)
@@ -507,7 +514,10 @@ class Symbolics_WebQSP():
                 if "?" in e:
                     json_pack = dict()
                     json_pack['op'] = "get_filter_answer"
-                    json_pack['e'] = list(self.answer[e])
+                    if e in self.answer:
+                        json_pack['e'] = list(self.answer[e])
+                    else:
+                        json_pack['e'] = []
                     json_pack['r'] = r
                     json_pack['t'] = t
                     jsonpost = json.dumps(json_pack)
@@ -632,7 +642,7 @@ class Symbolics_WebQSP():
         return [k for k in self.answer if len(self.answer[k]) < N]
 
     def union(self, e, r, t):
-        #print("A9:", e, r, t)
+        #print("A8:", e, r, t)
         if e == "": return {}
         if not e.startswith("Q"): return {}
         answer_dict = self.answer
@@ -690,8 +700,11 @@ class Symbolics_WebQSP():
 
     # equal, or equal
     def filter_or_equal(self, e, r, t):
-        self.answer[e].add(t)
-        return self.answer[e]
+        if e in self.answer[e]:
+            self.answer[e].add(t)
+            return self.answer[e]
+        else:
+            return []
 
     def count(self,e= None):
         #print("A11:Count")
@@ -790,7 +803,10 @@ class Symbolics_WebQSP():
                 if "?" in e:
                     json_pack = dict()
                     json_pack['op'] = "execute_select_oper_date_lt"
-                    json_pack['e'] = list(self.answer[e])
+                    if e in self.answer:
+                        json_pack['e'] = list(self.answer[e])
+                    else:
+                        json_pack['e'] = []
                     json_pack['date'] = date(json_pack)
                     jsonpost = json.dumps(json_pack)
                     content, content_result = requests.post(post_url, json=jsonpost).json()['content']
@@ -815,7 +831,10 @@ class Symbolics_WebQSP():
                 if "?" in e:
                     json_pack = dict()
                     json_pack['op'] = "execute_select_oper_date_lt"
-                    json_pack['set_date'] = list(self.answer[e])
+                    if e in self.answer:
+                        json_pack['set_date'] = list(self.answer[e])
+                    else:
+                        json_pack['set_date'] = []
                     json_pack['date'] = date(json_pack)
                     jsonpost = json.dumps(json_pack)
                     content, content_result = requests.post(post_url, json=jsonpost).json()['content']
@@ -840,7 +859,10 @@ class Symbolics_WebQSP():
                 if e == 'VARIABLE':
                     json_pack = dict()
                     json_pack['op'] = "execute_select_oper_date_gt"
-                    json_pack['set_date'] = list(self.answer[e])
+                    if e in self.answer:
+                        json_pack['set_date'] = list(self.answer[e])
+                    else:
+                        json_pack['set_date'] = []
                     json_pack['date'] = date
                     jsonpost = json.dumps(json_pack)
                     content, content_result = requests.post(post_url, json=jsonpost).json()['content']
@@ -865,7 +887,10 @@ class Symbolics_WebQSP():
                 if "?" in e:
                     json_pack = dict()
                     json_pack['op'] = "execute_select_oper_date_gt"
-                    json_pack['e'] = list(self.answer[e])
+                    if e in self.answer:
+                        json_pack['e'] = list(self.answer[e])
+                    else:
+                        json_pack['e'] = []
                     json_pack['date'] = date
                     jsonpost = json.dumps(json_pack)
                     content, content_result = requests.post(post_url, json=jsonpost).json()['content']
@@ -957,7 +982,7 @@ def processSparql(sparql_str, id="empty"):
                             if action.e == s or action.t == s:  # already has variable
                                 action_type = "A4"
                         # special for webqsp: swap s and t ,A3->A1 "6" means single action_seq
-                        print(len(untreated_list), "length of untreated_list")
+                        # print(len(untreated_list), "length of untreated_list")
                         if len(untreated_list) == 6:
                             action_type = "A1"
                             temp = s
@@ -1149,10 +1174,10 @@ def calc_01_reward(answer, true_answer):
         return true_reward
 
 w_1 = 0.2
-def calc_01_reward_type(target_value, gold_entities_set, type = "jaccard"):
+def calc_01_reward_type(target_value, gold_entities_set, type = "f1"):
     true_reward = 0.0
+    intersec = set(target_value).intersection(set(gold_entities_set))
     if type == "jaccard":
-        intersec = set(target_value).intersection(set(gold_entities_set))
         union = set([])
         union.update(target_value)
         union.update(gold_entities_set)
@@ -1173,27 +1198,29 @@ def calc_01_reward_type(target_value, gold_entities_set, type = "jaccard"):
 
 if __name__ == "__main__":
     print("start symbolics_webqsp")
-    # local_sparql = "PREFIX ns: <http://rdf.freebase.com/ns/>\nSELECT DISTINCT ?x\nWHERE {\nFILTER (?x != ns:m.01_2n)\nFILTER (!isLiteral(?x) OR lang(?x) = '' OR langMatches(lang(?x), 'en'))\nns:m.01_2n ns:tv.tv_program.regular_cast ?y .\n?y ns:tv.regular_tv_appearance.actor ?x .\n?y ns:tv.regular_tv_appearance.character ns:m.015lwh .\n}\n"
-    # seq = processSparql(local_sparql)
-    # print(seq)
-    # symbolic_exe = Symbolics_WebQSP(seq)
-    # answer = symbolic_exe.executor()
-    # print("answer test1: ", answer)
-
-
-    # seq74 =[
-    #         {'A1': ['m.0fjp3', 'sports.sports_championship.events', '?x']},
-    #     ]
-    # symbolic_exe = Symbolics_WebQSP(seq74)
-    # answer = symbolic_exe.executor()
-    # print("answer 74: ", answer)
+    local_sparql = "PREFIX ns: <http://rdf.freebase.com/ns/>\nSELECT DISTINCT ?x\nWHERE {\nFILTER (?x != ns:m.01_2n)\nFILTER (!isLiteral(?x) OR lang(?x) = '' OR langMatches(lang(?x), 'en'))\nns:m.01_2n ns:tv.tv_program.regular_cast ?y .\n?y ns:tv.regular_tv_appearance.actor ?x .\n?y ns:tv.regular_tv_appearance.character ns:m.015lwh .\n}\n"
+    seq = processSparql(local_sparql)
+    print(seq)
+    symbolic_exe = Symbolics_WebQSP(seq)
+    answer = symbolic_exe.executor()
+    print("answer test1: ", answer)
 
     seq74 =[
-            {'A1': ['m.024v2j', 'people.person.parents', '?x']},
+            {'A1': ['m.0fq2vj2', 'type.object.name', '?y']},
         ]
     symbolic_exe = Symbolics_WebQSP(seq74)
     answer = symbolic_exe.executor()
     print("answer 74: ", answer)
+
+    seq_3496 =[
+            # {'A1': ['m.0b90_r', 'location.statistical_region.places_exported_to', '?y']},
+            # {'A4': ['?y', 'location.imports_and_exports.exported_to', '?x']},
+            {'A1': ['m.0b90_r', 'location.statistical_region.places_imported_from', '?y']},
+            {'A4': ['?y', 'location.imports_and_exports.imported_from', '?x']},
+        ]
+    symbolic_exe = Symbolics_WebQSP(seq_3496)
+    answer = symbolic_exe.executor()
+    print("answer WebQTrn_3496: ", answer)
 
     # Load WebQuestions Semantic Parses
     WebQSPList = []
@@ -1203,67 +1230,6 @@ if __name__ == "__main__":
     true_count = 0
 
     errorlist = []
-
-    # errorfile = "errorlist_small.json"
-    # with open(errorfile, "r", encoding='UTF-8') as webQaTrain:
-    #     load_dictTrain = json.load(webQaTrain)
-    #     mytrainquestions = load_dictTrain
-    #     print(len(mytrainquestions))
-    #     myquestions = mytrainquestions
-    #     print(len(myquestions))
-    #     for q in myquestions:
-    #         question = q["ProcessedQuestion"]
-    #         # answer = q["Parses"][0]["Answers"][0]["AnswerArgument"]
-    #         Answers = []
-    #         id = q["QuestionId"]
-    #         answerList = q["Parses"][0]["Answers"]
-    #         for an in answerList:
-    #             Answers.append(an['AnswerArgument'])
-    #         # print(answer)
-    #         sparql = q["Parses"][0]["Sparql"]
-    #         # print(sparql)
-    #         mypair = Qapair(question, Answers, sparql)
-    #
-    #
-    #         if id == "WebQTest-1822":
-    #         # if True:
-    #             # test seq
-    #             test_sparql = mypair.sparql
-    #             seq = processSparql(test_sparql)
-    #             symbolic_exe = Symbolics_WebQSP(seq)
-    #             answer = symbolic_exe.executor()
-    #             # print("answer: ", answer)
-    #             true_answer = mypair.answer
-    #             # print("true_answer: ", true_answer)
-    #             # print(type(answer))
-    #             try:
-    #                 if compare(answer, true_answer):
-    #                     # print("correct!")
-    #                     true_count += 1
-    #                     WebQSPList_Correct.append(mypair)
-    #                 else:
-    #                     WebQSPList_Incorrect.append(mypair)
-    #                     print("answer", answer)
-    #                     print("seq", seq)
-    #                     print("true_answer", true_answer)
-    #                     print("id", id)
-    #                     errorlist.append(id)
-    #                     json_errorlist.append(q)
-    #                     print(" ")
-    #                     # print('incorrect!')
-    #             except:
-    #                 pass
-    #                 # print('incorrect!')
-    #
-    #             WebQSPList.append(mypair)
-    #     print("%s correct", true_count)
-    #     print (errorlist)
-    #     # 写入转换后的json
-    #     jsondata = json.dumps(json_errorlist, indent=1)
-    #     fileObject = open('errorlist_small_2.json', 'w')
-    #     fileObject.write(jsondata)
-    #     fileObject.close()
-
     with open("WebQSP.train.json", "r", encoding='UTF-8') as webQaTrain:
         with open("WebQSP.test.json", "r", encoding='UTF-8') as webQaTest:
             load_dictTrain = json.load(webQaTrain)
@@ -1276,6 +1242,7 @@ if __name__ == "__main__":
             # myquestions = mytrainquestions[0:9] + mytestquestions[0:9]
             print(len(myquestions))
 
+            process_questions = mytrainquestions
             # total rewards
             total_reward = 0
             test_count = 0
@@ -1283,9 +1250,8 @@ if __name__ == "__main__":
             total_reward_precision = 0
             total_reward_recall = 0
 
-            for q in myquestions:
+            for q in process_questions:
                 question = q["ProcessedQuestion"]
-                # answer = q["Parses"][0]["Answers"][0]["AnswerArgument"]
                 Answers = []
                 id = q["QuestionId"]
                 answerList = q["Parses"][0]["Answers"]
@@ -1294,7 +1260,7 @@ if __name__ == "__main__":
                 sparql = q["Parses"][0]["Sparql"]
                 mypair = Qapair(question, Answers, sparql)
 
-                # if id == "WebQTest-1822": # test one
+                # if id == "WebQTrn-194":  # test one
                 if True: # test all
                     # test seq
                     true_answer = mypair.answer
@@ -1308,7 +1274,7 @@ if __name__ == "__main__":
                         key = "?x"
                         if key in answer:
                             res_answer = answer[key]
-                            reward = calc_01_reward_type(res_answer, true_answer)
+                            reward = calc_01_reward_type(res_answer, true_answer, "f1")
                             reward_jaccard = calc_01_reward_type(res_answer, true_answer, "jaccard")
                             reward_recall = calc_01_reward_type(res_answer, true_answer, "recall")
                             reward_precision = calc_01_reward_type(res_answer, true_answer, "precision")
@@ -1340,15 +1306,15 @@ if __name__ == "__main__":
                                 relation_mask = dict()
                                 type_mask = dict()
                                 for e in entity:
-                                    dict_entity = {e : "ENTITY{0}".format(e_index)}
+                                    dict_entity = {e: "ENTITY{0}".format(e_index)}
                                     entity_mask.update(dict_entity)
                                     e_index += 1
                                 for r in relation:
-                                    dict_relation = {r : "RELATION{0}".format(r_index)}
+                                    dict_relation = {r: "RELATION{0}".format(r_index)}
                                     relation_mask.update(dict_relation)
                                     r_index += 1
                                 for t in type:
-                                    dict_type = {t : "TYPE{0}".format(t_index)}
+                                    dict_type = {t: "TYPE{0}".format(t_index)}
                                     type_mask.update(dict_type)
                                     t_index += 1
                                 mask_action_sequence_list = []
@@ -1380,7 +1346,7 @@ if __name__ == "__main__":
                                 # print(question)
                                 # print(answer)
                                 WebQSPList_Correct.append(correct_item)
-                            else:
+                            elif reward == 0.0:
                                 print('incorrect!', reward)
                                 WebQSPList_Incorrect.append(mypair)
                                 print("answer", answer)
@@ -1403,21 +1369,24 @@ if __name__ == "__main__":
 
                 WebQSPList.append(mypair)
 
-            mean_reward_jaccard = total_reward_jaccard / test_count
-            mean_reward_recall = total_reward_recall / test_count
-            mean_reward_precision = total_reward_precision / test_count
+            questions_count = len(process_questions)
+            mean_reward_jaccard = total_reward_jaccard / questions_count
+            mean_reward_recall = total_reward_recall / questions_count
+            mean_reward_precision = total_reward_precision / questions_count
+            mean_reward = total_reward / questions_count
             print("mean_reward_jaccard: ", mean_reward_jaccard)
             print("mean_reward_recall: ", mean_reward_recall)
             print("mean_reward_precision: ", mean_reward_precision)
+            print("mean_reward_f1: ", mean_reward)
             print("{0} pairs correct".format(true_count))
             print(errorlist)
 
             # # 写入转换后的json
             # jsondata = json.dumps(json_errorlist, indent=1)
-            # fileObject = open('errorlist_full.json', 'w')
+            # fileObject = open('errorlist_zero_full.json', 'w')
             # fileObject.write(jsondata)
             # fileObject.close()
-            #
+
             # jsondata = json.dumps(WebQSPList_Correct, indent=1, default=WebQSP.obj_2_json)
             # fileObject = open('right_answer_reorder_mask.json', 'w')
             # fileObject.write(jsondata)

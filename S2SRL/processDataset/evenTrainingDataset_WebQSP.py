@@ -32,20 +32,22 @@ special_characters = {'(',')','-','|','&'}
 # Get the training processDataset and test processDataset for seq2seq (one question to one action ).
 def getTrainingDatasetForPytorch(percentage):
 
-    path = '../../data/auto_QA_data/mask_even_' + percentage + '/PT_train.question'
+    path = '../../data/webqsp_data/RL_mask_even_' + percentage + '/PT_train.question'
     fwTrainQ = open(path, 'w', encoding="UTF-8")
-    path = '../../data/auto_QA_data/mask_even_' + percentage + '/PT_train.action'
+    path = '../../data/webqsp_data/RL_mask_even_' + percentage + '/PT_train.action'
     fwTrainA = open(path, 'w', encoding="UTF-8")
-    path = '../../data/auto_QA_data/mask_even_' + percentage + '/PT_test.question'
+    path = '../../data/webqsp_data/RL_mask_even_' + percentage + '/PT_test.question'
     fwTestQ = open(path, 'w', encoding="UTF-8")
-    path = '../../data/auto_QA_data/mask_even_' + percentage + '/PT_test.action'
+    path = '../../data/webqsp_data/RL_mask_even_' + percentage + '/PT_test.action'
     fwTestA = open(path, 'w', encoding="UTF-8")
-    with open("../../data/auto_QA_data/WebQSP_ANNOTATIONS_test.json", 'r', encoding="UTF-8") as load_f:
+    # with open("../../data/webqsp_data/WebQSP_ANNOTATIONS_test.json", 'r', encoding="UTF-8") as load_f:
+    with open("../../data/webqsp_data/WebQSP_ANNOTATIONS_subtest.json", 'r', encoding="UTF-8") as load_f:
         train_action_string_list, test_action_string_list, train_question_string_list, test_question_string_list = list(), list(), list(), list()
         dict_list = json.load(load_f)
-        random.seed(SEED)
-        random.shuffle(dict_list)
+        # random.seed(SEED)
+        # random.shuffle(dict_list)
         for item in dict_list:
+            print("item", item)
             key = list(dict(item).keys())[0]
             value = list(dict(item).values())[0]
             try:
@@ -273,11 +275,11 @@ def getTrainingDatasetForRl(percentage):
 
 # Get the training processDataset and test processDataset for REINFORCE with True Reward (one question with one answer).
 def getTrainingDatasetForRlWithTrueReward(percentage, SIZE):
-    path = '../../data/auto_QA_data/mask_even_' + percentage + '/RL_train_TR_sub.question'
+    path = '../../data/webqsp_data/RL_mask_even_' + percentage + '/RL_train_TR_sub_webqsp.question'
     fwTrainQ = open(path, 'w', encoding="UTF-8")
-    path = '../../data/auto_QA_data/mask_even_' + percentage + '/RL_test_TR_sub.question'
+    path = '../../data/webqsp_data/RL_mask_even_' + percentage + '/RL_test_TR_sub_webqsp.question'
     fwTestQ = open(path, 'w', encoding="UTF-8")
-    with open("../../data/auto_QA_data/WebQSP_ANNOTATIONS_test.json", 'r', encoding="UTF-8") as load_f:
+    with open("../../data/webqsp_data/WebQSP_ANNOTATIONS_subtrain.json", 'r', encoding="UTF-8") as load_f:
         dict_list = json.load(load_f)
         dict_dict = dict()
         random.seed(SEED)
@@ -294,8 +296,8 @@ def getTrainingDatasetForRlWithTrueReward(percentage, SIZE):
             if len(orig_response) > 0 and len(question) >0:
                 dict_dict[key] = value
     dict_train_list, dict_test_list = {}, {}
-    # train_size = int(len(dict_list))
-    train_size = int(len(dict_list) * 0.95)
+    train_size = int(len(dict_list))
+    # train_size = int(len(dict_list) * 0.95)
     temp_count = 0
     for key,value in dict_dict.items():
         if temp_count < train_size:

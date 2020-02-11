@@ -456,6 +456,11 @@ def get944k(path):
         dict944k = json.load(CSQA_List)
     return dict944k
 
+def get_webqsp(path):
+    with open(path, "r", encoding='UTF-8') as WEBQSP_List:
+        dict_webqsp = json.load(WEBQSP_List)
+    return dict_webqsp
+
 def get_docID_indices(order_list):
     did_indices = {}
     d_list = []
