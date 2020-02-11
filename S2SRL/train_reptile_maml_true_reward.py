@@ -22,7 +22,7 @@ TRAIN_RATIO = 0.985
 GAMMA = 0.05
 
 DIC_PATH = '../data/auto_QA_data/share.question'
-TRAIN_QUESTION_ANSWER_PATH = '../data/auto_QA_data/mask_even_1.0%/RL_train_TR_new_2k.question'
+TRAIN_QUESTION_ANSWER_PATH = '../data/auto_QA_data/mask_even_1.0%/RL_train_TR_new_10.question'
 TRAIN_944K_QUESTION_ANSWER_PATH = '../data/auto_QA_data/CSQA_DENOTATIONS_full_944K.json'
 DICT_944K = '../data/auto_QA_data/CSQA_result_question_type_944K.json'
 DICT_944K_WEAK = '../data/auto_QA_data/CSQA_result_question_type_count944K.json'
@@ -33,6 +33,8 @@ log = logging.getLogger("train")
 
 # Calculate 0-1 sparse reward for samples in test dataset to judge the performance of the model.
 def run_test(test_data, net, rev_emb_dict, end_token, device="cuda"):
+    net.encoder.flatten_parameters()
+    net.decoder.flatten_parameters()
     argmax_reward_sum = 0.0
     argmax_reward_count = 0.0
     # p1 is one sentence, p2 is sentence list.
@@ -51,10 +53,11 @@ def run_test(test_data, net, rev_emb_dict, end_token, device="cuda"):
             if temp_idx in rev_emb_dict and rev_emb_dict.get(temp_idx) != '#END':
                 action_tokens.append(str(rev_emb_dict.get(temp_idx)).upper())
         # Using 0-1 reward to compute accuracy.
-        argmax_reward_sum += float(utils.calc_True_Reward(action_tokens, p2, False))
-        # argmax_reward_sum += random.random()
+        # argmax_reward_sum += float(utils.calc_True_Reward(action_tokens, p2, False))
+        argmax_reward_sum += random.random()
         argmax_reward_count += 1
     return float(argmax_reward_sum) / float(argmax_reward_count)
+
 
 if __name__ == "__main__":
     logging.basicConfig(format="%(asctime)-15s %(levelname)s %(message)s", level=logging.INFO)
@@ -62,7 +65,7 @@ if __name__ == "__main__":
     # # -a=True means using adaptive reward to train the model. -a=False is using 0-1 reward.
     # sys.argv = ['train_maml_true_reward.py', '--cuda', '-l=../data/saves/rl_even_TR_batch8_1%/truereward_0.739_29.dat', '-n=maml_1%_batch8_att=0_test', '-s=5', '-a=0', '--att=0', '--lstm=1', '--fast-lr=0.1', '--meta-lr=1e-4', '--steps=5', '--batches=1', '--weak=1']
     sys.argv = ['train_reptile_maml_true_reward.py', '-l=../data/saves/rl_even_TR_batch8_1%/truereward_0.739_29.dat',
-                '-n=maml_att=0_newdata2k_reptile', '--cuda', '-s=5', '-a=0', '--att=0', '--lstm=1', '--fast-lr=1e-4',
+                '-n=maml_att=0_newdata2k_reptile_test', '--cuda', '-s=5', '-a=0', '--att=0', '--lstm=1', '--fast-lr=1e-4',
                 '--meta-lr=1e-4', '--steps=5', '--batches=1', '--weak=1', '--embed-grad', '--beta=0.1']
     parser = argparse.ArgumentParser()
     parser.add_argument("--cuda", action='store_true', default=False, help="Enable cuda")
@@ -137,23 +140,23 @@ if __name__ == "__main__":
     log.info("Training data converted, got %d samples", len(train_data))
     log.info("Train set has %d phrases, test %d", len(train_data), len(test_data))
     log.info("Batch size is %d", args.batches)
-    if (args.att):
+    if args.att:
         log.info("Using attention mechanism to train the SEQ2SEQ model...")
     else:
         log.info("Train the SEQ2SEQ model without attention mechanism...")
-    if (args.lstm):
+    if args.lstm:
         log.info("Using LSTM mechanism to train the SEQ2SEQ model...")
     else:
         log.info("Using RNN mechanism to train the SEQ2SEQ model...")
-    if (args.embed_grad):
+    if args.embed_grad:
         log.info("Word embedding in the model will be updated during the training...")
     else:
         log.info("Word embedding in the model will be fixed during the training...")
-    if (args.docembed_grad):
+    if args.docembed_grad:
         log.info("Document embedding in the retriever model will be updated during the training...")
     else:
         log.info("Document embedding in the retriever model will be fixed during the training...")
-    if (args.query_embed):
+    if args.query_embed:
         log.info("Using the sum of word embedding to represent the questions during the training...")
     else:
         log.info("Using the document_emb which is stored in the retriever model to represent the questions...")
@@ -162,7 +165,7 @@ if __name__ == "__main__":
     rev_emb_dict = {idx: word for word, idx in emb_dict.items()}
     # PhraseModel.__init__() to establish a LSTM model.
     net = model.PhraseModel(emb_size=model.EMBEDDING_DIM, dict_size=len(emb_dict), hid_size=model.HIDDEN_STATE_SIZE, LSTM_FLAG=args.lstm, ATT_FLAG=args.att, EMBED_FLAG=args.embed_grad).to(device)
-    # Using cuda.
+    # Using CUDA.
     net.cuda()
     log.info("Model: %s", net)
 
@@ -172,7 +175,7 @@ if __name__ == "__main__":
     # for name, param in net.named_parameters():
     #     print(name, param.shape)
     log.info("Model loaded from %s, continue training in RL mode...", args.load)
-    if (args.adaptive):
+    if args.adaptive:
         log.info("Using adaptive reward to train the REINFORCE model...")
     else:
         log.info("Using 0-1 sparse reward to train the REINFORCE model...")
