@@ -164,7 +164,7 @@ def iterate_batches(data, batch_size):
         yield batch
         ofs += 1
 
-def get_RL_question_action_list(qpath,apath):
+def get_RL_question_action_list(qpath, apath):
     qdict = {}
     adict = {}
     with open(qpath, 'r', encoding="UTF-8") as infile:
