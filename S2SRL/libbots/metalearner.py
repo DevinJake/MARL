@@ -240,7 +240,7 @@ class MetaLearner(object):
         # Support set is none. Use the training date per se as support set.
         # temp_dict = self.retriever_net.get_retriever_net_parameter()
         batch = list()
-        if N==0:
+        if N == 0:
             batch.append(task)
         else:
             key_name, key_weak, question, qid = self.retriever.AnalyzeQuestion(task[1])
@@ -266,7 +266,7 @@ class MetaLearner(object):
             for qid in topNList:
                 if qid in train_data_support_944K:
                     batch.append(train_data_support_944K[qid])
-                if len(batch)==N:
+                if len(batch) == N:
                     break
         return batch
 

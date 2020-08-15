@@ -19,8 +19,8 @@ TRAIN_QUESTION_ANSWER_PATH = '../data/auto_QA_data/mask_even_1.0%/RL_train_TR_ne
 TRAIN_944K_QUESTION_ANSWER_PATH = '../data/auto_QA_data/CSQA_DENOTATIONS_full_944K.json'
 DICT_944K = '../data/auto_QA_data/CSQA_result_question_type_944K.json'
 DICT_944K_WEAK = '../data/auto_QA_data/CSQA_result_question_type_count944K.json'
-POSITIVE_Q_DOCS = '../data/auto_QA_data/retriever_question_documents_pair.json'
 QTYPE_DOC_RANGE = '../data/auto_QA_data/944k_rangeDict.json'
+POSITIVE_Q_DOCS = '../data/auto_QA_data/retriever_question_documents_pair.json'
 TRAINING_SAMPLE_DICT = '../data/auto_QA_data/retriever_training_samples.json'
 
 def get_document_embedding(doc_list, emb_dict, net):
@@ -38,7 +38,7 @@ def get_document_embedding(doc_list, emb_dict, net):
         question_token_embeddings = net.emb(torch.tensor(question_token_indices, requires_grad=False).cuda())
         question_embeddings = torch.mean(question_token_embeddings, 0).tolist()
         d_embed_list.append(question_embeddings)
-        if i%10000 ==0:
+        if i % 10000 == 0:
             print('Transformed %d*10k embeddings!' %(i/10000))
     return d_embed_list
 

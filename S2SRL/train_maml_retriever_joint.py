@@ -86,7 +86,6 @@ if __name__ == "__main__":
     saves_path = os.path.join(SAVES_DIR, args.name)
     os.makedirs(saves_path, exist_ok=True)
 
-    # TODO: In maml, all data points in 944K training dataset will be used. So it is much better to use the dict of 944K training the model from scratch.
     # # List of (question, {question information and answer}) pairs, the training pairs are in format of 1:1.
     phrase_pairs, emb_dict = data.load_data_MAML(QUESTION_PATH=TRAIN_QUESTION_ANSWER_PATH, DIC_PATH=DIC_PATH, max_tokens=MAX_TOKENS)
     log.info("Obtained %d phrase pairs with %d uniq words from %s.", len(phrase_pairs), len(emb_dict), TRAIN_QUESTION_ANSWER_PATH)
