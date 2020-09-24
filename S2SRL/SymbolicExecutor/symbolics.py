@@ -228,7 +228,7 @@ class Symbolics():
             content = "empty"
             try:
                 # content=requests.post("http://127.0.0.1:5000/post",json=json_pack).json()['content']
-                content_json = requests.post("http://10.201.34.3:5000/post", json=json_pack).json()
+                content_json = requests.post("http://10.201.222.115:5566/post", json=json_pack).json()
                 if 'content' in content_json:
                     content = content_json['content']
             except:
@@ -257,7 +257,7 @@ class Symbolics():
             content = set([])
             try:
                 # content = requests.post("http://127.0.0.1:5000/post", json=json_pack).json()['content']
-                content_json = requests.post("http://10.201.34.3:5000/post", json=json_pack).json()
+                content_json = requests.post("http://10.201.222.115:5566/post", json=json_pack).json()
                 if 'content' in content_json:
                     content = content_json['content']
             except:
@@ -296,7 +296,7 @@ class Symbolics():
             json_pack['pre'] = r
             json_pack['obj'] = t
             try:
-                content_json = requests.post("http://10.201.34.3:5000/post", json=json_pack).json()
+                content_json = requests.post("http://10.201.222.115:5566/post", json=json_pack).json()
                 if 'content' in content_json:
                     content = content_json['content']
             except:
