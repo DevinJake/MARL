@@ -3,7 +3,7 @@ import torch
 import torch.nn.functional as F
 
 class RetrieverModel(nn.Module):
-    def __init__(self, emb_size, dict_size, EMBED_FLAG=False, hid1_size = 300, hid2_size = 200, output_size = 128, device='cpu'):
+    def __init__(self, emb_size, dict_size, EMBED_FLAG=False, hid1_size=300, hid2_size=200, output_size=128, device='cpu'):
         # Call __init__ function of PhraseModel's parent class (nn.Module).
         super(RetrieverModel, self).__init__()
         # With :attr:`padding_idx` set, the embedding vector at
