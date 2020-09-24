@@ -104,7 +104,7 @@ if __name__ == "__main__":
 
     model_path = '../data/saves/' + str(args.name) + '/' + str(args.model)
     net.load_state_dict((torch.load(model_path)))
-    log.info("Model loaded from %s, continue testing in MAML first-order mode...", model_path)
+    log.info("Model loaded from %s, continue testing in MAML REPTILE mode...", model_path)
 
     # BEGIN token
     beg_token = torch.LongTensor([emb_dict[data.BEGIN_TOKEN]]).to(device)
