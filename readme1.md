@@ -118,7 +118,35 @@ All the materials required for running the KG sever, training the model, and tes
   We download the file `CSQA_ANNOTATIONS_test.json` from the [data link](https://drive.google.com/drive/folders/17m3KvhAXyJIXd8fdMVUtIoNiilH3FeUH?usp=sharing) and put it into the folder `MARL/data/auto_QA_data/` of the project, which is used to record the ground-truth answers of each question.  
   The result will be stored in the file `MARL/data/auto_QA_data/test_result/maml_reptile.txt`.  
   
- References:  
+ #### References:  
  [1]. Yuncheng Hua, Yuan-Fang Li, Gholamreza Haffari, Guilin Qi, Wei Wu: Retrieve, Program, Repeat: Complex Knowledge Base Question Answering via Alternate Meta-learning. IJCAI 2020: 3679-3686.
+ 
  [2]. Amrita Saha, Vardaan Pahuja, Mitesh M Khapra, Karthik Sankaranarayanan, and Sarath Chandar. 2018. Complex sequential question answering: Towards learning to converse over linked question answer pairs with a knowledge graph. In ThirtySecond AAAI Conference on Artificial Intelligence.
+ 
+ #### Cite as:
+ > Hua, Y. , Li, Y. F. , Haffari, G. , Qi, G. , & Wu, W., 2020. Retrieve, Program, Repeat: Complex Knowledge Base Question Answering via Alternate Meta-learning. In Twenty-Ninth International Joint Conference on Artificial Intelligence and Seventeenth Pacific Rim International Conference on Artificial Intelligence (IJCAI-PRICAI-20).
+ 
+ #### Bibtex:
+ ```
+ @inproceedings{DBLP:conf/ijcai/HuaLHQW20,
+ author    = {Yuncheng Hua and
+               Yuan{-}Fang Li and
+               Gholamreza Haffari and
+               Guilin Qi and
+               Wei Wu},
+ editor    = {Christian Bessiere},
+ title     = {Retrieve, Program, Repeat: Complex Knowledge Base Question Answering
+               via Alternate Meta-learning},
+ booktitle = {Proceedings of the Twenty-Ninth International Joint Conference on
+               Artificial Intelligence, {IJCAI} 2020},
+ pages     = {3679--3686},
+ publisher = {ijcai.org},
+ year      = {2020},
+ url       = {https://doi.org/10.24963/ijcai.2020/509},
+ doi       = {10.24963/ijcai.2020/509},
+ timestamp = {Mon, 20 Jul 2020 12:38:52 +0200},
+ biburl    = {https://dblp.org/rec/conf/ijcai/HuaLHQW20.bib},
+ bibsource = {dblp computer science bibliography, https://dblp.org}
+}
+ ```
  
