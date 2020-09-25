@@ -98,4 +98,4 @@ if __name__ == '__main__':
     global par_dict
     par_dict = pickle.load(open('../data/bfs_data/par_child.pkl', 'rb'))
     print("par_dict Load done!")
-    app.run(host='10.201.32.24', port=5566, use_debugger=True)
+    app.run(host='10.201.222.115', port=5566, use_debugger=True)
