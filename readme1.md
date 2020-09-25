@@ -53,20 +53,35 @@ Now we will talk about how to training and testing our proposed model.
  python server.py
  ``` 
  ## 3. Retriever pre-training.
- (1). Download relevant materials.  
- Firstly, we need some files in folder `MARL/data/auto_QA_data` for pre-training the retriever: `share.question` (vocabulary), `CSQA_DENOTATIONS_full_944K.json` (the file that records the information relevant to all the training questions and is compressed in the Google drive), `CSQA_result_question_type_944K.json`, `CSQA_result_question_type_count944K.json`, `CSQA_result_question_type_count944k_orderlist.json`, and `944k_rangeDict.json` (the files that are used to retrieve the support sets).  
+ Based on the edit-distance and the Jaccard similarity, we retrieved the most similar instances for each question.
+ We treated the retrieved instances as the positive samples to pre-train the retriever (which is a DSSM model) to solve the cold-start problem.  
  
- Also, we need to put a pre-trained model `epoch_002_0.394_0.796.dat` in the folder `MARL/data/saves/maml_batch8_att=0_newdata2k_1storder_1task`, in which the learned word embeddings are stored.
+ (1). Download relevant materials.  
+ Firstly, we need place the following files in the folder `MARL/data/auto_QA_data` for pre-training the retriever: `share.question` (vocabulary), `CSQA_DENOTATIONS_full_944K.json` (the file that records the information relevant to all the training questions and is compressed in the Google drive), `CSQA_result_question_type_944K.json`, `CSQA_result_question_type_count944K.json`, `CSQA_result_question_type_count944k_orderlist.json`, and `944k_rangeDict.json` (the files that are used to retrieve the support sets).  
+ 
+ Also, we need to place a pre-trained model `epoch_002_0.394_0.796.dat` in the folder `MARL/data/saves/maml_batch8_att=0_newdata2k_1storder_1task`, in which the learned word embeddings are stored.
  The embeddings are used to initialize the question embedding by summing and averaging.
  
- All the materials could be downloaded from the the provided [data link](https://drive.google.com/drive/folders/17m3KvhAXyJIXd8fdMVUtIoNiilH3FeUH?usp=sharing).
+ Furthermore, we should place the training dataset `RL_train_TR_new_2k.question` in the folder `MARL/data/auto_QA_data/mask_even_1.0%`.
  
- (2). Pre-training the retriever.  
  We will analyse the question and find the most similar instances from the training dataset by evaluating the edit-distance and the Jaccard similarity as well.
- The found instances are treated as the positive samples for each question, and are used to pre-train the retriever.
+ The found instances are treated as the positive samples for each question, and are used to pre-train the retriever. 
  
+ All the materials could be downloaded from the the provided [data link](https://drive.google.com/drive/folders/17m3KvhAXyJIXd8fdMVUtIoNiilH3FeUH?usp=sharing).
+  
+ (2). Pre-training the retriever.  
+ In the folder `MARL/S2SRL`, we run the python file to pre-train the retriever: 
+ ```
+ python retriever_pretrain.py
+ ```
+ The program will first automatically create the dataset for training the retriever in the files `retriever_question_documents_pair.json` (the positive instances for each training question) and `retriever_training_samples.json` (the training samples for the retriever) in the folder `MARL/data/auto_QA_data`.  
  
+ Also, a model `initial_epoch_000_1.000.dat` will be automatically created in the folder `MARL/data/saves/retriever`.
+ The model is used to store the initialized question embedding.
  
+ Then, the retriever will be learned by using the above files to accomplish the pre-training.
+ The pre-trained retriever models would also be stored in the folder `MARL/data/saves/retriever`.   
+  
  ## 4. Meta-learner & Retriever joint learning.
  (1). Load pre-trained model.  
  We pre-trained a model based on Reinforcement learning, and further trained our MAML model on the basis of the RL model.   
