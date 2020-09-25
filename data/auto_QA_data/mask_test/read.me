@@ -1,2 +1,6 @@
-The dataset is the full-size (15W+) test questions for final test.
-The vocabulary is the same vocab as used in unevenly-distributed mask dataset.
+The full testing dataset has more than 150k questions.
+We processed all the 150k+ testing questions and saved the processed question in the file FINAL_MAML_test.question, which is used for testing.
+Also, we randomly sampled 5 percent of all the testing questions, and stored them in the file SAMPLE_FINAL_MAML_test.question.
+We found that the test result of the sampled testing question approximated that of all the testing questions.
+If the researcher wants to quickly evaluate the performance of the model, we recommend using the sample data set.
+All the files could be downloaded from the [data link](https://drive.google.com/drive/folders/1_3j6QsrLM2Sbq4e79ZpoBfUfkAUnt8iV?usp=sharing).

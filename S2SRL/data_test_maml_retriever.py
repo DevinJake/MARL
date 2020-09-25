@@ -21,7 +21,7 @@ if __name__ == "__main__":
     logging.basicConfig(format="%(asctime)-15s %(levelname)s %(message)s", level=logging.INFO)
 
     # command line parameters for final test
-    sys.argv = ['data_test_maml_retriever.py', '-m=net_epoch_006_0.766_0.741.dat', '-p=sample_final_maml',
+    sys.argv = ['data_test_maml_retriever.py', '-m=net_epoch_006_0.766_0.741.dat', '-p=final_maml',
                 '--n=maml_newdata2k_reptile_retriever_joint', '--cuda', '-s=5', '-a=0', '--att=0', '--lstm=1',
                 '--fast-lr=1e-4', '--meta-lr=1e-4', '--steps=5', '--batches=1', '--weak=1', '--embed-grad',  '--beta=0.1', '--supportsets=5', '-retrieverl=../data/saves/maml_newdata2k_reptile_retriever_joint/retriever_epoch_006_0.775_0.741.dat', '--docembed-grad']
     parser = argparse.ArgumentParser()
