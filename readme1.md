@@ -24,13 +24,11 @@ Now we will talk about how to training and testing our proposed model.
 ## 1. Experiment environment.
  (1). Python = 3.6.4  
  (2). PyTorch = 1.1.0  
- (3). TensorFlow = 1.7.0  
+ (3). TensorFlow = latest  
  (4). tensorboardX = 2.0  
  (5). ptan = 0.4  
  (6). flask = 1.1.1  
  (7). requests = 2.22.0  
-  
-All the materials required for running the KG sever, training the model, and testing could be found from the [data link](https://drive.google.com/drive/folders/17m3KvhAXyJIXd8fdMVUtIoNiilH3FeUH?usp=sharing).  
   
 ## 2. Accessing knowledge graph.
  (1). Assign the IP address and the port number for the KG server.    
@@ -42,7 +40,7 @@ All the materials required for running the KG sever, training the model, and tes
  ```
 
  Manually assign the IP address and the port number in the file of the project `MARL/S2SRL/SymbolicExecutor/symbolics.py`.  
- Insert the host address and the post number for your server in the following three lines of the code in the `symbolics.py`: 
+ Insert the host address and the post number for your server in the following ***three*** lines of the code in the `symbolics.py`: 
  ```
  content_json = requests.post("http://**.***.**.**:####/post", json=json_pack).json()
  ```
@@ -54,8 +52,22 @@ All the materials required for running the KG sever, training the model, and tes
  ```
  python server.py
  ``` 
+ ## 3. Retriever pre-training.
+ (1). Download relevant materials.  
+ Firstly, we need some files in folder `MARL/data/auto_QA_data` for pre-training the retriever: `share.question` (vocabulary), `CSQA_DENOTATIONS_full_944K.json` (the file that records the information relevant to all the training questions and is compressed in the Google drive), `CSQA_result_question_type_944K.json`, `CSQA_result_question_type_count944K.json`, `CSQA_result_question_type_count944k_orderlist.json`, and `944k_rangeDict.json` (the files that are used to retrieve the support sets).  
  
- ## 3. MAML training.
+ Also, we need to put a pre-trained model `epoch_002_0.394_0.796.dat` in the folder `MARL/data/saves/maml_batch8_att=0_newdata2k_1storder_1task`, in which the learned word embeddings are stored.
+ The embeddings are used to initialize the question embedding by summing and averaging.
+ 
+ All the materials could be downloaded from the the provided [data link](https://drive.google.com/drive/folders/17m3KvhAXyJIXd8fdMVUtIoNiilH3FeUH?usp=sharing).
+ 
+ (2). Pre-training the retriever.  
+ We will analyse the question and find the most similar instances from the training dataset by evaluating the edit-distance and the Jaccard similarity as well.
+ The found instances are treated as the positive samples for each question, and are used to pre-train the retriever.
+ 
+ 
+ 
+ ## 4. Meta-learner & Retriever joint learning.
  (1). Load pre-trained model.  
  We pre-trained a model based on Reinforcement learning, and further trained our MAML model on the basis of the RL model.   
  We could download and uncompress the RL model `truereward_0.739_29.zip` in the folder `MARL/data/saves/rl_even_TR_batch8_1%` from the provided [data link](https://drive.google.com/drive/folders/17m3KvhAXyJIXd8fdMVUtIoNiilH3FeUH?usp=sharing).  
@@ -71,7 +83,7 @@ All the materials required for running the KG sever, training the model, and tes
  ```
  The trained models would be stored in the folder `MARL/data/saves/maml_reptile`.   
  
- ## 4. MAML testing.
+ ## 5. MAML testing.
   (1). Load trained model.  
   The trained models will be stored in the folder `MARL/data/saves/maml_reptile`.  
   We have saved a trained model `epoch_020_0.784_0.741.zip` in this folder, which could lead to the SOTA result.  
