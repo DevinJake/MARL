@@ -8,7 +8,9 @@ import json
 from symbolics import Symbolics
 from transform_util import transformBooleanToString, list2dict
 import logging
-
+log = logging.basicConfig(level = logging.INFO,
+                           filename ='../../data/auto_QA_data/test_result/1%_sample_test_result_MAML.log',
+                           filemode ='w', format = '%(message)s')
 
 def transMask2ActionMAML(state, sample=False):
     predict_path = "../../data/saves/maml_1%_batch8_att=0/"
