@@ -149,6 +149,3 @@ if __name__ == "__main__":
     #     val = kb.select('Q1348664', 'P749', 'Q43229')[e]
     #     for v in val:
     #         print(v, kb.is_A(v))
-        
-        
-        

@@ -86,7 +86,6 @@ if __name__ == "__main__":
     end_token = emb_dict[data.END_TOKEN]
     # Transform token into index in dictionary.
     test_data = data.encode_phrase_pairs_RLTR(phrase_pairs, emb_dict)
-    # # list of (seq1, [seq*]) pairs，把训练对做成1：N的形式；
     # train_data = data.group_train_data(train_data)
     test_data = data.group_train_data_RLTR(test_data)
 
@@ -143,7 +142,6 @@ if __name__ == "__main__":
     token_string_list = list()
     refer_string_list = list()
     batch_count = 0
-    # seq_1是輸入，targets是references，可能有多個；
 
     # The dict stores the initial parameters in the modules.
     old_param_dict = metaLearner.get_net_named_parameter()

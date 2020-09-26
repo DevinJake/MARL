@@ -125,7 +125,6 @@ class Retriever():
         if key_weak in dict_candicate:
             weak_list = dict_candicate[key_weak]
             weak_list_filtered = [x for x in weak_list if len(x) > 0 and list(x.keys())[0] in train_data_944k]
-            # todo: without replacement
             sort_candidate_weak = random.choices(weak_list_filtered, k=N)
             for c_weak in sort_candidate_weak:
                 if len(topNList) == N:

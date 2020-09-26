@@ -90,7 +90,6 @@ def establish_positive_question_documents_pair(MAX_TOKENS):
 
     # Transform token into index in dictionary.
     train_data = data.encode_phrase_pairs_RLTR(phrase_pairs, emb_dict)
-    # # list of (seq1, [seq*]) pairs，把训练对做成1：N的形式；
     # train_data = data.group_train_data(train_data)
     train_data = data.group_train_data_RLTR(train_data)
     train_data_944K = data.encode_phrase_pairs_RLTR(phrase_pairs_944K, emb_dict)

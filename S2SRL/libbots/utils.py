@@ -85,7 +85,7 @@ def calc_True_Reward_webqsp(action_sequence, qa_info, adaptive_flag = False):
 
 w_1 = 0.2
 def calc_01_reward_webqsp(target_value, gold_entities_set, type = "jaccard"):
-    true_reward = 0.0
+    true_reward, intersec = 0.0, 0.0
     if len(gold_entities_set) == 0:
         if len(target_value) == 0:
             return 1.0
@@ -187,12 +187,7 @@ def calc_01_reward(answer, qa_info):
                             right_count += 1
                     return float(right_count)/float(len(response_entities))
 
-'''
-Adaptive reward 是一种partial reward。
-首先看问题类型是不是对的，若不对，则整个reward为0；
-若对，而答案一个都不对，那么就有W_1的reward；
-若type对，答案有一部分也对，再计算不同问题类型的答案正确率（答案是entities的就用F1，答案是boolean的就用准确率，答案是数字的就用s = 1-|T-P|/|T+P+ε|，为R_answer，再乘以权重W_2，这样来计算reward。
-即：reward = R_type * (W_1 + W_2 * R_answer), W_1 + W_2 = 1。'''
+
 def calc_adaptative_reward(answer, qa_info):
     response_entities = qa_info['response_entities'] if 'response_entities' in qa_info.keys() else []
     orig_response = qa_info['orig_response'].strip() if 'orig_response' in qa_info.keys() else ""
