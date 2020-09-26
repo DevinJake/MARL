@@ -3,6 +3,7 @@ Our paper is published in IJCAI 2020[1], which is "Retrieve, Program, Repeat: Co
 We aim to solve the CQA task [2], which is answering factual questions through complex inferring over a realistic-sized KG of millions of entities.  
 We could learn the details of the CQA dataset [here](https://amritasaha1812.github.io/CSQA/download_CQA/).  
 All the materials required for running the KG sever, training the model, and testing in this task could be downloaded from the [data link](https://drive.google.com/drive/folders/17m3KvhAXyJIXd8fdMVUtIoNiilH3FeUH?usp=sharing).  
+We should follow the folder structure in the [data link](https://drive.google.com/drive/folders/17m3KvhAXyJIXd8fdMVUtIoNiilH3FeUH?usp=sharing), and place the files in the corresponding location under the `data` folder.  
 Following this README, we will instruct how to use the relevant data from the data link.    
 
 The questions in the CQA could be categorized into seven groups.  
@@ -21,6 +22,12 @@ The typical examples of these seven question types are displayed in the followin
 ---
 
 Now we will talk about how to training and testing our proposed model.  
+We first clone the project:
+```
+git clone https://github.com/DevinJake/MARL.git
+``` 
+, and we could download a project `MARL`.
+
 ## 1. Experiment environment.
  (1). Python = 3.6.4  
  (2). PyTorch = 1.1.0  
@@ -40,15 +47,15 @@ Now we will talk about how to training and testing our proposed model.
  ```
 
  Manually assign the IP address and the port number in the file of the project `MARL/S2SRL/SymbolicExecutor/symbolics.py`.  
- Insert the host address and the post number for your server in the following ***three*** lines of the code in the `symbolics.py`: 
+ Insert the host address and the post number for your server in the following ***three*** lines in the `symbolics.py`: 
  ```
  content_json = requests.post("http://**.***.**.**:####/post", json=json_pack).json()
  ```
   
  (2). Run the KG server.  
  Download the bfs data `bfs_data.zip` from the provided [data link](https://drive.google.com/drive/folders/17m3KvhAXyJIXd8fdMVUtIoNiilH3FeUH?usp=sharing).   
- We need to uncompress the file `bfs_data.zip` and copy the three pkl files into the folder `MARL/data/bfs_data`.   
- Run the file `MARL/BFS/server.py` to activate the KG server for retrieval: 
+ We need to uncompress the file `bfs_data.zip` and copy the three pkl files into the project folder `MARL/data/bfs_data`.   
+ Run the project file `MARL/BFS/server.py` to activate the KG server for retrieval: 
  ```
  python server.py
  ``` 
@@ -57,12 +64,12 @@ Now we will talk about how to training and testing our proposed model.
  We treated the retrieved instances as the positive samples to pre-train the retriever (which is a DSSM model) to solve the cold-start problem.  
  
  (1). Download relevant materials.  
- Firstly, we need place the following files in the folder `MARL/data/auto_QA_data` for pre-training the retriever: `share.question` (vocabulary), `CSQA_DENOTATIONS_full_944K.json` (the file that records the information relevant to all the training questions and is compressed in the Google drive), `CSQA_result_question_type_944K.json`, `CSQA_result_question_type_count944K.json`, `CSQA_result_question_type_count944k_orderlist.json`, and `944k_rangeDict.json` (the files that are used to retrieve the support sets).  
+ Firstly, we need place the following files in the project folder `MARL/data/auto_QA_data` for pre-training the retriever: `share.question` (vocabulary), `CSQA_DENOTATIONS_full_944K.json` (the file that records the information relevant to all the training questions and is compressed in the Google drive), `CSQA_result_question_type_944K.json`, `CSQA_result_question_type_count944K.json`, `CSQA_result_question_type_count944k_orderlist.json`, and `944k_rangeDict.json` (the files that are used to retrieve the support sets).  
  
- Also, we need to place a pre-trained model `epoch_002_0.394_0.796.dat` in the folder `MARL/data/saves/maml_batch8_att=0_newdata2k_1storder_1task`, in which the learned word embeddings are stored.
+ Also, we need to place a pre-trained model `epoch_002_0.394_0.796.dat` in the project folder `MARL/data/saves/maml_batch8_att=0_newdata2k_1storder_1task`, in which the learned word embeddings are stored.
  The embeddings are used to initialize the question embedding by summing and averaging.
  
- Furthermore, we should place the training dataset `RL_train_TR_new_2k.question` in the folder `MARL/data/auto_QA_data/mask_even_1.0%`.
+ Furthermore, we have processed the training dataset and thus we need to download the file `RL_train_TR_new_2k.question` and place it in the project folder `MARL/data/auto_QA_data/mask_even_1.0%`. 
  
  We will analyse the question and find the most similar instances from the training dataset by evaluating the edit-distance and the Jaccard similarity as well.
  The found instances are treated as the positive samples for each question, and are used to pre-train the retriever. 
@@ -70,47 +77,47 @@ Now we will talk about how to training and testing our proposed model.
  All the materials could be downloaded from the the provided [data link](https://drive.google.com/drive/folders/17m3KvhAXyJIXd8fdMVUtIoNiilH3FeUH?usp=sharing).
   
  (2). Pre-training the retriever.  
- In the folder `MARL/S2SRL`, we run the python file to pre-train the retriever: 
+ In the project folder `MARL/S2SRL`, we run the python file to pre-train the retriever: 
  ```
  python retriever_pretrain.py
  ```
- The program will first automatically create the dataset for training the retriever in the files `retriever_question_documents_pair.json` (the positive instances for each training question) and `retriever_training_samples.json` (the training samples for the retriever) in the folder `MARL/data/auto_QA_data`.  
+ The program will first automatically create the dataset for training the retriever in the files `retriever_question_documents_pair.json` (the positive instances for each training question) and `retriever_training_samples.json` (the training samples for the retriever) in the project folder `MARL/data/auto_QA_data`.  
  
  Also, a model `initial_epoch_000_1.000.dat` will be automatically created in the folder `MARL/data/saves/retriever`.
  The model is used to store the initialized question embedding.
  
  Then, the retriever will be learned by using the above files to accomplish the pre-training.
- The pre-trained retriever models would also be stored in the folder `MARL/data/saves/retriever`.   
+ The pre-trained retriever models would also be stored in the project folder `MARL/data/saves/retriever`.   
   
  ## 4. Meta-learner & Retriever joint learning.
- (1). Load pre-trained model.  
- We pre-trained a model based on Reinforcement learning, and further trained our MAML model on the basis of the RL model.   
- We could download and uncompress the RL model `truereward_0.739_29.zip` in the folder `MARL/data/saves/rl_even_TR_batch8_1%` from the provided [data link](https://drive.google.com/drive/folders/17m3KvhAXyJIXd8fdMVUtIoNiilH3FeUH?usp=sharing).  
+ (1). Load the pre-trained models.  
+ We have pre-trained a CQA model based on Reinforcement learning, and will further trained this RL-based model by using MAML.   
+ We could download the pre-trained RL model `truereward_0.739_29.zip`, uncompress it, and place it in the project folder `MARL/data/saves/rl_even_TR_batch8_1%`.  
+ 
+ As mentioned before, we have also pre-trained the retriever.  
+ We have saved a retriever model `AdaBound_DocEmbed_QueryEmbed_epoch_140_4.306.zip` in the folder `MARL/data/saves/retriever`, which is the best pre-trained retriever model we got.  
+ We need to download the aforementioned files from the [data link](https://drive.google.com/drive/folders/17m3KvhAXyJIXd8fdMVUtIoNiilH3FeUH?usp=sharing), uncompress them, and further put them under the corresponding folders in our project.
  
  (2). Train the MAML model.  
- Furthermore, we need some extra files in folder `MARL/data/auto_QA_data` for training the model: `share.question` (vocabulary), `CSQA_DENOTATIONS_full_944K.zip` (the file that records the information relevant to all the training questions), `CSQA_result_question_type_944K.json`, `CSQA_result_question_type_count944K.json`, `CSQA_result_question_type_count944k_orderlist.json`, and `944k_rangeDict.json` (the files that are used to retrieve the support sets).  
- Also, we have processed the training dataset and thus we need to download the file `RL_train_TR_new_2k.question` from the folder `MARL/data/auto_QA_data/mask_even_1.0%`.  
- 
- All we need is to download the aforementioned files from the [data link](https://drive.google.com/drive/folders/17m3KvhAXyJIXd8fdMVUtIoNiilH3FeUH?usp=sharing) and further put them under the corresponding folders in our project.   
- Then in the folder `MARL/S2SRL`, we run the python file to train the MAML model: 
+ In the project folder `MARL/S2SRL`, we run the python file to train the MAML model: 
  ```
- python train_reptile_maml_true_reward.py
+ python train_maml_retriever_joint.py
  ```
- The trained models would be stored in the folder `MARL/data/saves/maml_reptile`.   
+ The trained CQA model and the retriever model would be stored in the folder `MARL/data/saves/maml_newdata2k_reptile_retriever_joint`.   
  
  ## 5. MAML testing.
-  (1). Load trained model.  
-  The trained models will be stored in the folder `MARL/data/saves/maml_reptile`.  
-  We have saved a trained model `epoch_020_0.784_0.741.zip` in this folder, which could lead to the SOTA result.  
-  We could download such model from the [data link](https://drive.google.com/drive/folders/17m3KvhAXyJIXd8fdMVUtIoNiilH3FeUH?usp=sharing).  
-  When testing the model, we could choose a best model from all the models that we trained, or simply use the saved model `epoch_020_0.784_0.741.dat`.  
+  (1). Load the trained model.  
+  The trained models will be stored in the folder `MARL/data/saves/maml_newdata2k_reptile_retriever_joint`.  
+  We have saved a trained CQA model `net_epoch_016_0.782_0.719.zip` and a retriever model `retriever_epoch_016_0.785_0.719.zip` in this folder, which could lead to the SOTA result.  
+  We could download such models from the [data link](https://drive.google.com/drive/folders/17m3KvhAXyJIXd8fdMVUtIoNiilH3FeUH?usp=sharing), uncompress them, and place them under the corresponding project folder.  
+  When testing the model, we could choose a best model from all the models that we trained, or simply use the models `net_epoch_016_0.782_0.719.dat` and `retriever_epoch_016_0.785_0.719.dat`.  
   
   (2). Load the testing dataset.  
   We also have processed the testing dataset `SAMPLE_FINAL_MAML_test.question` (which is 1/20 of the full testing dataset) and `FINAL_MAML_test.question` (which is the full testing dataset), and saved them in the folder `MARL/data/auto_QA_data/mask_test`.  
   We could download the files from the [data link](https://drive.google.com/drive/folders/17m3KvhAXyJIXd8fdMVUtIoNiilH3FeUH?usp=sharing) and put them under the folder `MARL/data/auto_QA_data/mask_test` in the project.  
   
   (3). Testing.  
-  In the file `MARL/S2SRL/data_test_maml.py`, we could change the parameter following to meed our requirement.  
+  In the project file `MARL/S2SRL/data_test_maml_retriever.py`, we could change the parameter following to meet our requirement.  
   In the command line: 
   ```
   sys.argv = ['data_test_maml.py', '-m=epoch_020_0.784_0.741.dat', '-p=sample_final_maml',
