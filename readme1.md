@@ -1,9 +1,11 @@
 # MARL: for IJCAI 2020 submission.
 Our paper is published in IJCAI 2020[1], which is "Retrieve, Program, Repeat: Complex Knowledge Base Question Answering via Alternate Meta-learning".
 We aim to solve the CQA task [2], which is answering factual questions through complex inferring over a realistic-sized KG of millions of entities.  
+
 We could learn the details of the CQA dataset [here](https://amritasaha1812.github.io/CSQA/download_CQA/).  
+
 All the materials required for running the KG sever, training the model, and testing in this task could be downloaded from the [data link](https://drive.google.com/drive/folders/17m3KvhAXyJIXd8fdMVUtIoNiilH3FeUH?usp=sharing).  
-We should follow the folder structure in the [data link](https://drive.google.com/drive/folders/17m3KvhAXyJIXd8fdMVUtIoNiilH3FeUH?usp=sharing), and place the files in the corresponding location under the `data` folder.  
+We should follow the folder structure in the data link, and place the files in the corresponding location under the `data` folder.  
 Following this README, we will instruct how to use the relevant data from the data link.    
 
 The questions in the CQA could be categorized into seven groups.  
@@ -64,7 +66,8 @@ git clone https://github.com/DevinJake/MARL.git
  We treated the retrieved instances as the positive samples to pre-train the retriever (which is a DSSM model) to solve the cold-start problem.  
  
  (1). Download relevant materials.  
- Firstly, we need place the following files in the project folder `MARL/data/auto_QA_data` for pre-training the retriever: `share.question` (vocabulary), `CSQA_DENOTATIONS_full_944K.json` (the file that records the information relevant to all the training questions and is compressed in the Google drive), `CSQA_result_question_type_944K.json`, `CSQA_result_question_type_count944K.json`, `CSQA_result_question_type_count944k_orderlist.json`, and `944k_rangeDict.json` (the files that are used to retrieve the support sets).  
+ Firstly, we need place the following files in the project folder `MARL/data/auto_QA_data` for pre-training the retriever:  
+ `share.question` (vocabulary), `CSQA_DENOTATIONS_full_944K.json` (the file that records the information relevant to all the training questions and is compressed in the Google drive), `CSQA_result_question_type_944K.json`, `CSQA_result_question_type_count944K.json`, `CSQA_result_question_type_count944k_orderlist.json`, and `944k_rangeDict.json` (the files that are used to retrieve the support sets).  
  
  Also, we need to place a pre-trained model `epoch_002_0.394_0.796.dat` in the project folder `MARL/data/saves/maml_batch8_att=0_newdata2k_1storder_1task`, in which the learned word embeddings are stored.
  The embeddings are used to initialize the question embedding by summing and averaging.
@@ -95,7 +98,8 @@ git clone https://github.com/DevinJake/MARL.git
  We could download the pre-trained RL model `truereward_0.739_29.zip`, uncompress it, and place it in the project folder `MARL/data/saves/rl_even_TR_batch8_1%`.  
  
  As mentioned before, we have also pre-trained the retriever.  
- We have saved a retriever model `AdaBound_DocEmbed_QueryEmbed_epoch_140_4.306.zip` in the folder `MARL/data/saves/retriever`, which is the best pre-trained retriever model we got.  
+ We have saved a retriever model `AdaBound_DocEmbed_QueryEmbed_epoch_140_4.306.zip` in the folder `MARL/data/saves/retriever`, which is the best pre-trained retriever model we got.
+   
  We need to download the aforementioned files from the [data link](https://drive.google.com/drive/folders/17m3KvhAXyJIXd8fdMVUtIoNiilH3FeUH?usp=sharing), uncompress them, and further put them under the corresponding folders in our project.
  
  (2). Train the MAML model.  
@@ -110,7 +114,7 @@ git clone https://github.com/DevinJake/MARL.git
   The trained models will be stored in the folder `MARL/data/saves/maml_newdata2k_reptile_retriever_joint`.  
   We have saved a trained CQA model `net_epoch_016_0.782_0.719.zip` and a retriever model `retriever_epoch_016_0.785_0.719.zip` in this folder, which could lead to the SOTA result.  
   We could download such models from the [data link](https://drive.google.com/drive/folders/17m3KvhAXyJIXd8fdMVUtIoNiilH3FeUH?usp=sharing), uncompress them, and place them under the corresponding project folder.  
-  When testing the model, we could choose a best model from all the models that we trained, or simply use the models `net_epoch_016_0.782_0.719.dat` and `retriever_epoch_016_0.785_0.719.dat`.  
+  When testing the model, we could choose a best model from all the models that we have trained, or simply use the models `net_epoch_016_0.782_0.719.dat` and `retriever_epoch_016_0.785_0.719.dat`.  
   
   (2). Load the testing dataset.  
   We also have processed the testing dataset `SAMPLE_FINAL_MAML_test.question` (which is 1/20 of the full testing dataset) and `FINAL_MAML_test.question` (which is the full testing dataset), and saved them in the folder `MARL/data/auto_QA_data/mask_test`.  
@@ -126,11 +130,14 @@ git clone https://github.com/DevinJake/MARL.git
                 '--beta=0.1', '--supportsets=5', '--docembed-grad', 
                 '-retrieverl=../data/saves/maml_newdata2k_reptile_retriever_joint/retriever_epoch_016_0.785_0.719.dat']
   ```
-  , we could change the following settings.  
-  If we want to use the subset of the testing dataset to get an approximation testing result, we set `-p=sample_final_maml`, or we could set `-p=final_maml` to infer all the testing questions.  
+  , we could change the following settings.
+    
+  If we want to use the subset of the testing dataset to get an approximation testing result, we set `-p=sample_final_maml`,  
+  or we could set `-p=final_maml` to infer all the testing questions.  
   If we want to use the models stored in the named folder `MARL/data/saves/maml_reptile`, we set `--n=maml_reptile`.  
   If we want to use our saved CQA model `net_***.dat` in the named folder to test the questions, we set `-m=net_***.dat`.  
-  If we want to use our saved CQA model `retriever_***.dat` in the named folder to test the questions, we set `-retrieverl=../data/saves/maml_newdata2k_reptile_retriever_joint/retriever_***.dat`.  
+  If we want to use our saved CQA model `retriever_***.dat` in the named folder to test the questions,  
+  we set `-retrieverl=../data/saves/maml_newdata2k_reptile_retriever_joint/retriever_***.dat`.  
   
   After setting, we run the file `MARL/S2SRL/data_test_maml_retriever.py` to generate the action sequence for each testing question:
   ```
@@ -148,11 +155,12 @@ git clone https://github.com/DevinJake/MARL.git
   ```
   , which is used to compute the accuracy of the actions stored in the file `MARL/data/saves/maml_newdata2k_reptile_retriever_joint/sample_final_maml_predict.actions`.  
   We could change the path of the generated file in the above line of the code.  
+  
   Then we run the file `MARL/S2SRL/SymbolicExecutor/calculate_sample_test_dataset.py` to get the final result:
   ```
   python calculate_sample_test_dataset.py
   ```
-  We download the file `CSQA_ANNOTATIONS_test.json` from the [data link](https://drive.google.com/drive/folders/17m3KvhAXyJIXd8fdMVUtIoNiilH3FeUH?usp=sharing) and put it into the folder `MARL/data/auto_QA_data/` of the project, which is used to record the ground-truth answers of each question.  
+  We should download the file `CSQA_ANNOTATIONS_test.json` from the [data link](https://drive.google.com/drive/folders/17m3KvhAXyJIXd8fdMVUtIoNiilH3FeUH?usp=sharing) and put it into the folder `MARL/data/auto_QA_data/` of the project, which is used to record the ground-truth answers of each question.  
   The result will be stored in the file `MARL/data/auto_QA_data/test_result/maml_newdata2k_reptile_retriever_joint_test_result.txt`.  
   
  #### References:  
