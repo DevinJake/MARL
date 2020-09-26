@@ -6,7 +6,9 @@ We could learn the details of the CQA dataset [here](https://amritasaha1812.gith
 
 All the materials required for running the KG sever, training the model, and testing in this task could be downloaded from the [data link](https://drive.google.com/drive/folders/17m3KvhAXyJIXd8fdMVUtIoNiilH3FeUH?usp=sharing).  
 We should follow the folder structure in the data link, and place the files in the corresponding location under the `data` folder.  
-Following this README, we will instruct how to use the relevant data from the data link.    
+Following this README, we will instruct how to use the relevant data from the data link. 
+
+---
 
 The questions in the CQA could be categorized into seven groups.  
 The typical examples of these seven question types are displayed in the following table.  
@@ -20,7 +22,7 @@ The typical examples of these seven question types are displayed in the followin
    Verification | Is Alda Pereira-Lemaitre a citizen of France and Emmelsbull-Horsbull? | E1: Alda Pereira-Lemaitre <br> E2: France <br> E3: Emmelsbull-Horsbull <br> R1: country of citizenship <br> T1: administrative territory | Select(E1, R1, T1) <br> Bool(E2) <br> Bool(E3) | YES and NO respectively
    Quantitative Count | How many assemblies or courts have control over the jurisdiction of Free Hanseatic City of Bremen? | E1: Bremen <br> R1: applies to jurisdiction <br> T1: deliberative assembly <br> T2: court | Select(E1, R1, T1) <br> Union(E1, R1, T2) <br> Count() | 2
    Comparative Count | How many art genres express more number of humen or concepts than floral painting? | E1: floral painting <br> R1: depicts <br> T1: art genre <br> T2: human <br> t3: concept | SelectAll(T1, R1, T2) <br> SelectAll(T1, R1, T3) <br> GreaterThan(E1) <br> Count() | 8
-    
+
 ---
 
 Now we will talk about how to training and testing our proposed model.  
@@ -79,7 +81,7 @@ git clone https://github.com/DevinJake/MARL.git
  
  All the materials could be downloaded from the the provided [data link](https://drive.google.com/drive/folders/17m3KvhAXyJIXd8fdMVUtIoNiilH3FeUH?usp=sharing).
   
- (2). Pre-training the retriever.  
+ (2). Pre-train the retriever.  
  In the project folder `MARL/S2SRL`, we run the python file to pre-train the retriever: 
  ```
  python retriever_pretrain.py
@@ -120,7 +122,7 @@ git clone https://github.com/DevinJake/MARL.git
   We also have processed the testing dataset `SAMPLE_FINAL_MAML_test.question` (which is 1/20 of the full testing dataset) and `FINAL_MAML_test.question` (which is the full testing dataset), and saved them in the folder `MARL/data/auto_QA_data/mask_test`.  
   We could download the files from the [data link](https://drive.google.com/drive/folders/17m3KvhAXyJIXd8fdMVUtIoNiilH3FeUH?usp=sharing) and put them under the folder `MARL/data/auto_QA_data/mask_test` in the project.  
   
-  (3). Testing.  
+  (3). Test.  
   In the project file `MARL/S2SRL/data_test_maml_retriever.py`, we could change the parameters to meet our requirement.  
   In the command line: 
   ```
@@ -145,7 +147,7 @@ git clone https://github.com/DevinJake/MARL.git
   ```
   We could find the generated action sequences in the folder where the model is in (for instance `MARL/data/saves/maml_newdata2k_reptile_retriever_joint`), which is stored in the file `sample_final_maml_predict.actions` or `final_maml_predict.actions`.   
   
-  (4). Calculating the result.  
+  (4). Calculate the result.  
   After generating the actions, we could use them to compute the QA result.  
   For example, we use the saved models to predict actions for the sample testing questions, and therefore generate a file `MARL/data/saves/maml_newdata2k_reptile_retriever_joint/sample_final_maml_predict.actions` to record the generated actions for the testing questions.  
   Then in the file `MARL/S2SRL/SymbolicExecutor/calculate_sample_test_dataset.py`, we set the parameters as follows.  
