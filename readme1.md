@@ -117,7 +117,7 @@ git clone https://github.com/DevinJake/MARL.git
   We could download the files from the [data link](https://drive.google.com/drive/folders/17m3KvhAXyJIXd8fdMVUtIoNiilH3FeUH?usp=sharing) and put them under the folder `MARL/data/auto_QA_data/mask_test` in the project.  
   
   (3). Testing.  
-  In the project file `MARL/S2SRL/data_test_maml_retriever.py`, we could change the parameter following to meet our requirement.  
+  In the project file `MARL/S2SRL/data_test_maml_retriever.py`, we could change the parameters to meet our requirement.  
   In the command line: 
   ```
   sys.argv = ['data_test_maml.py', '-m=epoch_020_0.784_0.741.dat', '-p=sample_final_maml',
