@@ -277,7 +277,6 @@ class Symbolics_WebQSP():
         #         print self.answer
         # print("----------------")
 
-    # TODO: NOT TESTED
     # get type
     def is_A(self,e):
         #return type of entity
@@ -303,7 +302,6 @@ class Symbolics_WebQSP():
             finally:
                 return content
 
-    # TODO: NOT THROUGHLY TESTED
     def select(self, e, r, t):
         if e == "" or r == "" or t == "":
             return {}
@@ -405,8 +403,6 @@ class Symbolics_WebQSP():
                 max = item_count
         return {t: set(max)}
 
-    # TODO: NOT THROUGHLY TESTED
-    # TODO: EXCEPTION HANDLE
     def joint(self, e, r, t):
         intermediate_result = {}
         if e == "" or r == "" or t == "":
@@ -631,7 +627,6 @@ class Symbolics_WebQSP():
             N = 0
         return [k for k in self.answer if len(self.answer[k]) > N]
 
-    # TODO: NOT TESTED!
     def less_than(self, e, r, t):
         content = self.answer
         if type(content) != dict: return []
@@ -658,8 +653,6 @@ class Symbolics_WebQSP():
         except:
             print("ERROR for command: union(%s,%s,%s)" % (e, r, t))
         finally:
-            # 进行 union 操作
-            # todo 这里前面都和select部分一样 所以还是应该拆开？ union单独做 好处是union可以不止合并两个 字典里的都可以合并
             union_key = "|"
             union_value = set([])
             for k, v in answer_dict.items():
@@ -687,8 +680,6 @@ class Symbolics_WebQSP():
         except:
             print("ERROR for command: union(%s,%s,%s)" % (e, r, t))
         finally:
-            # 进行 union 操作
-            # todo 这里前面都和select部分一样 所以还是应该拆开？ union单独做 好处是union可以不止合并两个 字典里的都可以合并
             union_key = "|"
             union_value = set([])
             for k, v in answer_dict.items():
@@ -730,7 +721,6 @@ class Symbolics_WebQSP():
             print("ERROR! THE ACTION IS count(%s)!" %e)
             return 0
 
-    # TODO: NOT TESTED
     def at_least(self, N):
         # print("A12: at_least")
         # for k in list(self.answer):
@@ -744,7 +734,6 @@ class Symbolics_WebQSP():
                     answer_keys.append(k)
         return answer_keys
 
-    # TODO: NOT TESTED
     def at_most(self, N):
         # print("A13: at_most")
         answer_keys = []
@@ -756,7 +745,6 @@ class Symbolics_WebQSP():
                     answer_keys.append(k)
         return answer_keys
 
-    # TODO: NOT TESTED
     def equal(self, N):
         answer_keys = []
         if type(self.answer) == dict:
@@ -1043,7 +1031,6 @@ def isValidAction(action_item):
     return (action_item.e.startswith("m.") or action_item.e.startswith("?"))\
            and (action_item.t.startswith("m.") or action_item.t.startswith("?"))
 
-# todo still has problem with the order of A1_2 and a19 of one variable
 def reorder(sparql_list, answer_keys):
     count = 0
     final_len = len(sparql_list)
@@ -1056,7 +1043,6 @@ def reorder(sparql_list, answer_keys):
         add_next_variable(sparql_list, key, reorder_sparql_list)
         # print(reorder_sparql_list)
             # contains key
-            # 提取包含key并排序
             # for action_item in sparql_list:
             #     # last select action of answer key
             #     if action_item.t == key:
@@ -1381,7 +1367,6 @@ if __name__ == "__main__":
             print("{0} pairs correct".format(true_count))
             print(errorlist)
 
-            # # 写入转换后的json
             # jsondata = json.dumps(json_errorlist, indent=1)
             # fileObject = open('errorlist_zero_full.json', 'w')
             # fileObject.write(jsondata)

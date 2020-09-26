@@ -442,7 +442,6 @@ class MetaLearner(object):
         true_reward_argmax_step = []
         true_reward_sample_step = []
 
-        # TODO
         if weights is not None:
             self.net.insert_new_parameter(weights, True)
         # input_seq: the padded and embedded batch-sized input sequence.
@@ -555,7 +554,6 @@ class MetaLearner(object):
 
         if not net_policies:
             log.info("The net_policies is empty!")
-            # TODO the format of 0.0 should be the same as loss_v.
             return 0.0, total_samples, skipped_samples
 
         # Data for decode_chain_sampling samples and the number of such samples is the same as args.samples parameter.
@@ -706,7 +704,6 @@ class MetaLearner(object):
 
         if not net_policies:
             log.info("The net_policies is empty!")
-            # TODO the format of 0.0 should be the same as loss_v.
             return 0.0, total_samples, skipped_samples
 
         # Data for decode_chain_sampling samples and the number of such samples is the same as args.samples parameter.
@@ -863,7 +860,6 @@ class MetaLearner(object):
 
         if not net_policies:
             log.info("The net_policies is empty!")
-            # TODO the format of 0.0 should be the same as loss_v.
             return 0.0, total_samples, skipped_samples
 
         # Data for decode_chain_sampling samples and the number of such samples is the same as args.samples parameter.
@@ -1313,8 +1309,6 @@ class MetaLearner(object):
         support_set = self.establish_support_set(task, self.steps, self.weak_flag, self.train_data_support_944K)
 
         for step_sample in support_set:
-            # todo: use the similarity between the sample in support set and the task to scale the reward or loss
-            #  when meta optimization.
             inner_loss, inner_total_samples, inner_skipped_samples, true_reward_argmax_step, true_reward_sample_step = self.inner_loss(step_sample, weights=names_weights_copy, dial_shown=True)
             total_samples += inner_total_samples
             skipped_samples += inner_skipped_samples
