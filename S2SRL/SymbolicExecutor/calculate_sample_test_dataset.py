@@ -195,4 +195,4 @@ def calculate_MAML_result(fila_path, sample=False):
 if __name__ == "__main__":
     # If testing the sample test dataset, set sample as True.
     # If testing the entire test dataset, set sample as False.
-    calculate_MAML_result('maml_newdata2k_reptile_retriever_joint_test_result', sample=True)
+    calculate_MAML_result('maml_newdata2k_reptile_retriever_joint_test_result', sample=False)

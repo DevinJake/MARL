@@ -126,7 +126,7 @@ git clone https://github.com/DevinJake/MARL.git
   In the project file `MARL/S2SRL/data_test_maml_retriever.py`, we could change the parameters to meet our requirement.  
   In the command line: 
   ```
-  sys.argv = ['data_test_maml_retriever.py', '-m=net_epoch_016_0.782_0.719.dat', '-p=sample_final_maml',
+  sys.argv = ['data_test_maml_retriever.py', '-m=net_epoch_016_0.782_0.719.dat', '-p=final_maml',
                 '--n=maml_newdata2k_reptile_retriever_joint', '--cuda', '-s=5', '-a=0', '--att=0', '--lstm=1',
                 '--fast-lr=1e-4', '--meta-lr=1e-4', '--steps=5', '--batches=1', '--weak=1', '--embed-grad',
                 '--beta=0.1', '--supportsets=5', '--docembed-grad', 
@@ -134,8 +134,10 @@ git clone https://github.com/DevinJake/MARL.git
   ```
   , we could change the following settings.
     
-  If we want to use the subset of the testing dataset to get an approximation testing result, we set `-p=sample_final_maml`,  
-  or we could set `-p=final_maml` to infer all the testing questions.  
+  If we want to use the entire testing dataset to get the QA result, we should set `-p=final_maml`.  
+  Otherwise, we could set `-p=sample_final_maml` to test on the subset of the testing dataset to get an approximation testing result with less time.  
+  Based on our observation, the testing results of the entire testing dataset are always better than those of the subset.  
+  
   If we want to use the models stored in the named folder `MARL/data/saves/maml_reptile`, we set `--n=maml_reptile`.  
   If we want to use our saved CQA model `net_***.dat` in the named folder to test the questions, we set `-m=net_***.dat`.  
   If we want to use our saved CQA model `retriever_***.dat` in the named folder to test the questions,  
@@ -147,22 +149,32 @@ git clone https://github.com/DevinJake/MARL.git
   ```
   We could find the generated action sequences in the folder where the model is in (for instance `MARL/data/saves/maml_newdata2k_reptile_retriever_joint`), which is stored in the file `sample_final_maml_predict.actions` or `final_maml_predict.actions`.   
   
-  (4). Calculate the result.  
+  (4). Calculate the result.   
+  Firstly, we should download the files `CSQA_ANNOTATIONS_test.json` from the [data link](https://drive.google.com/drive/folders/17m3KvhAXyJIXd8fdMVUtIoNiilH3FeUH?usp=sharing) and put it into the folder `MARL/data/auto_QA_data/` of the project, which is used to record the ground-truth answers of each question.  
+   
   After generating the actions, we could use them to compute the QA result.  
-  For example, we use the saved models to predict actions for the sample testing questions, and therefore generate a file `MARL/data/saves/maml_newdata2k_reptile_retriever_joint/sample_final_maml_predict.actions` to record the generated actions for the testing questions.  
+  For example, we use the saved models to predict actions for the testing questions, and therefore generate a file `MARL/data/saves/maml_newdata2k_reptile_retriever_joint/final_maml_predict.actions` to record the generated actions for all the testing questions.  
+    
   Then in the file `MARL/S2SRL/SymbolicExecutor/calculate_sample_test_dataset.py`, we set the parameters as follows.  
-  In the function `transMask2ActionMAML()`, we have a line of the code: 
+  In the line,
   ```
-  with open(path, 'r') as load_f, open("../../data/saves/maml_newdata2k_reptile_retriever_joint/sample_final_maml_predict.actions", 'r') as predict_actions:
+calculate_MAML_result('maml_newdata2k_reptile_retriever_joint_test_result', sample=False)
   ```
-  , which is used to compute the accuracy of the actions stored in the file `MARL/data/saves/maml_newdata2k_reptile_retriever_joint/sample_final_maml_predict.actions`.  
-  We could change the path of the generated file in the above line of the code.  
+  if we set `sample=False`, we will calculate the result of the entire testing dataset.  
+  If we set `sample=True`, we will calculate the result of the subset.  
+  
+  This line of code will call the function `transMask2ActionMAML()` to compute the accuracy of the actions stored in the file `MARL/data/saves/maml_newdata2k_reptile_retriever_joint/final_maml_predict.actions`.  
+  
+  We could change the path of the generated file in the following line of the code if we want:
+  ```
+  with open(path, 'r') as load_f, open("../../data/saves/maml_newdata2k_reptile_retriever_joint/final_maml_predict.actions", 'r') as predict_actions:
+  ```
   
   Then we run the file `MARL/S2SRL/SymbolicExecutor/calculate_sample_test_dataset.py` to get the final result:
   ```
   python calculate_sample_test_dataset.py
   ```
-  We should download the file `CSQA_ANNOTATIONS_test.json` from the [data link](https://drive.google.com/drive/folders/17m3KvhAXyJIXd8fdMVUtIoNiilH3FeUH?usp=sharing) and put it into the folder `MARL/data/auto_QA_data/` of the project, which is used to record the ground-truth answers of each question.  
+  
   The result will be stored in the file `MARL/data/auto_QA_data/test_result/maml_newdata2k_reptile_retriever_joint_test_result.txt`.  
   
  #### References:  
