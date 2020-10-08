@@ -9,7 +9,7 @@ from symbolics import Symbolics
 from transform_util import transformBooleanToString, list2dict
 import logging
 log = logging.basicConfig(level = logging.INFO,
-                           filename ='../../data/auto_QA_data/test_result/maml_newdata2k_reptile_retriever_joint_test_result.log',
+                           filename ='../../data/auto_QA_data/test_result/maml_newdata2k_reptile_retriever_joint_test_full_result.log',
                            filemode ='w', format = '%(message)s')
 
 def transMask2ActionMAML(state, sample=False):
@@ -195,4 +195,4 @@ def calculate_MAML_result(fila_path, sample=False):
 if __name__ == "__main__":
     # If testing the sample test dataset, set sample as True.
     # If testing the entire test dataset, set sample as False.
-    calculate_MAML_result('maml_newdata2k_reptile_retriever_joint_test_result', sample=True)
+    calculate_MAML_result('maml_newdata2k_reptile_retriever_joint_test_full_result', sample=False)
