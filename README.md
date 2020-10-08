@@ -1,6 +1,6 @@
 # MARL: for IJCAI 2020 submission.
 Our paper is published in IJCAI 2020[1], which is "Retrieve, Program, Repeat: Complex Knowledge Base Question Answering via Alternate Meta-learning".
-We aim to solve the CQA task [2], which is answering factual questions through complex inferring over a realistic-sized KG of millions of entities.  
+We aim to solve the CQA task[2], which is answering factual questions through complex inferring over a realistic-sized KG of millions of entities.  
 
 We could learn the details of the CQA dataset [here](https://amritasaha1812.github.io/CSQA/download_CQA/).  
 
